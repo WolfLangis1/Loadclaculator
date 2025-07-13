@@ -1,0 +1,49 @@
+{
+  "name": "load-calculator",
+  "version": "1.0.0",
+  "description": "Professional electrical load calculator for NEC-compliant residential calculations",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "typecheck": "tsc --noEmit",
+    "docker:build": "docker build -t load-calculator .",
+    "docker:build:dev": "docker build -f Dockerfile.dev -t load-calculator:dev .",
+    "docker:run": "docker run -p 3000:3000 load-calculator",
+    "docker:run:dev": "docker run -p 3000:3000 -v $(pwd):/app -v /app/node_modules load-calculator:dev",
+    "docker:compose:dev": "docker-compose --profile dev up --build",
+    "docker:compose:prod": "docker-compose -f docker-compose.prod.yml up --build -d",
+    "docker:compose:down": "docker-compose down",
+    "docker:compose:down:prod": "docker-compose -f docker-compose.prod.yml down",
+    "docker:clean": "docker system prune -f && docker volume prune -f",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:prod": "docker-compose -f docker-compose.prod.yml logs -f"
+  },
+  "dependencies": {
+    "jspdf": "^3.0.1",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/jspdf": "^1.3.3",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "@vitest/ui": "^1.0.0",
+    "eslint": "^8.53.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

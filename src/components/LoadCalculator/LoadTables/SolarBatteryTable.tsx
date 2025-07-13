@@ -1,0 +1,191 @@
+import React from 'react';
+import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
+
+export const SolarBatteryTable: React.FC = () => {
+  const { state, dispatch, calculations } = useLoadCalculator();
+  const { solarBatteryLoads } = state.loads;
+
+  const updateLoad = (id: number, field: string, value: any) => {
+    let processedValue = value;
+    
+    if (['kw', 'inverterAmps', 'breaker', 'quantity'].includes(field)) {
+      processedValue = parseFloat(value) || 0;
+    }
+    
+    const updatedLoad = { [field]: processedValue };
+    
+    // Auto-calculate inverter amps from kW
+    if (field === 'kw') {
+      const load = solarBatteryLoads.find(l => l.id === id);
+      if (load) {
+        // Calculate inverter amps: kW * 1000 / volts
+        updatedLoad.inverterAmps = (processedValue * 1000) / (load.volts || 240);
+        updatedLoad.amps = updatedLoad.inverterAmps;
+        updatedLoad.va = updatedLoad.inverterAmps * (load.volts || 240);
+        updatedLoad.total = updatedLoad.va * (load.quantity || 1);
+      }
+    }
+    
+    Object.entries(updatedLoad).forEach(([updateField, updateValue]) => {
+      dispatch({
+        type: 'UPDATE_SOLAR_BATTERY_LOAD',
+        payload: { id, field: updateField as any, value: updateValue }
+      });
+    });
+  };
+
+  const busbarRating = state.panelDetails.busRating || state.mainBreaker;
+  const maxAllowableBackfeed = (busbarRating * 1.2) - state.mainBreaker;
+
+  return (
+    <div className="space-y-6">
+      {/* 120% Rule Information */}
+      <div className={`rounded-lg p-4 ${calculations.interconnectionCompliant ? 'bg-green-50' : 'bg-red-50'}`}>
+        <h3 className={`text-sm font-medium mb-2 ${calculations.interconnectionCompliant ? 'text-green-800' : 'text-red-800'}`}>
+          Solar Interconnection Analysis (NEC 705.12(B)(3)(2))
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <span className={calculations.interconnectionCompliant ? 'text-green-700' : 'text-red-700'}>
+              Main Breaker: {state.mainBreaker}A
+            </span>
+          </div>
+          <div>
+            <span className={calculations.interconnectionCompliant ? 'text-green-700' : 'text-red-700'}>
+              Busbar Rating: {busbarRating}A
+            </span>
+          </div>
+          <div>
+            <span className={calculations.interconnectionCompliant ? 'text-green-700' : 'text-red-700'}>
+              Max Backfeed: {maxAllowableBackfeed.toFixed(1)}A
+            </span>
+          </div>
+        </div>
+        <div className="mt-2">
+          <span className={`font-medium ${calculations.interconnectionCompliant ? 'text-green-800' : 'text-red-800'}`}>
+            Current Interconnection: {calculations.totalInterconnectionAmps?.toFixed(1) || '0.0'}A
+            {calculations.interconnectionCompliant ? ' ✓ Compliant' : ' ✗ Exceeds Limit'}
+          </span>
+        </div>
+      </div>
+
+      {/* Solar/Battery Loads Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                System Description
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Capacity (kW)
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Inverter Amps
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Breaker Size
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Connection
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Volts
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {solarBatteryLoads.map((load) => (
+              <tr key={load.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3">
+                  <input
+                    type="text"
+                    value={load.name}
+                    onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
+                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    placeholder="System description"
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <select
+                    value={load.type}
+                    onChange={(e) => updateLoad(load.id, 'type', e.target.value)}
+                    className="w-28 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="solar">Solar PV</option>
+                    <option value="battery">Battery</option>
+                  </select>
+                </td>
+                <td className="px-4 py-3">
+                  <input
+                    type="number"
+                    value={load.kw}
+                    onChange={(e) => updateLoad(load.id, 'kw', e.target.value)}
+                    className="w-24 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    min="0"
+                    step="0.1"
+                    placeholder="kW"
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-sm font-mono text-gray-700">
+                    {load.inverterAmps.toFixed(1)}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <input
+                    type="number"
+                    value={load.breaker}
+                    onChange={(e) => updateLoad(load.id, 'breaker', e.target.value)}
+                    className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    min="0"
+                    step="5"
+                    placeholder="A"
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <select
+                    value={load.location}
+                    onChange={(e) => updateLoad(load.id, 'location', e.target.value)}
+                    className="w-32 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="backfeed">Backfeed</option>
+                    <option value="supply_side">Supply Side</option>
+                    <option value="load_side">Load Side</option>
+                  </select>
+                </td>
+                <td className="px-4 py-3">
+                  <select
+                    value={load.volts}
+                    onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
+                    className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  >
+                    <option value={240}>240</option>
+                    <option value={120}>120</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      <div className="bg-purple-50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-purple-800 mb-2">
+          Solar & Battery System Requirements (NEC Article 705)
+        </h4>
+        <ul className="text-xs text-purple-700 space-y-1">
+          <li>• Solar inverter output current must not exceed inverter nameplate rating</li>
+          <li>• Breaker size typically 125% of inverter maximum output current</li>
+          <li>• Backfeed breakers must comply with 120% rule: (Busbar × 1.2) - Main Breaker</li>
+          <li>• Supply-side connections are not subject to 120% rule limitations</li>
+          <li>• Battery systems must include rapid shutdown and energy storage labeling</li>
+          <li>• Grounding and bonding per NEC 705.50 and local AHJ requirements</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
