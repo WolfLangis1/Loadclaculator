@@ -1,10 +1,11 @@
-// Minimal app for debugging deployment issues
+import { LoadCalculatorMain } from './components/LoadCalculator/LoadCalculatorMain';
+
+// Testing LoadCalculatorMain without contexts
 function App() {
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Load Calculator</h1>
-      <p>Application is loading successfully!</p>
-      <p>If you see this message, the basic app structure is working.</p>
+    <div style={{ padding: '20px' }}>
+      <h1>Load Calculator - Testing Component</h1>
+      <LoadCalculatorMain />
     </div>
   );
 }
