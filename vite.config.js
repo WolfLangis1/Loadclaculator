@@ -4,13 +4,7 @@ import react from '@vitejs/plugin-react'
 // Production-ready Vite configuration in JavaScript
 // Eliminates TypeScript import issues during Vercel deployment
 export default defineConfig(({ mode }) => ({
-  plugins: [react({
-    // Ensure React is properly configured for all modes
-    include: "**/*.{jsx,tsx}",
-    babel: {
-      plugins: []
-    }
-  })],
+  plugins: [react()],
   build: {
     outDir: 'dist',
     sourcemap: false, // Disable in production for smaller bundle
@@ -19,40 +13,10 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1000, // Warn for chunks over 1MB
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Vendor libraries
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'vendor';
-          }
-          if (id.includes('node_modules/lucide-react')) {
-            return 'icons';
-          }
-          if (id.includes('node_modules/jspdf')) {
-            return 'pdf';
-          }
-          if (id.includes('node_modules/@testing-library') || id.includes('node_modules/vitest')) {
-            return 'testing';
-          }
-          
-          // Application chunks
-          if (id.includes('src/services/necCalculations') || id.includes('src/services/wireCalculations')) {
-            return 'calculations';
-          }
-          if (id.includes('src/services/aerialView') || id.includes('src/services/googleSolar')) {
-            return 'maps';
-          }
-          if (id.includes('src/components/LoadCalculator/LoadTables')) {
-            return 'load-tables';
-          }
-          if (id.includes('src/components/UI')) {
-            return 'ui-components';
-          }
-          if (id.includes('src/components/AerialView') || id.includes('src/components/SLD')) {
-            return 'advanced-features';
-          }
-          
-          // Default chunk
-          return 'main';
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          icons: ['lucide-react'],
+          pdf: ['jspdf']
         },
         chunkFileNames: (chunkInfo) => {
           return `assets/[name]-[hash].js`;
