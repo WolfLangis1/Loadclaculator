@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm ci && npx vite build --mode production",
+  "buildCommand": "npm ci && npx vite build --config vite.config.production.ts --mode production",
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm ci",

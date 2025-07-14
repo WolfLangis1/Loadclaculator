@@ -68,9 +68,12 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
+      'react/jsx-runtime',
+      'react-dom/client',
       'jspdf',
       'lucide-react'
-    ]
+    ],
+    exclude: ['@testing-library/react', '@testing-library/jest-dom']
   },
   server: {
     host: '0.0.0.0',
