@@ -1,15 +1,13 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { Calculator, MapPin, Zap, FolderOpen, Brain } from 'lucide-react';
+import { Calculator, FolderOpen } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 
 // Lazy load heavy components  
-const UnifiedSLDMain = lazy(() => import('../SLD/UnifiedSLDMain').then(module => ({ default: module.UnifiedSLDMain })));
-const RefactoredAerialViewMain = lazy(() => import('../AerialView/RefactoredAerialViewMain').then(module => ({ default: module.RefactoredAerialViewMain })));
 const ProjectManager = lazy(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })));
 
-type TabType = 'calculator' | 'sld' | 'aerial';
+type TabType = 'calculator';
 
 interface Tab {
   id: TabType;
@@ -28,18 +26,6 @@ export const TabbedInterface: React.FC = () => {
       label: 'Load Calculator',
       icon: Calculator,
       component: LoadCalculatorMain
-    },
-    {
-      id: 'sld',
-      label: 'Single Line Diagram',
-      icon: Zap,
-      component: UnifiedSLDMain
-    },
-    {
-      id: 'aerial',
-      label: 'Aerial View & Site Analysis',
-      icon: MapPin,
-      component: RefactoredAerialViewMain
     }
   ];
 
@@ -153,11 +139,7 @@ export const TabbedInterface: React.FC = () => {
         role="tabpanel"
         id={`tabpanel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
-        className={`${
-          activeTab === 'sld' || activeTab === 'aerial' 
-            ? 'h-[calc(100vh-80px)]' 
-            : 'max-w-7xl mx-auto'
-        }`}
+        className="max-w-7xl mx-auto"
       >
         {renderActiveComponent()}
       </div>
