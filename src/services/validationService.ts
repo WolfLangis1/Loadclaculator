@@ -119,14 +119,8 @@ export const validateServiceSize = (totalAmps: number, serviceSize: number): Val
     });
   }
   
-  if (totalAmps > serviceSize * 0.8) {
-    errors.push({
-      type: 'error',
-      message: `Total load exceeds 80% of service capacity (${(serviceSize * 0.8).toFixed(1)}A)`,
-      code: 'NEC 220.83',
-      field: 'serviceSize'
-    });
-  }
+  // Main service breakers can be loaded to 100% of rating
+  // 80% rule (NEC 210.20(A)) applies to branch circuits, not main service breakers
   
   return errors;
 };

@@ -87,7 +87,7 @@ RECOMMENDATIONS
 ${calculations.spareCapacity < 25 ? '• Consider upgrading service for future expansion capacity\n' : ''}
 ${calculations.solarCapacityKW > 0 && !calculations.interconnectionCompliant ? 
   '• Solar interconnection exceeds 120% rule - consider alternative connection methods\n' : ''}
-${calculations.totalAmps > mainBreaker * 0.8 ? '• Load exceeds 80% of service capacity - service upgrade recommended\n' : ''}
+${calculations.totalAmps > mainBreaker ? '• Load exceeds service capacity - service upgrade required\n' : ''}
 ${evseLoads.filter(l => l.quantity > 0).length > 1 && !useEMS ? 
   '• Multiple EVSEs without EMS - consider installing energy management system per NEC 750.30\n' : ''}
 ${hasRenewableEnergy ? 

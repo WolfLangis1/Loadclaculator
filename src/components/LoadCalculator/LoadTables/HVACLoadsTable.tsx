@@ -108,12 +108,12 @@ export const HVACLoadsTable: React.FC = () => {
               </td>
               <td className="px-4 py-3">
                 <span className="text-sm font-mono text-gray-700">
-                  {load.va.toLocaleString()}
+                  {load.va?.toLocaleString() || '0'}
                 </span>
               </td>
               <td className="px-4 py-3">
                 <span className="text-sm font-mono font-medium text-gray-900">
-                  {load.total.toLocaleString()}
+                  {load.total?.toLocaleString() || '0'}
                 </span>
               </td>
               <td className="px-4 py-3">

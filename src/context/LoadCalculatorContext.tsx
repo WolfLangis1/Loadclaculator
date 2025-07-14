@@ -6,10 +6,13 @@ import type {
   ProjectInformation, 
   PanelDetails, 
   ActualDemandData,
-  CalculationMethod 
+  CalculationMethod,
+  ProjectAttachment,
+  AttachmentStats
 } from '../types';
 import { LOAD_TEMPLATES } from '../constants';
 import { calculateLoadDemand } from '../services';
+import { AttachmentService } from '../services/attachmentService';
 
 interface LoadCalculatorState {
   // Load data
@@ -24,13 +27,32 @@ interface LoadCalculatorState {
   panelDetails: PanelDetails;
   actualDemandData: ActualDemandData;
   
-  // EMS settings
+  // Load Management settings
   useEMS: boolean;
   emsMaxLoad: number;
+  loadManagementType: 'none' | 'ems' | 'simpleswitch' | 'dcc';
+  loadManagementMaxLoad: number;
+  simpleSwitchMode: 'branch_sharing' | 'feeder_monitoring';
+  simpleSwitchLoadA: {
+    type: 'general' | 'hvac' | 'evse';
+    id: number;
+    name: string;
+    amps: number;
+  } | null;
+  simpleSwitchLoadB: {
+    type: 'general' | 'hvac' | 'evse';
+    id: number;
+    name: string;
+    amps: number;
+  } | null;
   
   // UI state
   showAdvanced: boolean;
   activeTab: string;
+  
+  // Project attachments
+  attachments: ProjectAttachment[];
+  attachmentStats: AttachmentStats;
 }
 
 export interface LoadCalculatorContextType {
@@ -39,6 +61,14 @@ export interface LoadCalculatorContextType {
   calculations: CalculationResults;
   updateProjectInfo: (updates: Partial<ProjectInformation>) => void;
   updateSettings: (updates: Partial<Omit<LoadCalculatorState, 'loads' | 'projectInfo'>>) => void;
+  
+  // Attachment methods
+  addAttachment: (attachment: ProjectAttachment) => void;
+  markAttachmentForExport: (attachmentId: string, exportOptions?: any) => void;
+  unmarkAttachmentForExport: (attachmentId: string) => void;
+  deleteAttachment: (attachmentId: string) => void;
+  getExportAttachments: () => ProjectAttachment[];
+  refreshAttachments: () => void;
 }
 
 const initialProjectInfo: ProjectInformation = {
@@ -92,8 +122,23 @@ const initialState: LoadCalculatorState = {
   actualDemandData: initialActualDemandData,
   useEMS: false,
   emsMaxLoad: 0,
+  loadManagementType: 'none',
+  loadManagementMaxLoad: 0,
+  simpleSwitchMode: 'branch_sharing',
+  simpleSwitchLoadA: null,
+  simpleSwitchLoadB: null,
   showAdvanced: false,
-  activeTab: 'loads'
+  activeTab: 'loads',
+  
+  // Project attachments
+  attachments: [],
+  attachmentStats: {
+    total: 0,
+    byType: {} as Record<any, number>,
+    bySource: {} as Record<any, number>,
+    markedForExport: 0,
+    totalFileSize: 0
+  }
 };
 
 const loadReducer = (state: LoadState, action: LoadAction): LoadState => {
@@ -161,19 +206,45 @@ export const LoadCalculatorProvider: React.FC<{ children: ReactNode }> = ({ chil
     ...appState
   };
   
+  // Split calculations into smaller, more targeted memos for better performance
+  const baseCalculationInputs = useMemo(() => ({
+    calculationMethod: state.calculationMethod,
+    squareFootage: state.squareFootage,
+    mainBreaker: state.mainBreaker,
+    panelDetails: state.panelDetails,
+    actualDemandData: state.actualDemandData
+  }), [state.calculationMethod, state.squareFootage, state.mainBreaker, 
+       state.panelDetails, state.actualDemandData]);
+
+  const loadManagementInputs = useMemo(() => ({
+    useEMS: state.useEMS,
+    emsMaxLoad: state.emsMaxLoad,
+    loadManagementType: state.loadManagementType,
+    loadManagementMaxLoad: state.loadManagementMaxLoad,
+    simpleSwitchMode: state.simpleSwitchMode,
+    simpleSwitchLoadA: state.simpleSwitchLoadA,
+    simpleSwitchLoadB: state.simpleSwitchLoadB
+  }), [state.useEMS, state.emsMaxLoad, state.loadManagementType, 
+       state.loadManagementMaxLoad, state.simpleSwitchMode,
+       state.simpleSwitchLoadA, state.simpleSwitchLoadB]);
+
   const calculations = useMemo(() => 
     calculateLoadDemand(
       loads,
-      state.calculationMethod,
-      state.squareFootage,
-      state.mainBreaker,
-      state.panelDetails,
-      state.actualDemandData,
-      state.useEMS,
-      state.emsMaxLoad
+      baseCalculationInputs.calculationMethod,
+      baseCalculationInputs.squareFootage,
+      baseCalculationInputs.mainBreaker,
+      baseCalculationInputs.panelDetails,
+      baseCalculationInputs.actualDemandData,
+      loadManagementInputs.useEMS,
+      loadManagementInputs.emsMaxLoad,
+      loadManagementInputs.loadManagementType,
+      loadManagementInputs.loadManagementMaxLoad,
+      loadManagementInputs.simpleSwitchMode,
+      loadManagementInputs.simpleSwitchLoadA,
+      loadManagementInputs.simpleSwitchLoadB
     ),
-    [loads, state.calculationMethod, state.squareFootage, state.mainBreaker, 
-     state.panelDetails, state.actualDemandData, state.useEMS, state.emsMaxLoad]
+    [loads, baseCalculationInputs, loadManagementInputs]
   );
   
   const updateProjectInfo = React.useCallback((updates: Partial<ProjectInformation>) => {
@@ -186,13 +257,64 @@ export const LoadCalculatorProvider: React.FC<{ children: ReactNode }> = ({ chil
   const updateSettings = React.useCallback((updates: Partial<Omit<LoadCalculatorState, 'loads' | 'projectInfo'>>) => {
     setAppState(prev => ({ ...prev, ...updates }));
   }, []);
+
+  // Generate project ID for attachments
+  const projectId = React.useMemo(() => {
+    return `project_${state.projectInfo.customerName}_${state.projectInfo.propertyAddress}`.replace(/[^a-zA-Z0-9_]/g, '_') || 'default_project';
+  }, [state.projectInfo.customerName, state.projectInfo.propertyAddress]);
+
+  // Attachment methods
+  const addAttachment = React.useCallback((attachment: ProjectAttachment) => {
+    AttachmentService.addAttachment(projectId, attachment);
+    refreshAttachments();
+  }, [projectId]);
+
+  const markAttachmentForExport = React.useCallback((attachmentId: string, exportOptions?: any) => {
+    AttachmentService.markForExport(projectId, attachmentId, exportOptions);
+    refreshAttachments();
+  }, [projectId]);
+
+  const unmarkAttachmentForExport = React.useCallback((attachmentId: string) => {
+    AttachmentService.unmarkForExport(projectId, attachmentId);
+    refreshAttachments();
+  }, [projectId]);
+
+  const deleteAttachment = React.useCallback((attachmentId: string) => {
+    AttachmentService.deleteAttachment(projectId, attachmentId);
+    refreshAttachments();
+  }, [projectId]);
+
+  const getExportAttachments = React.useCallback(() => {
+    return AttachmentService.getExportAttachments(projectId);
+  }, [projectId]);
+
+  const refreshAttachments = React.useCallback(() => {
+    const attachments = AttachmentService.getProjectAttachments(projectId);
+    const stats = AttachmentService.getAttachmentStats(projectId);
+    setAppState(prev => ({
+      ...prev,
+      attachments,
+      attachmentStats: stats
+    }));
+  }, [projectId]);
+
+  // Refresh attachments when project changes
+  React.useEffect(() => {
+    refreshAttachments();
+  }, [refreshAttachments]);
   
   const contextValue: LoadCalculatorContextType = {
     state,
     dispatch,
     calculations,
     updateProjectInfo,
-    updateSettings
+    updateSettings,
+    addAttachment,
+    markAttachmentForExport,
+    unmarkAttachmentForExport,
+    deleteAttachment,
+    getExportAttachments,
+    refreshAttachments
   };
   
   return (

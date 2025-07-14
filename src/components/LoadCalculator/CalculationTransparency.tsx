@@ -12,9 +12,64 @@ export const CalculationTransparency: React.FC = () => {
   const bathroomVA = 1500;
   const baseGeneralVA = lightingVA + smallApplianceVA + laundryVA + bathroomVA;
   
-  // NEC 220.83 Optional Method calculation
-  const first8kVA = Math.min(baseGeneralVA, 8000);
-  const remainder = Math.max(baseGeneralVA - 8000, 0);
+  // Get the correct demand factor calculation details to match actual calculation logic
+  const getDemandFactorCalculation = () => {
+    switch (state.calculationMethod) {
+      case 'optional': {
+        // For optional method, appliances are included in general demand calculation
+        const totalGeneralAndAppliances = baseGeneralVA + (calculations.applianceDemand || 0);
+        const first10kVA = Math.min(totalGeneralAndAppliances, 10000);
+        const remainder = Math.max(totalGeneralAndAppliances - 10000, 0);
+        return { 
+          totalForDemand: totalGeneralAndAppliances,
+          first: first10kVA, 
+          remainder, 
+          factor: 0.4, 
+          method: 'NEC 220.83 Optional Method',
+          appliancesIncluded: true
+        };
+      }
+      case 'standard': {
+        // For standard method, only base general loads get demand factors, appliances are separate
+        const first3kVA = Math.min(baseGeneralVA, 3000);
+        const next117kVA = Math.min(Math.max(baseGeneralVA - 3000, 0), 117000);
+        const above120kVA = Math.max(baseGeneralVA - 120000, 0);
+        return { 
+          totalForDemand: baseGeneralVA,
+          first: first3kVA, 
+          next117: next117kVA, 
+          above120: above120kVA,
+          method: 'NEC 220.42 Standard Method',
+          appliancesIncluded: false
+        };
+      }
+      case 'existing': {
+        if (state.actualDemandData?.enabled && state.actualDemandData.averageDemand > 0) {
+          return { 
+            actualDemand: state.actualDemandData.averageDemand, 
+            method: 'NEC 220.87 Existing Dwelling (Actual Data)',
+            appliancesIncluded: true
+          };
+        } else {
+          const totalGeneralAndAppliances = baseGeneralVA + (calculations.applianceDemand || 0);
+          const first8kVA = Math.min(totalGeneralAndAppliances, 8000);
+          const remainder = Math.max(totalGeneralAndAppliances - 8000, 0);
+          return { 
+            totalForDemand: totalGeneralAndAppliances,
+            first: first8kVA, 
+            remainder, 
+            factor: 0.4, 
+            method: 'NEC 220.87 Existing Dwelling (40% Factor)',
+            appliancesIncluded: true
+          };
+        }
+      }
+      default:
+        return { first: 0, remainder: 0, factor: 0.4, method: 'Unknown Method', appliancesIncluded: false };
+    }
+  };
+  
+  const demandCalc = getDemandFactorCalculation();
   
   // Active loads summary
   const activeGeneralLoads = state.loads.generalLoads.filter(load => load.quantity > 0);
@@ -31,7 +86,7 @@ export const CalculationTransparency: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900">Calculation Transparency</h3>
         <div className="flex items-center gap-1 text-sm text-blue-600">
           <Info className="h-4 w-4" />
-          <span>NEC 220.83 Optional Method</span>
+          <span>{demandCalc.method}</span>
         </div>
       </div>
 
@@ -46,7 +101,7 @@ export const CalculationTransparency: React.FC = () => {
               <span className="font-mono">{state.squareFootage} sq ft × 3 VA = {lightingVA.toLocaleString()} VA</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-emerald-700">Small Appliance Circuits:</span>
+              <span className="text-emerald-700">Small Appliance Circuits (NEC 220.52):</span>
               <span className="font-mono">2 × 1,500 VA = {smallApplianceVA.toLocaleString()} VA</span>
             </div>
             <div className="flex justify-between">
@@ -61,12 +116,12 @@ export const CalculationTransparency: React.FC = () => {
             {activeGeneralLoads.length > 0 && (
               <>
                 <div className="border-t border-emerald-300 pt-2 mt-2">
-                  <span className="text-emerald-700 font-medium">Large Appliances:</span>
+                  <span className="text-emerald-700 font-medium">Dedicated Appliance Circuits:</span>
                 </div>
                 {activeGeneralLoads.map((load, index) => (
                   <div key={index} className="flex justify-between ml-4">
                     <span className="text-emerald-600">{load.name}:</span>
-                    <span className="font-mono">{load.quantity} × {load.va.toLocaleString()} VA = {load.total.toLocaleString()} VA</span>
+                    <span className="font-mono">{load.quantity} × {load.va?.toLocaleString() || '0'} VA = {load.total?.toLocaleString() || '0'} VA</span>
                   </div>
                 ))}
               </>
@@ -74,23 +129,82 @@ export const CalculationTransparency: React.FC = () => {
             
             <div className="border-t border-emerald-400 pt-2 mt-2 font-semibold">
               <div className="flex justify-between">
-                <span className="text-emerald-800">Subtotal:</span>
-                <span className="font-mono">{(baseGeneralVA + (calculations.applianceDemand || 0)).toLocaleString()} VA</span>
+                <span className="text-emerald-800">
+                  {demandCalc.appliancesIncluded ? 'Total for Demand Calculation:' : 'General Loads Subtotal:'}
+                </span>
+                <span className="font-mono">{(demandCalc.totalForDemand || baseGeneralVA).toLocaleString()} VA</span>
               </div>
             </div>
             
-            <div className="bg-emerald-100 p-2 rounded border border-emerald-300">
-              <div className="text-emerald-800 font-medium mb-1">NEC 220.83 Demand Factors:</div>
-              <div className="flex justify-between text-sm">
-                <span>First 8,000 VA at 100%:</span>
-                <span className="font-mono">{first8kVA.toLocaleString()} VA</span>
+            {!demandCalc.appliancesIncluded && (calculations.applianceDemand || 0) > 0 && (
+              <div className="text-sm text-emerald-600 italic">
+                Note: Appliances calculated separately in Standard Method ({(calculations.applianceDemand || 0).toLocaleString()} VA)
               </div>
-              {remainder > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Remaining {remainder.toLocaleString()} VA at 40%:</span>
-                  <span className="font-mono">{(remainder * 0.4).toLocaleString()} VA</span>
-                </div>
+            )}
+            
+            <div className="bg-emerald-100 p-2 rounded border border-emerald-300">
+              <div className="text-emerald-800 font-medium mb-1">{demandCalc.method} Demand Factors:</div>
+              
+              {state.calculationMethod === 'optional' && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>First 10,000 VA at 100%:</span>
+                    <span className="font-mono">{(demandCalc.first || 0).toLocaleString()} VA</span>
+                  </div>
+                  {(demandCalc.remainder || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Remaining {(demandCalc.remainder || 0).toLocaleString()} VA at 40%:</span>
+                      <span className="font-mono">{((demandCalc.remainder || 0) * 0.4).toLocaleString()} VA</span>
+                    </div>
+                  )}
+                </>
               )}
+
+              {state.calculationMethod === 'standard' && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>First 3,000 VA at 100%:</span>
+                    <span className="font-mono">{(demandCalc.first || 0).toLocaleString()} VA</span>
+                  </div>
+                  {(demandCalc.next117 || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Next {(demandCalc.next117 || 0).toLocaleString()} VA at 35%:</span>
+                      <span className="font-mono">{((demandCalc.next117 || 0) * 0.35).toLocaleString()} VA</span>
+                    </div>
+                  )}
+                  {(demandCalc.above120 || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Above 120kVA at 25%:</span>
+                      <span className="font-mono">{((demandCalc.above120 || 0) * 0.25).toLocaleString()} VA</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {state.calculationMethod === 'existing' && (
+                <>
+                  {demandCalc.actualDemand ? (
+                    <div className="flex justify-between text-sm">
+                      <span>Actual Demand Data:</span>
+                      <span className="font-mono">{(demandCalc.actualDemand * 1000).toLocaleString()} VA</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>First 8,000 VA at 100%:</span>
+                        <span className="font-mono">{(demandCalc.first || 0).toLocaleString()} VA</span>
+                      </div>
+                      {(demandCalc.remainder || 0) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Remaining {(demandCalc.remainder || 0).toLocaleString()} VA at 40%:</span>
+                          <span className="font-mono">{((demandCalc.remainder || 0) * 0.4).toLocaleString()} VA</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
               <div className="flex justify-between font-semibold border-t border-emerald-400 pt-1 mt-1">
                 <span>Part A Total:</span>
                 <span className="font-mono text-emerald-800">{(calculations.generalDemand || 0).toLocaleString()} VA</span>
@@ -101,7 +215,7 @@ export const CalculationTransparency: React.FC = () => {
 
         {/* Part B: HVAC and Other Loads */}
         <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
-          <h4 className="font-semibold text-orange-800 mb-3">Part B: Loads at 100% (HVAC, EVSE, etc.)</h4>
+          <h4 className="font-semibold text-orange-800 mb-3">Part B: Loads at 100% (HVAC, EVSE, Battery Charging)</h4>
           
           <div className="space-y-2 text-sm">
             {activeHvacLoads.length > 0 ? (
@@ -110,7 +224,7 @@ export const CalculationTransparency: React.FC = () => {
                 {activeHvacLoads.map((load, index) => (
                   <div key={index} className="flex justify-between ml-4">
                     <span className="text-orange-600">{load.name}:</span>
-                    <span className="font-mono">{load.quantity} × {load.va.toLocaleString()} VA = {load.total.toLocaleString()} VA</span>
+                    <span className="font-mono">{load.quantity} × {load.va?.toLocaleString() || '0'} VA = {load.total?.toLocaleString() || '0'} VA</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-medium ml-4">
@@ -124,11 +238,11 @@ export const CalculationTransparency: React.FC = () => {
             
             {activeEvseLoads.length > 0 ? (
               <>
-                <div className="text-orange-700 font-medium mt-3">EV Charging (Continuous @ 125%):</div>
+                <div className="text-orange-700 font-medium mt-3">EV Charging (NEC 625.42 @ 100%):</div>
                 {activeEvseLoads.map((load, index) => (
                   <div key={index} className="flex justify-between ml-4">
                     <span className="text-orange-600">{load.name}:</span>
-                    <span className="font-mono">{load.quantity} × {load.va.toLocaleString()} VA × 1.25 = {(load.total * 1.25).toLocaleString()} VA</span>
+                    <span className="font-mono">{load.quantity} × {load.va?.toLocaleString() || '0'} VA = {load.total?.toLocaleString() || '0'} VA</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-medium ml-4">
@@ -140,10 +254,29 @@ export const CalculationTransparency: React.FC = () => {
               <div className="text-orange-600 italic">No EV charging loads</div>
             )}
             
+            {/* Battery Charging Loads */}
+            {activeSolarLoads.filter(load => load.type === 'battery').length > 0 ? (
+              <>
+                <div className="text-orange-700 font-medium mt-3">Battery Charging Loads:</div>
+                {activeSolarLoads.filter(load => load.type === 'battery').map((load, index) => (
+                  <div key={index} className="flex justify-between ml-4">
+                    <span className="text-orange-600">{load.name}:</span>
+                    <span className="font-mono">{load.quantity} × {load.va?.toLocaleString() || '0'} VA = {load.total?.toLocaleString() || '0'} VA</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-medium ml-4">
+                  <span className="text-orange-700">Battery Charging Subtotal:</span>
+                  <span className="font-mono">{(calculations.batteryChargingDemand || 0).toLocaleString()} VA</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-orange-600 italic mt-2">No battery charging loads</div>
+            )}
+            
             <div className="bg-orange-100 p-2 rounded border border-orange-300 mt-3">
               <div className="flex justify-between font-semibold">
                 <span className="text-orange-800">Part B Total:</span>
-                <span className="font-mono text-orange-800">{((calculations.hvacDemand || 0) + (calculations.evseDemand || 0)).toLocaleString()} VA</span>
+                <span className="font-mono text-orange-800">{((calculations.hvacDemand || 0) + (calculations.evseDemand || 0) + (calculations.batteryChargingDemand || 0)).toLocaleString()} VA</span>
               </div>
             </div>
           </div>
@@ -159,8 +292,8 @@ export const CalculationTransparency: React.FC = () => {
               <span className="font-mono">{(calculations.generalDemand || 0).toLocaleString()} VA</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-purple-700">Part B (HVAC + EVSE @ 100%):</span>
-              <span className="font-mono">{((calculations.hvacDemand || 0) + (calculations.evseDemand || 0)).toLocaleString()} VA</span>
+              <span className="text-purple-700">Part B (HVAC + EVSE + Battery @ 100%):</span>
+              <span className="font-mono">{((calculations.hvacDemand || 0) + (calculations.evseDemand || 0) + (calculations.batteryChargingDemand || 0)).toLocaleString()} VA</span>
             </div>
             
             <div className="border-t border-purple-400 pt-2 mt-2">

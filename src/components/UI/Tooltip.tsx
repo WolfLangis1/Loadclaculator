@@ -2,24 +2,29 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
-  content: string;
+  content: React.ReactNode;
   children: React.ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
+  id?: string;
 }
 
-export const Tooltip: React.FC<TooltipProps> = ({ 
+export const Tooltip: React.FC<TooltipProps> = React.memo(({ 
   content, 
   children, 
   position = 'top',
-  className = ''
+  className = '',
+  id
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  
+  // Generate unique ID for accessibility
+  const tooltipId = id || `tooltip-${Math.random().toString(36).substr(2, 9)}`;
 
-  const updatePosition = () => {
+  const updatePosition = React.useCallback(() => {
     if (!triggerRef.current || !tooltipRef.current) return;
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -56,7 +61,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     y = Math.max(8, Math.min(y, viewport.height - tooltipRect.height - 8));
 
     setTooltipPosition({ x, y });
-  };
+  }, [position]);
 
   useEffect(() => {
     if (isVisible) {
@@ -71,13 +76,27 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   }, [isVisible]);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = React.useCallback(() => {
     setIsVisible(true);
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = React.useCallback(() => {
     setIsVisible(false);
-  };
+  }, []);
+
+  const handleFocus = React.useCallback(() => {
+    setIsVisible(true);
+  }, []);
+
+  const handleBlur = React.useCallback(() => {
+    setIsVisible(false);
+  }, []);
+
+  const handleKeyDown = React.useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      setIsVisible(false);
+    }
+  }, []);
 
   const tooltipElement = isVisible && (
     <div

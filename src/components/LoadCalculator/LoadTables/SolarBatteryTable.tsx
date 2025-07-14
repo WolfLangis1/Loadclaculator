@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
+import { TooltipWrapper } from '../../UI/TooltipWrapper';
 
 export const SolarBatteryTable: React.FC = () => {
   const { state, dispatch, calculations } = useLoadCalculator();
@@ -22,7 +23,9 @@ export const SolarBatteryTable: React.FC = () => {
         updatedLoad.inverterAmps = (processedValue * 1000) / (load.volts || 240);
         updatedLoad.amps = updatedLoad.inverterAmps;
         updatedLoad.va = updatedLoad.inverterAmps * (load.volts || 240);
-        updatedLoad.total = updatedLoad.va * (load.quantity || 1);
+        updatedLoad.total = updatedLoad.va;
+        // Auto-set quantity to 1 when kW > 0, or 0 when kW = 0
+        updatedLoad.quantity = processedValue > 0 ? 1 : 0;
       }
     }
     
@@ -78,19 +81,19 @@ export const SolarBatteryTable: React.FC = () => {
                 System Description
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+                <TooltipWrapper term="solar_battery_type">Type</TooltipWrapper>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Capacity (kW)
+                <TooltipWrapper term="solar capacity">Capacity (kW)</TooltipWrapper>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Inverter Amps
+                <TooltipWrapper term="inverter amps">Inverter Amps</TooltipWrapper>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Breaker Size
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Connection
+                <TooltipWrapper term="connection_type">Connection Type</TooltipWrapper>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Volts
@@ -132,7 +135,7 @@ export const SolarBatteryTable: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm font-mono text-gray-700">
-                    {load.inverterAmps.toFixed(1)}
+                    {load.inverterAmps?.toFixed(1) || '0.0'}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -151,10 +154,11 @@ export const SolarBatteryTable: React.FC = () => {
                     value={load.location}
                     onChange={(e) => updateLoad(load.id, 'location', e.target.value)}
                     className="w-32 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    title="Choose connection type - affects NEC 705.12 compliance"
                   >
-                    <option value="backfeed">Backfeed</option>
-                    <option value="supply_side">Supply Side</option>
-                    <option value="load_side">Load Side</option>
+                    <option value="backfeed" title="Most common: breaker in main panel">Backfeed</option>
+                    <option value="supply_side" title="Before main breaker: no 120% rule limit">Supply Side</option>
+                    <option value="load_side" title="After main breaker: subject to 120% rule">Load Side</option>
                   </select>
                 </td>
                 <td className="px-4 py-3">

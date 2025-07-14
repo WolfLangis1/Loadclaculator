@@ -1,9 +1,12 @@
 import React from 'react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
+import { useLoadUpdater, useLoadValidation } from '../../../hooks/useLoadUpdater';
 
-export const GeneralLoadsTable: React.FC = () => {
+export const GeneralLoadsTable: React.FC = React.memo(() => {
   const { state, dispatch } = useLoadCalculator();
   const { generalLoads } = state.loads;
+  const { updateLoadField } = useLoadUpdater('general');
+  const { getValidationError } = useLoadValidation();
 
   const updateLoad = (id: number, field: string, value: any) => {
     let processedValue = value;
@@ -108,12 +111,12 @@ export const GeneralLoadsTable: React.FC = () => {
               </td>
               <td className="px-4 py-3">
                 <span className="text-sm font-mono text-gray-700">
-                  {load.va.toLocaleString()}
+                  {load.va?.toLocaleString() || '0'}
                 </span>
               </td>
               <td className="px-4 py-3">
                 <span className="text-sm font-mono font-medium text-gray-900">
-                  {load.total.toLocaleString()}
+                  {load.total?.toLocaleString() || '0'}
                 </span>
               </td>
               <td className="px-4 py-3">
@@ -141,4 +144,4 @@ export const GeneralLoadsTable: React.FC = () => {
       </div>
     </div>
   );
-};
+});

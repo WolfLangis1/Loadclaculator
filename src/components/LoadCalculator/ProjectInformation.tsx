@@ -1,6 +1,8 @@
 import React from 'react';
 import { Home } from 'lucide-react';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
+import { TooltipWrapper } from '../UI/TooltipWrapper';
+import { AddressAutocomplete } from '../UI/AddressAutocomplete';
 
 export const ProjectInformation: React.FC = () => {
   const { state, updateProjectInfo, updateSettings } = useLoadCalculator();
@@ -15,7 +17,7 @@ export const ProjectInformation: React.FC = () => {
         <h2 className="text-xl font-bold text-white">Project Information</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <div>
           <label htmlFor="customer-name" className="block text-sm font-medium text-white/90 mb-2">
             Customer Name *
@@ -32,16 +34,24 @@ export const ProjectInformation: React.FC = () => {
         </div>
 
         <div>
-          <label htmlFor="property-address" className="block text-sm font-medium text-white/90 mb-2">
-            Property Address *
-          </label>
-          <input
-            id="property-address"
-            type="text"
+          <AddressAutocomplete
             value={projectInfo.propertyAddress}
-            onChange={(e) => updateProjectInfo({ propertyAddress: e.target.value })}
+            onChange={(address) => updateProjectInfo({ propertyAddress: address })}
+            onPlaceSelect={(place) => {
+              console.log('🏠 Project address selected:', place);
+              updateProjectInfo({ 
+                propertyAddress: place.address,
+                // Optionally update city, state if components available
+                ...(place.components?.city && { city: place.components.city }),
+                ...(place.components?.state && { state: place.components.state }),
+                ...(place.components?.zipCode && { zipCode: place.components.zipCode })
+              });
+            }}
+            label="Property Address *"
+            placeholder="Start typing property address..."
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter property address"
+            labelClassName="block text-sm font-medium text-white/90 mb-2"
+            helperClassName="mt-1 text-xs text-white/70"
             required
           />
         </div>
@@ -135,7 +145,7 @@ export const ProjectInformation: React.FC = () => {
 
         <div>
           <label htmlFor="main-breaker" className="block text-sm font-medium text-white/90 mb-2">
-            Main Breaker Size (A) *
+            <TooltipWrapper term="main breaker">Main Breaker Size (A) *</TooltipWrapper>
           </label>
           <select
             id="main-breaker"
@@ -144,7 +154,28 @@ export const ProjectInformation: React.FC = () => {
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
           >
             {[100, 125, 150, 175, 200, 225, 250, 300, 350, 400].map(size => (
-              <option key={size} value={size}>{size}A</option>
+              <option key={size} value={size} className="text-gray-900 bg-white">{size}A</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="bus-rating" className="block text-sm font-medium text-white/90 mb-2">
+            <TooltipWrapper term="bus rating">Bus Bar Rating (A) *</TooltipWrapper>
+          </label>
+          <select
+            id="bus-rating"
+            value={state.panelDetails.busRating}
+            onChange={(e) => updateSettings({ 
+              panelDetails: { 
+                ...state.panelDetails, 
+                busRating: parseInt(e.target.value) 
+              } 
+            })}
+            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
+          >
+            {[100, 125, 150, 175, 200, 225, 250, 300, 350, 400].map(size => (
+              <option key={size} value={size} className="text-gray-900 bg-white">{size}A</option>
             ))}
           </select>
         </div>

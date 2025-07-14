@@ -6,6 +6,7 @@ export interface CalculationResults {
   applianceDemand: number;
   hvacDemand: number;
   evseDemand: number;
+  batteryChargingDemand: number;
   solarCapacityKW: number;
   batteryCapacityKW: number;
   totalInterconnectionAmps: number;
@@ -15,6 +16,7 @@ export interface CalculationResults {
   recommendedServiceSize: number;
   warnings: ValidationMessage[];
   errors: ValidationMessage[];
+  appliancesIncludedInGeneral?: boolean;
 }
 
 export interface ValidationMessage {

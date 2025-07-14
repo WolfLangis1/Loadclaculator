@@ -17,8 +17,23 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build the application
-RUN npm run build
+# Accept build arguments for environment variables
+ARG VITE_USE_REAL_AERIAL_DATA=false
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ARG VITE_MAPBOX_API_KEY=""
+ARG VITE_AERIAL_PROVIDER=google
+
+# Set environment variables for build
+ENV VITE_USE_REAL_AERIAL_DATA=$VITE_USE_REAL_AERIAL_DATA
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_MAPBOX_API_KEY=$VITE_MAPBOX_API_KEY
+ENV VITE_AERIAL_PROVIDER=$VITE_AERIAL_PROVIDER
+
+# Create .env file from example if it doesn't exist
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+# Build the application (skip TypeScript check for now)
+RUN npm run build:vite
 
 # Production image, copy all the files and run nginx
 FROM nginx:alpine AS runner

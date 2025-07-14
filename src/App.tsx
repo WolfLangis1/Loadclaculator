@@ -1,11 +1,14 @@
 import { LoadCalculatorProvider } from './context/LoadCalculatorContext';
-import { LoadCalculatorMain } from './components/LoadCalculator/LoadCalculatorMain';
+import { TabbedInterface } from './components/TabbedInterface/TabbedInterface';
+import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 
 function App() {
   return (
-    <LoadCalculatorProvider>
-      <LoadCalculatorMain />
-    </LoadCalculatorProvider>
+    <ErrorBoundary>
+      <LoadCalculatorProvider>
+        <TabbedInterface />
+      </LoadCalculatorProvider>
+    </ErrorBoundary>
   );
 }
 

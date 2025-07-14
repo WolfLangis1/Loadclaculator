@@ -65,7 +65,7 @@ describe('NEC Load Calculations', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('should apply continuous load factor to EVSE', () => {
+  it('should calculate EVSE demand at 100% nameplate', () => {
     const loadState = createTestLoadState();
     // Add an EVSE load
     loadState.evseLoads[0].quantity = 1;
@@ -82,8 +82,8 @@ describe('NEC Load Calculations', () => {
       0
     );
 
-    // EVSE demand should be 125% of nameplate (continuous load)
-    expect(result.evseDemand).toBe(11520 * 1.25);
+    // EVSE demand should be 100% of nameplate per NEC 625.42(B)
+    expect(result.evseDemand).toBe(11520);
   });
 
   it('should check 120% rule for solar interconnection', () => {

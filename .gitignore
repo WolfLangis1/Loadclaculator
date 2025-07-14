@@ -8,6 +8,11 @@ yarn-error.log*
 dist/
 build/
 
+# Vite cache and temp files
+.vite/
+node_modules/.vite/
+.tmp/
+
 # Environment variables
 .env
 .env.local

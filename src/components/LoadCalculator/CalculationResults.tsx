@@ -4,22 +4,35 @@ import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 import { exportToPDF } from '../../services/pdfExportService';
 import { TooltipWrapper } from '../UI/TooltipWrapper';
 
-export const CalculationResults: React.FC = () => {
+export const CalculationResults: React.FC = React.memo(() => {
   const { state, calculations } = useLoadCalculator();
 
-  const handleExportReport = () => {
-    exportToPDF(
-      calculations,
-      state.projectInfo,
-      state.loads,
-      state.calculationMethod,
-      state.mainBreaker,
-      state.panelDetails,
-      state.codeYear,
-      state.squareFootage,
-      state.useEMS,
-      state.emsMaxLoad
-    );
+  const handleExportReport = async () => {
+    try {
+      // Generate project ID for attachments
+      const projectId = `project_${state.projectInfo.customerName}_${state.projectInfo.propertyAddress}`.replace(/[^a-zA-Z0-9_]/g, '_') || 'default_project';
+      
+      await exportToPDF(
+        calculations,
+        state.projectInfo,
+        state.loads,
+        state.calculationMethod,
+        state.mainBreaker,
+        state.panelDetails,
+        state.codeYear,
+        state.squareFootage,
+        state.useEMS,
+        state.emsMaxLoad,
+        state.loadManagementType,
+        state.simpleSwitchMode,
+        state.simpleSwitchLoadA,
+        state.simpleSwitchLoadB,
+        projectId
+      );
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    }
   };
 
 
@@ -103,6 +116,12 @@ export const CalculationResults: React.FC = () => {
             <span className="text-blue-800 font-medium">EV Charging</span>
             <span className="font-mono font-bold text-blue-900">{(calculations.evseDemand || 0).toLocaleString()} VA</span>
           </div>
+          {(calculations.batteryChargingDemand || 0) > 0 && (
+            <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+              <span className="text-yellow-800 font-medium">Battery Charging</span>
+              <span className="font-mono font-bold text-yellow-900">{(calculations.batteryChargingDemand || 0).toLocaleString()} VA</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -173,4 +192,4 @@ export const CalculationResults: React.FC = () => {
       </div>
     </div>
   );
-};
+});

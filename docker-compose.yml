@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Development service with hot reload
   load-calculator-dev:
@@ -7,13 +5,37 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
-      - .:/app
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./index.html:/app/index.html:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./tsconfig.node.json:/app/tsconfig.node.json:ro
+      - ./tailwind.config.js:/app/tailwind.config.js:ro
+      - ./postcss.config.js:/app/postcss.config.js:ro
       - /app/node_modules
+      - /app/dist
+      - /app/.vite
+      - ./.env:/app/.env:ro
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=2000
+      - VITE_HOST=0.0.0.0
+      - VITE_PORT=3000
+      - WATCHPACK_POLLING=true
+      - FAST_REFRESH=false
+    env_file:
+      - .env  # Load environment variables from .env file
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     profiles:
       - dev
 
@@ -22,13 +44,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Pass build-time environment variables
+        - VITE_USE_REAL_AERIAL_DATA=${VITE_USE_REAL_AERIAL_DATA:-false}
+        - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY:-}
+        - VITE_MAPBOX_API_KEY=${VITE_MAPBOX_API_KEY:-}
+        - VITE_AERIAL_PROVIDER=${VITE_AERIAL_PROVIDER:-google}
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - NODE_ENV=production
+    env_file:
+      - .env  # Load environment variables from .env file
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -40,8 +70,8 @@ services:
   nginx-proxy:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./nginx/proxy.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro

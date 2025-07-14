@@ -7,13 +7,14 @@ import { CalculationResults } from './CalculationResults';
 import { CalculationTransparency } from './CalculationTransparency';
 import { ValidationMessages } from './ValidationMessages';
 import { LoadCalculationGuide } from './LoadCalculationGuide';
+import { DefinitionsGlossary } from './DefinitionsGlossary';
 
 export const LoadCalculatorMain: React.FC = () => {
   const { state, updateSettings } = useLoadCalculator();
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-[1600px] mx-auto p-3">
+      <div className="max-w-[1800px] mx-auto p-2">
         {/* Compact Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg p-4 mb-4">
           <div className="flex items-center justify-between">
@@ -21,7 +22,7 @@ export const LoadCalculatorMain: React.FC = () => {
               <Calculator className="h-7 w-7 text-white" />
               <div>
                 <h1 className="text-xl font-bold text-white">
-                  Professional Load Calculator
+                  Load Calculator
                 </h1>
                 <p className="text-blue-100 text-sm">NEC {state.codeYear} Compliant</p>
               </div>
@@ -60,12 +61,6 @@ export const LoadCalculatorMain: React.FC = () => {
                 </select>
               </div>
               
-              <button
-                onClick={() => updateSettings({ showAdvanced: !state.showAdvanced })}
-                className="px-3 py-1.5 text-sm font-medium text-purple-600 bg-white rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-white/50"
-              >
-                {state.showAdvanced ? 'Hide' : 'Show'} Advanced
-              </button>
             </div>
           </div>
           
@@ -76,8 +71,8 @@ export const LoadCalculatorMain: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content Grid - More Efficient Layout */}
-        <div className="grid grid-cols-12 gap-4">
+        {/* Main Content Grid - Optimized Horizontal Layout */}
+        <div className="grid grid-cols-12 gap-3">
           {/* Project Information - Horizontal Layout */}
           <div className="col-span-12">
             <ProjectInformation />
@@ -88,26 +83,26 @@ export const LoadCalculatorMain: React.FC = () => {
             <ValidationMessages />
           </div>
 
-          {/* Load Input Section - Wider */}
-          <div className="col-span-12 lg:col-span-8">
+          {/* Two Column Layout - Load Inputs + Results */}
+          <div className="col-span-12 lg:col-span-7">
             <LoadInputTabs />
           </div>
 
           {/* Calculation Results - Sticky Sidebar */}
-          <div className="col-span-12 lg:col-span-4">
-            <div className="lg:sticky lg:top-4">
+          <div className="col-span-12 lg:col-span-5">
+            <div className="lg:sticky lg:top-4 space-y-3">
               <CalculationResults />
+              <CalculationTransparency />
             </div>
           </div>
 
-          {/* Calculation Transparency - Full Width */}
-          <div className="col-span-12">
-            <CalculationTransparency />
-          </div>
-
-          {/* Load Calculation Guide - Full Width */}
-          <div className="col-span-12">
+          {/* Two Column Bottom Section */}
+          <div className="col-span-12 lg:col-span-6">
             <LoadCalculationGuide />
+          </div>
+          
+          <div className="col-span-12 lg:col-span-6">
+            <DefinitionsGlossary />
           </div>
         </div>
       </div>

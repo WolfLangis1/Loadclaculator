@@ -5,7 +5,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install dependencies for better compatibility
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat curl
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -13,8 +13,11 @@ COPY package.json package-lock.json* ./
 # Install all dependencies (including dev dependencies)
 RUN npm ci
 
-# Copy source code
+# Copy source code (excluding .env which will be mounted)
 COPY . .
+
+# Create .env from example if it doesn't exist
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
 # Expose port
 EXPOSE 3000
@@ -24,6 +27,14 @@ ENV NODE_ENV=development
 
 # Enable polling for file watching in containers
 ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=1000
+
+# Vite specific environment variables for Docker
+ENV VITE_HOST=0.0.0.0
+ENV VITE_PORT=3000
+
+# Disable Vite's automatic dependency pre-bundling in dev for stability
+ENV VITE_OPTIMIZE_DEPS_DISABLED=true
 
 # Health check for development
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
