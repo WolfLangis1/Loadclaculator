@@ -35,7 +35,7 @@ export const useLoadCalculatorCompat = () => {
         updateLoad('evse', action.payload.id, action.payload.field, action.payload.value);
         break;
       case 'UPDATE_SOLAR_BATTERY_LOAD':
-        updateLoad('solarBattery', action.payload.id, action.payload.field, action.payload.value);
+        updateLoad('solar', action.payload.id, action.payload.field, action.payload.value);
         break;
       case 'ADD_LOAD':
         addLoad(action.payload.category, action.payload);
