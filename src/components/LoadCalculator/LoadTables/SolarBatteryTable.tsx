@@ -1,11 +1,15 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
-import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
+import { useLoadData } from '../../../context/LoadDataContext';
+import { useCalculations } from '../../../context/CalculationContext';
+import { useProjectSettings } from '../../../context/ProjectSettingsContext';
 import { TooltipWrapper } from '../../UI/TooltipWrapper';
 
 export const SolarBatteryTable: React.FC = () => {
-  const { state, dispatch, calculations } = useLoadCalculator();
-  const { solarBatteryLoads } = state.loads;
+  const { loads, updateLoad: updateLoadData, addLoad } = useLoadData();
+  const { calculations } = useCalculations();
+  const { settings } = useProjectSettings();
+  const { solarBatteryLoads } = loads;
 
   const updateLoad = (id: number, field: string, value: any) => {
     let processedValue = value;
@@ -31,38 +35,32 @@ export const SolarBatteryTable: React.FC = () => {
     }
     
     Object.entries(updatedLoad).forEach(([updateField, updateValue]) => {
-      dispatch({
-        type: 'UPDATE_SOLAR_BATTERY_LOAD',
-        payload: { id, field: updateField as any, value: updateValue }
-      });
+      updateLoadData('solar', id, updateField, updateValue);
     });
   };
 
-  const addLoad = () => {
+  const addSolarBatteryLoad = () => {
     const newId = Math.max(...solarBatteryLoads.map(l => l.id), 0) + 1;
-    dispatch({
-      type: 'ADD_LOAD',
-      payload: {
-        category: 'solar',
-        id: newId,
-        name: 'Custom Solar/Battery System',
-        kw: 0,
-        inverterAmps: 0,
-        volts: 240,
-        breaker: 0,
-        type: 'solar' as const,
-        location: 'backfeed' as const,
-        amps: 0,
-        va: 0,
-        total: 0,
-        quantity: 0,
-        circuit: ''
-      }
-    });
+    const newLoad = {
+      id: newId,
+      name: 'Custom Solar/Battery System',
+      kw: 0,
+      inverterAmps: 0,
+      volts: 240,
+      breaker: 0,
+      type: 'solar' as const,
+      location: 'backfeed' as const,
+      amps: 0,
+      va: 0,
+      total: 0,
+      quantity: 0,
+      circuit: ''
+    };
+    addLoad('solar', newLoad);
   };
 
-  const busbarRating = state.panelDetails.busRating || state.mainBreaker;
-  const maxAllowableBackfeed = (busbarRating * 1.2) - state.mainBreaker;
+  const busbarRating = settings.panelDetails.busRating || settings.mainBreaker;
+  const maxAllowableBackfeed = (busbarRating * 1.2) - settings.mainBreaker;
 
   return (
     <div className="space-y-6">
@@ -74,7 +72,7 @@ export const SolarBatteryTable: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <span className={calculations.interconnectionCompliant ? 'text-green-700' : 'text-red-700'}>
-              Main Breaker: {state.mainBreaker}A
+              Main Breaker: {settings.mainBreaker}A
             </span>
           </div>
           <div>
@@ -100,7 +98,7 @@ export const SolarBatteryTable: React.FC = () => {
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Solar/Battery Systems</h3>
         <button
-          onClick={addLoad}
+          onClick={addSolarBatteryLoad}
           className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
         >
           <Plus className="h-4 w-4 mr-1" />
