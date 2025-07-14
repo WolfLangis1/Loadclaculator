@@ -1,16 +1,11 @@
-import { UnifiedAppProvider } from './context/UnifiedAppContext';
-import { TabbedInterface } from './components/TabbedInterface/TabbedInterface';
-import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
-import { DeviceTogglePanel } from './components/UI/DeviceTogglePanel';
-
+// Minimal app for debugging deployment issues
 function App() {
   return (
-    <ErrorBoundary>
-      <UnifiedAppProvider>
-        <TabbedInterface />
-        <DeviceTogglePanel />
-      </UnifiedAppProvider>
-    </ErrorBoundary>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>Load Calculator</h1>
+      <p>Application is loading successfully!</p>
+      <p>If you see this message, the basic app structure is working.</p>
+    </div>
   );
 }
 
