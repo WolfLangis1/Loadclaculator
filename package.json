@@ -37,6 +37,10 @@
     "react-dom": "^18.2.0",
     "svg.js": "^2.7.1"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.45.0",
+    "@rollup/rollup-win32-x64-msvc": "^4.45.0"
+  },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
