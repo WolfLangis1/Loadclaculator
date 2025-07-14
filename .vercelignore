@@ -24,7 +24,17 @@ dev_output.log
 .DS_Store
 
 # Extended features that cause TypeScript errors
-src/components/AerialView/
+src/components/AerialView/EnhancedAerialViewMain.tsx
+src/components/AerialView/ChangeDetectionPanel.tsx
+src/components/AerialView/MeasurementToolsPanel.tsx
+src/components/AerialView/WeatherOverlayPanel.tsx
+src/components/AerialView/AerialViewMain.tsx
+src/components/AerialView/ThreeDModelPanel.tsx
+src/components/AerialView/AnalysisControls.tsx
+src/components/AerialView/ProgressTracker.tsx
+src/components/AerialView/ResultsDisplay.tsx
+src/components/AerialView/RefactoredAerialViewMain.tsx
+# Problematic SLD components (keep SimpleSLDMain.tsx available)
 src/components/SLD/UnifiedSLDMain.tsx
 src/components/SLD/EnhancedSLDMain.tsx
 src/components/SLD/EnhancedSLDCanvas.tsx
@@ -35,6 +45,27 @@ src/components/SLD/ProfessionalSLDMain.tsx
 src/components/SLD/ProfessionalSLDCanvas.tsx
 src/components/SLD/RealisticComponentRenderer.tsx
 src/components/SLD/RealisticElectricalSymbols.tsx
+src/components/SLD/ComponentLibrary.tsx
+src/components/SLD/EnhancedSLDCanvas.tsx
+src/components/SLD/EnhancedSingleLineDiagram.tsx
+src/components/SLD/IEEESymbolLibrary.tsx
+src/components/SLD/ProfessionalSymbolRenderer.tsx
+src/components/SLD/LayerPanel.tsx
+src/components/SLD/MeasurementTools.tsx
+src/components/SLD/MeasurementRenderer.tsx
+src/components/SLD/ComponentSearch.tsx
+src/components/SLD/CategoryFilter.tsx
+src/components/SLD/ComponentCard.tsx
+src/components/SLD/ComponentGrid.tsx
+src/components/SLD/RefactoredComponentLibrary.tsx
+src/components/SLD/ProfessionalGrid.tsx
+src/components/SLD/LayerManager.tsx
+src/components/SLD/ExpandedIEEESymbols.tsx
+src/components/SLD/PerformanceMonitor.tsx
+src/components/SLD/TitleBlock.tsx
+src/components/SLD/SLDToolbar.tsx
+src/components/SLD/ExpandedComponentLibrary.tsx
+src/components/SLD/WireSizingPanel.tsx
 src/services/intelligentSLDService.ts
 src/services/intelligentSymbolService.ts
 src/services/intelligentWireSizingService.ts
