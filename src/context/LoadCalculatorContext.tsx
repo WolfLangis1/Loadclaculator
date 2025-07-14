@@ -13,6 +13,12 @@ import type {
 import { LOAD_TEMPLATES } from '../constants';
 import { calculateLoadDemand } from '../services';
 import { AttachmentService } from '../services/attachmentService';
+import TemplateLearningService, { 
+  UserBehaviorPattern, 
+  PersonalizedTemplate, 
+  PredictiveRecommendation,
+  LearningAnalytics 
+} from '../services/templateLearningService';
 
 interface LoadCalculatorState {
   // Load data
@@ -53,6 +59,14 @@ interface LoadCalculatorState {
   // Project attachments
   attachments: ProjectAttachment[];
   attachmentStats: AttachmentStats;
+  
+  // Template Learning
+  userPatterns: UserBehaviorPattern[];
+  personalizedTemplates: PersonalizedTemplate[];
+  predictiveRecommendations: PredictiveRecommendation[];
+  learningAnalytics: LearningAnalytics | null;
+  enableTemplateLearning: boolean;
+  userId: string;
 }
 
 export interface LoadCalculatorContextType {
@@ -69,6 +83,13 @@ export interface LoadCalculatorContextType {
   deleteAttachment: (attachmentId: string) => void;
   getExportAttachments: () => ProjectAttachment[];
   refreshAttachments: () => void;
+  
+  // Template Learning methods
+  trackUserAction: (action: string, context: any) => void;
+  applyPersonalizedTemplate: (templateId: string) => Promise<void>;
+  recordTemplateFeedback: (templateId: string, feedback: any) => void;
+  getPersonalizedRecommendations: () => Promise<PredictiveRecommendation[]>;
+  updateLearningPreferences: (preferences: any) => void;
 }
 
 const initialProjectInfo: ProjectInformation = {
@@ -108,10 +129,10 @@ const initialActualDemandData: ActualDemandData = {
 
 const initialState: LoadCalculatorState = {
   loads: {
-    generalLoads: [...LOAD_TEMPLATES.GENERAL],
-    hvacLoads: [...LOAD_TEMPLATES.HVAC],
-    evseLoads: [...LOAD_TEMPLATES.EVSE],
-    solarBatteryLoads: [...LOAD_TEMPLATES.SOLAR_BATTERY]
+    generalLoads: [...LOAD_TEMPLATES.general],
+    hvacLoads: [...LOAD_TEMPLATES.hvac],
+    evseLoads: [...LOAD_TEMPLATES.evse],
+    solarBatteryLoads: [...LOAD_TEMPLATES.solar]
   },
   projectInfo: initialProjectInfo,
   squareFootage: 1500,
@@ -138,7 +159,15 @@ const initialState: LoadCalculatorState = {
     bySource: {} as Record<any, number>,
     markedForExport: 0,
     totalFileSize: 0
-  }
+  },
+  
+  // Template Learning
+  userPatterns: [],
+  personalizedTemplates: [],
+  predictiveRecommendations: [],
+  learningAnalytics: null,
+  enableTemplateLearning: true,
+  userId: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 };
 
 const loadReducer = (state: LoadState, action: LoadAction): LoadState => {
@@ -181,6 +210,38 @@ const loadReducer = (state: LoadState, action: LoadAction): LoadState => {
           load.id === id ? { ...load, [field]: value } : load
         )
       };
+    }
+    
+    case 'ADD_LOAD': {
+      const { category, ...loadData } = action.payload;
+      switch (category) {
+        case 'general':
+          return { ...state, generalLoads: [...state.generalLoads, loadData] };
+        case 'hvac':
+          return { ...state, hvacLoads: [...state.hvacLoads, loadData] };
+        case 'evse':
+          return { ...state, evseLoads: [...state.evseLoads, loadData] };
+        case 'solar':
+          return { ...state, solarBatteryLoads: [...state.solarBatteryLoads, loadData] };
+        default:
+          return state;
+      }
+    }
+    
+    case 'REMOVE_LOAD': {
+      const { category, id } = action.payload;
+      switch (category) {
+        case 'general':
+          return { ...state, generalLoads: state.generalLoads.filter(load => load.id !== id) };
+        case 'hvac':
+          return { ...state, hvacLoads: state.hvacLoads.filter(load => load.id !== id) };
+        case 'evse':
+          return { ...state, evseLoads: state.evseLoads.filter(load => load.id !== id) };
+        case 'solar':
+          return { ...state, solarBatteryLoads: state.solarBatteryLoads.filter(load => load.id !== id) };
+        default:
+          return state;
+      }
     }
     
     case 'RESET_LOADS': {
@@ -302,6 +363,158 @@ export const LoadCalculatorProvider: React.FC<{ children: ReactNode }> = ({ chil
   React.useEffect(() => {
     refreshAttachments();
   }, [refreshAttachments]);
+
+  // Template Learning methods
+  const [userActions, setUserActions] = React.useState<Array<{
+    timestamp: Date;
+    action: string;
+    context: any;
+  }>>([]);
+
+  const trackUserAction = React.useCallback((action: string, context: any) => {
+    if (!state.enableTemplateLearning) return;
+    
+    const actionData = {
+      timestamp: new Date(),
+      action,
+      context
+    };
+    
+    setUserActions(prev => [...prev, actionData]);
+    console.log('📊 Tracking user action:', action);
+  }, [state.enableTemplateLearning]);
+
+  const applyPersonalizedTemplate = React.useCallback(async (templateId: string) => {
+    try {
+      const result = await TemplateLearningService.applyPersonalizedTemplate(
+        state.userId,
+        templateId,
+        state.loads,
+        true // user confirmation
+      );
+
+      if (result.success) {
+        // Update loads with template data
+        if (result.updatedState.loads) {
+          Object.entries(result.updatedState.loads).forEach(([category, loads]) => {
+            loads.forEach((load: any) => {
+              dispatch({
+                type: `ADD_${category.toUpperCase().slice(0, -5)}_LOAD` as any,
+                payload: load
+              });
+            });
+          });
+        }
+
+        // Update recommendations
+        const recommendations = await TemplateLearningService.getPersonalizedRecommendations(
+          state.userId,
+          {
+            loadState: state.loads,
+            projectType: state.projectInfo.projectName || 'general',
+            currentStep: state.activeTab,
+            timeContext: new Date()
+          }
+        );
+
+        setAppState(prev => ({
+          ...prev,
+          predictiveRecommendations: recommendations
+        }));
+
+        console.log('✅ Template applied successfully:', result.appliedChanges);
+      }
+    } catch (error) {
+      console.error('❌ Failed to apply template:', error);
+    }
+  }, [state.userId, state.loads, state.projectInfo, state.activeTab, dispatch]);
+
+  const recordTemplateFeedback = React.useCallback((templateId: string, feedback: any) => {
+    TemplateLearningService.recordUserFeedback(state.userId, templateId, feedback);
+    trackUserAction('template_feedback', { templateId, feedback });
+  }, [state.userId, trackUserAction]);
+
+  const getPersonalizedRecommendations = React.useCallback(async () => {
+    try {
+      const recommendations = await TemplateLearningService.getPersonalizedRecommendations(
+        state.userId,
+        {
+          loadState: state.loads,
+          projectType: state.projectInfo.projectName || 'general',
+          currentStep: state.activeTab,
+          timeContext: new Date()
+        }
+      );
+
+      setAppState(prev => ({
+        ...prev,
+        predictiveRecommendations: recommendations
+      }));
+
+      return recommendations;
+    } catch (error) {
+      console.error('❌ Failed to get recommendations:', error);
+      return [];
+    }
+  }, [state.userId, state.loads, state.projectInfo, state.activeTab]);
+
+  const updateLearningPreferences = React.useCallback((preferences: any) => {
+    setAppState(prev => ({
+      ...prev,
+      enableTemplateLearning: preferences.enableTemplateLearning ?? prev.enableTemplateLearning
+    }));
+    trackUserAction('learning_preferences_updated', preferences);
+  }, [trackUserAction]);
+
+  // Track session completion and analyze patterns
+  React.useEffect(() => {
+    if (userActions.length > 0 && state.enableTemplateLearning) {
+      const sessionData = {
+        projectType: state.projectInfo.projectName || 'general',
+        actions: userActions.map(action => ({
+          timestamp: action.timestamp,
+          action: action.action,
+          context: action.context
+        })),
+        completionStatus: 'in_progress' as const,
+        finalState: state.loads,
+        necCalculations: calculations as any,
+        duration: userActions.length > 0 
+          ? (new Date().getTime() - userActions[0].timestamp.getTime()) / 60000 
+          : 0
+      };
+
+      // Debounced pattern analysis
+      const timeoutId = setTimeout(async () => {
+        try {
+          const result = await TemplateLearningService.trackUserSession(
+            state.userId,
+            sessionData
+          );
+
+          setAppState(prev => ({
+            ...prev,
+            userPatterns: result.patternsDetected,
+            personalizedTemplates: result.newTemplates,
+            predictiveRecommendations: result.recommendations
+          }));
+        } catch (error) {
+          console.error('❌ Pattern analysis failed:', error);
+        }
+      }, 5000); // 5 second debounce
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [userActions, state.enableTemplateLearning, state.userId, state.projectInfo, state.loads, calculations]);
+
+  // Initialize template learning service
+  React.useEffect(() => {
+    if (state.enableTemplateLearning) {
+      TemplateLearningService.initialize().catch(error => {
+        console.error('❌ Template learning initialization failed:', error);
+      });
+    }
+  }, [state.enableTemplateLearning]);
   
   const contextValue: LoadCalculatorContextType = {
     state,
@@ -314,7 +527,12 @@ export const LoadCalculatorProvider: React.FC<{ children: ReactNode }> = ({ chil
     unmarkAttachmentForExport,
     deleteAttachment,
     getExportAttachments,
-    refreshAttachments
+    refreshAttachments,
+    trackUserAction,
+    applyPersonalizedTemplate,
+    recordTemplateFeedback,
+    getPersonalizedRecommendations,
+    updateLearningPreferences
   };
   
   return (

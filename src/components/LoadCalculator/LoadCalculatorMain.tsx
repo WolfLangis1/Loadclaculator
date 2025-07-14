@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calculator } from 'lucide-react';
-import { useLoadCalculator } from '../../hooks/useLoadCalculator';
+import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { ProjectInformation } from './ProjectInformation';
 import { LoadInputTabs } from './LoadInputTabs';
 import { CalculationResults } from './CalculationResults';
@@ -10,7 +10,7 @@ import { LoadCalculationGuide } from './LoadCalculationGuide';
 import { DefinitionsGlossary } from './DefinitionsGlossary';
 
 export const LoadCalculatorMain: React.FC = () => {
-  const { state, updateSettings } = useLoadCalculator();
+  const { settings, updateCalculationSettings } = useProjectSettings();
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -24,7 +24,7 @@ export const LoadCalculatorMain: React.FC = () => {
                 <h1 className="text-xl font-bold text-white">
                   Load Calculator
                 </h1>
-                <p className="text-blue-100 text-sm">NEC {state.codeYear} Compliant</p>
+                <p className="text-blue-100 text-sm">NEC {settings.codeYear} Compliant</p>
               </div>
             </div>
             
@@ -35,8 +35,8 @@ export const LoadCalculatorMain: React.FC = () => {
                 </label>
                 <select
                   id="code-year"
-                  value={state.codeYear}
-                  onChange={(e) => updateSettings({ codeYear: e.target.value })}
+                  value={settings.codeYear}
+                  onChange={(e) => updateCalculationSettings({ codeYear: e.target.value })}
                   className="rounded-lg border-0 bg-white/20 text-white placeholder-white/70 text-sm focus:ring-2 focus:ring-white/50"
                 >
                   <option value="2023" className="text-gray-900">NEC 2023</option>
@@ -51,8 +51,8 @@ export const LoadCalculatorMain: React.FC = () => {
                 </label>
                 <select
                   id="calculation-method"
-                  value={state.calculationMethod}
-                  onChange={(e) => updateSettings({ calculationMethod: e.target.value as any })}
+                  value={settings.calculationMethod}
+                  onChange={(e) => updateCalculationSettings({ calculationMethod: e.target.value as any })}
                   className="rounded-lg border-0 bg-white/20 text-white placeholder-white/70 text-sm focus:ring-2 focus:ring-white/50"
                 >
                   <option value="optional" className="text-gray-900">Optional (220.83)</option>

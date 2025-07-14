@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { logErrorBoundary } from '../../services/loggingService';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -24,8 +25,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error);
-    console.error('Error details:', errorInfo);
+    // Use centralized logging service
+    logErrorBoundary(error, errorInfo);
     
     this.setState({
       error,
@@ -37,9 +38,58 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       this.props.onError(error, errorInfo);
     }
 
-    // In production, you might want to send this to an error reporting service
+    // Enhanced error reporting with context
+    this.reportError(error, errorInfo);
+  }
+
+  private reportError = (error: Error, errorInfo: ErrorInfo) => {
+    const errorContext = {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      userId: 'anonymous', // Could be enhanced with actual user ID
+      errorMessage: error.message,
+      errorStack: error.stack,
+      componentStack: errorInfo.componentStack,
+      errorBoundary: this.constructor.name
+    };
+
     if (process.env.NODE_ENV === 'production') {
-      // Example: reportError(error, errorInfo);
+      // Example: Send to error reporting service
+      console.error('Production error report:', errorContext);
+    } else {
+      console.warn('Development error context:', errorContext);
+    }
+  }
+
+  private getErrorCategory = (error: Error): 'calculation' | 'network' | 'validation' | 'unknown' => {
+    const message = error.message.toLowerCase();
+    
+    if (message.includes('calculation') || message.includes('nec') || message.includes('load')) {
+      return 'calculation';
+    }
+    if (message.includes('network') || message.includes('fetch') || message.includes('api')) {
+      return 'network';
+    }
+    if (message.includes('validation') || message.includes('invalid')) {
+      return 'validation';
+    }
+    
+    return 'unknown';
+  }
+
+  private getUserFriendlyMessage = (error: Error): string => {
+    const category = this.getErrorCategory(error);
+    
+    switch (category) {
+      case 'calculation':
+        return 'There was an error with the electrical calculations. Please check your input values and try again.';
+      case 'network':
+        return 'Unable to connect to the server. Please check your internet connection and try again.';
+      case 'validation':
+        return 'Some of your input values appear to be invalid. Please review and correct them.';
+      default:
+        return 'An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.';
     }
   }
 
@@ -69,7 +119,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <div>
                 <h1 className="text-lg font-bold text-gray-900">Something went wrong</h1>
                 <p className="text-sm text-gray-600">
-                  The application encountered an unexpected error
+                  {this.state.error ? this.getUserFriendlyMessage(this.state.error) : 'The application encountered an unexpected error'}
                 </p>
               </div>
             </div>

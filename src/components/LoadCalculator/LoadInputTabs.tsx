@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
-import { Home, Zap, Car, Battery, ChevronDown, ChevronUp } from 'lucide-react';
-import { useLoadCalculator } from '../../hooks/useLoadCalculator';
-import { GeneralLoadsTable } from './LoadTables/GeneralLoadsTable';
+import { Home, Zap, Car, Battery, Cable, ChevronDown, ChevronUp } from 'lucide-react';
+import { useProjectSettings } from '../../context/ProjectSettingsContext';
+import { OptimizedGeneralLoadsTable } from './LoadTables/OptimizedGeneralLoadsTable';
 import { HVACLoadsTable } from './LoadTables/HVACLoadsTable';
 import { EVSELoadsTable } from './LoadTables/EVSELoadsTable';
 import { SolarBatteryTable } from './LoadTables/SolarBatteryTable';
+import { WireSizingChart } from './WireSizingChart';
 
 const SECTIONS = [
-  { id: 'general', label: 'General Loads', icon: Home, component: GeneralLoadsTable, color: 'emerald' },
+  { id: 'general', label: 'General Loads', icon: Home, component: OptimizedGeneralLoadsTable, color: 'emerald' },
   { id: 'hvac', label: 'HVAC', icon: Zap, component: HVACLoadsTable, color: 'orange' },
   { id: 'evse', label: 'EV Charging', icon: Car, component: EVSELoadsTable, color: 'blue' },
   { id: 'solar', label: 'Solar/Battery', icon: Battery, component: SolarBatteryTable, color: 'yellow' },
+  { id: 'wiring', label: 'Wire Sizing Chart', icon: Cable, component: WireSizingChart, color: 'red' },
 ] as const;
 
 export const LoadInputTabs: React.FC = () => {
-  const { state } = useLoadCalculator();
+  const { settings } = useProjectSettings();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     general: true,
     hvac: true,
     evse: true,
     solar: true,
+    wiring: false,
   });
 
   const toggleSection = (sectionId: string) => {
@@ -37,6 +40,7 @@ export const LoadInputTabs: React.FC = () => {
       hvac: newState,
       evse: newState,
       solar: newState,
+      wiring: newState,
     });
   };
 
@@ -69,6 +73,13 @@ export const LoadInputTabs: React.FC = () => {
         text: 'text-white',
         chevron: 'text-yellow-100',
         content: 'bg-yellow-50/50'
+      },
+      red: {
+        header: isExpanded ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-red-400 to-red-500',
+        icon: 'text-white',
+        text: 'text-white',
+        chevron: 'text-red-100',
+        content: 'bg-red-50/50'
       }
     };
     return colors[color as keyof typeof colors] || colors.emerald;
@@ -118,12 +129,12 @@ export const LoadInputTabs: React.FC = () => {
               {/* Section Content */}
               {isExpanded && (
                 <div className={`${colorClasses.content} border-t border-white/20`}>
-                  <div className="p-6 bg-white">
+                  <div className="p-6 bg-white" style={{ minHeight: 'auto', height: 'auto', maxHeight: 'none' }}>
                     {section.id === 'general' && (
                       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h4 className="text-sm font-semibold text-blue-900 mb-2">✓ Automatically Included per NEC 220.52:</h4>
                         <ul className="text-xs text-blue-800 space-y-1">
-                          <li>• General lighting & receptacles: 3 VA/sq ft (currently {state.squareFootage * 3} VA)</li>
+                          <li>• General lighting & receptacles: 3 VA/sq ft (currently {settings.squareFootage * 3} VA)</li>
                           <li>• Small appliance circuits: 3000 VA (2 kitchen circuits)</li>
                           <li>• Laundry circuit: 1500 VA</li>
                           <li>• Bathroom circuit: 1500 VA</li>

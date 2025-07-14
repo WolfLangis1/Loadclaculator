@@ -12,17 +12,54 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // Warn for chunks over 1MB
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunk for React and core libraries
-          vendor: ['react', 'react-dom'],
-          // Calculations chunk for NEC calculations
-          calculations: ['./src/services/necCalculations', './src/services/wireCalculations'],
-          // UI components chunk
-          ui: ['lucide-react'],
-          // PDF and export functionality
-          export: ['jspdf'],
-          // Google APIs chunk
-          maps: ['./src/services/aerialViewService', './src/services/googleSolarService']
+        manualChunks: (id) => {
+          // Vendor libraries
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons';
+          }
+          if (id.includes('node_modules/jspdf')) {
+            return 'pdf';
+          }
+          if (id.includes('node_modules/@testing-library') || id.includes('node_modules/vitest')) {
+            return 'testing';
+          }
+          
+          // Application chunks
+          if (id.includes('src/services/necCalculations') || id.includes('src/services/wireCalculations')) {
+            return 'calculations';
+          }
+          if (id.includes('src/services/aerialView') || id.includes('src/services/googleSolar')) {
+            return 'maps';
+          }
+          if (id.includes('src/components/LoadCalculator/LoadTables')) {
+            return 'load-tables';
+          }
+          if (id.includes('src/components/UI')) {
+            return 'ui-components';
+          }
+          if (id.includes('src/components/AerialView') || id.includes('src/components/SLD')) {
+            return 'advanced-features';
+          }
+          
+          // Default chunk
+          return 'main';
+        },
+        chunkFileNames: (chunkInfo) => {
+          return `assets/[name]-[hash].js`;
+        },
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name?.split('.') || [];
+          const ext = info[info.length - 1];
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+            return `assets/images/[name]-[hash][extname]`;
+          }
+          if (/css/i.test(ext)) {
+            return `assets/styles/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
         }
       }
     }

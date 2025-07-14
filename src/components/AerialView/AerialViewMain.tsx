@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
-import { MapPin, Camera, Sun, Navigation, Plus, Check, X, FileImage, Download } from 'lucide-react';
+import { MapPin, Camera, Sun, Navigation, Plus, Check, X, FileImage, Download, Search, Ruler } from 'lucide-react';
 import { AerialViewService } from '../../services/aerialViewService';
 import { GoogleSolarService, type SolarInsights } from '../../services/googleSolarService';
 import { AttachmentService } from '../../services/attachmentService';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
+import { ChangeDetectionPanel } from './ChangeDetectionPanel';
+import { MeasurementToolsPanel } from './MeasurementToolsPanel';
+import { ThreeDModelPanel } from './ThreeDModelPanel';
+import { WeatherOverlayPanel } from './WeatherOverlayPanel';
+import type { DetectedChange } from '../../services/changeDetectionService';
+import type { LinearMeasurement, AreaMeasurement, MeasurementPoint } from '../../services/advancedMeasurementService';
+import type { ThreeDModel } from '../../services/threeDModelService';
+import type { WeatherDataPoint, SolarPerformanceModel } from '../../services/weatherDataService';
 // import type { ProjectAttachment } from '../../types';
 
-type ViewMode = 'satellite' | 'streetview' | 'solar';
+type ViewMode = 'satellite' | 'streetview' | 'solar' | 'changes' | 'measurements' | '3d' | 'weather';
 
 export const AerialViewMain: React.FC = () => {
   const { 
@@ -35,6 +43,16 @@ export const AerialViewMain: React.FC = () => {
   const [streetViewImages, setStreetViewImages] = useState<{heading: number; imageUrl: string; label: string}[]>([]);
   const [solarData, setSolarData] = useState<SolarInsights | null>(null);
   const [coordinates, setCoordinates] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedChange, setSelectedChange] = useState<DetectedChange | null>(null);
+  const [measurements, setMeasurements] = useState<{
+    linear: LinearMeasurement[];
+    area: AreaMeasurement[];
+  }>({ linear: [], area: [] });
+  const [selectedMeasurement, setSelectedMeasurement] = useState<LinearMeasurement | AreaMeasurement | null>(null);
+  const [threeDModels, setThreeDModels] = useState<ThreeDModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState<ThreeDModel | null>(null);
+  const [currentWeather, setCurrentWeather] = useState<WeatherDataPoint | null>(null);
+  const [solarPerformance, setSolarPerformance] = useState<SolarPerformanceModel | null>(null);
 
   const handleCapture = async () => {
     if (!address) {
@@ -88,6 +106,18 @@ export const AerialViewMain: React.FC = () => {
         ]);
         setSatelliteUrl(imageUrl);
         setSolarData(solarInsights);
+        
+      } else if (viewMode === 'changes') {
+        // Initialize change detection - the panel will handle the actual analysis
+        console.log('🔍 Change detection mode - coordinates set for analysis');
+        // The ChangeDetectionPanel will automatically start analysis when coordinates are available
+        setSelectedChange(null); // Clear any previous selection
+        
+      } else if (viewMode === 'measurements') {
+        // Initialize measurement tools - the panel will handle the actual measurements
+        console.log('📐 Measurement mode - coordinates set for measurement tools');
+        // The MeasurementToolsPanel will use coordinates for GPS-based measurements
+        setSelectedMeasurement(null); // Clear any previous selection
       }
     } catch (err) {
       console.error('❌ Aerial view capture failed:', err);
@@ -132,7 +162,7 @@ export const AerialViewMain: React.FC = () => {
       unmarkAttachmentForExport(attachmentId);
     } else {
       markAttachmentForExport(attachmentId, {
-        pdfSection: viewMode === 'satellite' ? 'aerial_views' : viewMode === 'streetview' ? 'site_overview' : 'solar_analysis'
+        pdfSection: viewMode === 'satellite' ? 'aerial_views' : viewMode === 'streetview' ? 'site_overview' : viewMode === 'solar' ? 'solar_analysis' : viewMode === 'changes' ? 'change_analysis' : viewMode === 'measurements' ? 'measurements' : viewMode === '3d' ? '3d_modeling' : 'weather_analysis'
       });
     }
   };
@@ -214,7 +244,7 @@ export const AerialViewMain: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Analysis Type
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-7 gap-2">
                 <button
                   onClick={() => setViewMode('satellite')}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
@@ -247,6 +277,50 @@ export const AerialViewMain: React.FC = () => {
                 >
                   <Sun className="h-4 w-4" />
                   Solar
+                </button>
+                <button
+                  onClick={() => setViewMode('changes')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === 'changes'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Search className="h-4 w-4" />
+                  Changes
+                </button>
+                <button
+                  onClick={() => setViewMode('measurements')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === 'measurements'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Ruler className="h-4 w-4" />
+                  Measure
+                </button>
+                <button
+                  onClick={() => setViewMode('3d')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === '3d'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <FileImage className="h-4 w-4" />
+                  3D Model
+                </button>
+                <button
+                  onClick={() => setViewMode('weather')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === 'weather'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Download className="h-4 w-4" />
+                  Weather
                 </button>
               </div>
             </div>
@@ -284,10 +358,10 @@ export const AerialViewMain: React.FC = () => {
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Capturing {viewMode === 'satellite' ? 'Satellite' : viewMode === 'streetview' ? 'Street View' : 'Solar'} Data...
+                  Capturing {viewMode === 'satellite' ? 'Satellite' : viewMode === 'streetview' ? 'Street View' : viewMode === 'solar' ? 'Solar' : viewMode === 'changes' ? 'Change' : viewMode === 'measurements' ? 'Measurement' : viewMode === '3d' ? '3D Model' : 'Weather'} Data...
                 </div>
               ) : (
-                `Capture ${viewMode === 'satellite' ? 'Satellite View' : viewMode === 'streetview' ? 'Street Views' : 'Solar Analysis'}`
+                `Capture ${viewMode === 'satellite' ? 'Satellite View' : viewMode === 'streetview' ? 'Street Views' : viewMode === 'solar' ? 'Solar Analysis' : viewMode === 'changes' ? 'Change Analysis' : viewMode === 'measurements' ? 'Measurement Data' : viewMode === '3d' ? '3D Site Model' : 'Weather Data'}`
               )}
             </button>
           </div>
@@ -456,6 +530,373 @@ export const AerialViewMain: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* Change Detection Results */}
+          {viewMode === 'changes' && coordinates && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Search className="h-5 w-5 text-purple-600" />
+                  Historical Change Analysis
+                </h2>
+                <div className="text-sm text-gray-600">
+                  📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                </div>
+              </div>
+              
+              <ChangeDetectionPanel
+                location={coordinates}
+                onChangeSelected={(change) => {
+                  setSelectedChange(change);
+                  console.log('🔍 Change selected:', change);
+                }}
+                className="mt-4"
+              />
+              
+              {selectedChange && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="font-medium text-blue-900 mb-2">Selected Change Details</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Type:</strong> {selectedChange.changeType}</div>
+                    <div><strong>Confidence:</strong> {Math.round(selectedChange.characteristics.confidence * 100)}%</div>
+                    <div><strong>Area:</strong> {selectedChange.region.area.toLocaleString()} m²</div>
+                    <div><strong>Time Period:</strong> {selectedChange.detectedBetween.beforeDate.toLocaleDateString()} → {selectedChange.detectedBetween.afterDate.toLocaleDateString()}</div>
+                    <div><strong>Impact:</strong> {selectedChange.context.impactAssessment}</div>
+                    {selectedChange.context.necRelevance && (
+                      <div><strong>NEC Relevance:</strong> {selectedChange.context.necRelevance}</div>
+                    )}
+                    {selectedChange.context.solarRelevance && (
+                      <div><strong>Solar Impact:</strong> {selectedChange.context.solarRelevance}</div>
+                    )}
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <button
+                        onClick={() => {
+                          // Log change analysis save (attachment creation would be implemented here)
+                          console.log('💾 Change analysis would be saved to project:', {
+                            changeType: selectedChange.changeType,
+                            confidence: selectedChange.characteristics.confidence,
+                            area: selectedChange.region.area,
+                            coordinates: coordinates,
+                            timeRange: selectedChange.detectedBetween,
+                            description: selectedChange.context.description
+                          });
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                      >
+                        Save Analysis to Project
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Measurement Tools Results */}
+          {viewMode === 'measurements' && coordinates && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Ruler className="h-5 w-5 text-green-600" />
+                  Precision Measurement Tools
+                </h2>
+                <div className="text-sm text-gray-600">
+                  📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                </div>
+              </div>
+              
+              <MeasurementToolsPanel
+                imageMetadata={satelliteUrl ? {
+                  bounds: {
+                    north: coordinates.latitude + 0.001,
+                    south: coordinates.latitude - 0.001,
+                    east: coordinates.longitude + 0.001,
+                    west: coordinates.longitude - 0.001
+                  },
+                  width: 800,
+                  height: 600
+                } : undefined}
+                onMeasurementCreated={(measurement) => {
+                  setSelectedMeasurement(measurement);
+                  if ('distanceMeters' in measurement.results) {
+                    // Linear measurement
+                    setMeasurements(prev => ({
+                      ...prev,
+                      linear: [...prev.linear, measurement as LinearMeasurement]
+                    }));
+                  } else {
+                    // Area measurement
+                    setMeasurements(prev => ({
+                      ...prev,
+                      area: [...prev.area, measurement as AreaMeasurement]
+                    }));
+                  }
+                  console.log('📐 Measurement created:', measurement);
+                }}
+                onPointSelected={(point) => {
+                  console.log('📍 Point selected:', point);
+                }}
+                className="mt-4"
+              />
+              
+              {selectedMeasurement && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="font-medium text-green-900 mb-2">Selected Measurement Details</h3>
+                  <div className="space-y-2 text-sm">
+                    {'distanceMeters' in selectedMeasurement.results ? (
+                      <>
+                        <div><strong>Type:</strong> {selectedMeasurement.type}</div>
+                        <div><strong>Distance:</strong> {selectedMeasurement.results.distanceMeters.toFixed(2)} m ({selectedMeasurement.results.distanceFeet.toFixed(2)} ft)</div>
+                        <div><strong>Bearing:</strong> {selectedMeasurement.results.bearing.toFixed(1)}°</div>
+                        {selectedMeasurement.results.elevationChange && (
+                          <div><strong>Elevation Change:</strong> {selectedMeasurement.results.elevationChange.toFixed(1)} m</div>
+                        )}
+                        {selectedMeasurement.compliance.necSetbackCompliance !== undefined && (
+                          <div><strong>NEC Compliance:</strong> {selectedMeasurement.compliance.necSetbackCompliance ? '✅ Compliant' : '❌ Non-compliant'}</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div><strong>Type:</strong> {selectedMeasurement.type}</div>
+                        <div><strong>Area:</strong> {selectedMeasurement.results.areaSquareMeters.toFixed(2)} m² ({selectedMeasurement.results.areaSquareFeet.toFixed(2)} ft²)</div>
+                        <div><strong>Perimeter:</strong> {selectedMeasurement.results.perimeterMeters.toFixed(2)} m ({selectedMeasurement.results.perimeterFeet.toFixed(2)} ft)</div>
+                        {selectedMeasurement.solar && (
+                          <>
+                            <div><strong>Solar Potential:</strong> {selectedMeasurement.solar.maxPanelCount} panels, {selectedMeasurement.solar.estimatedCapacity} kW</div>
+                            <div><strong>Usable Area:</strong> {selectedMeasurement.solar.usableArea} m² (after setbacks)</div>
+                          </>
+                        )}
+                        <div><strong>NEC Compliance:</strong> {selectedMeasurement.compliance.necCompliant ? '✅ Compliant' : '❌ Non-compliant'}</div>
+                      </>
+                    )}
+                    
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <div className="text-xs text-green-700">
+                        <div><strong>Measurement Precision:</strong> {selectedMeasurement.precision.horizontalAccuracy.toFixed(1)}m horizontal accuracy</div>
+                        <div><strong>Method:</strong> {selectedMeasurement.precision.measurementMethod} with {Math.round(selectedMeasurement.precision.confidenceLevel * 100)}% confidence</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <button
+                        onClick={() => {
+                          // Log measurement save (attachment creation would be implemented here)
+                          console.log('💾 Measurement would be saved to project:', {
+                            type: selectedMeasurement.type,
+                            results: selectedMeasurement.results,
+                            precision: selectedMeasurement.precision,
+                            compliance: selectedMeasurement.compliance
+                          });
+                        }}
+                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                      >
+                        Save Measurement to Project
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3D Model Results */}
+          {viewMode === '3d' && coordinates && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <FileImage className="h-5 w-5 text-purple-600" />
+                  3D Site Modeling
+                </h2>
+                <div className="text-sm text-gray-600">
+                  📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                </div>
+              </div>
+              
+              <ThreeDModelPanel
+                location={coordinates}
+                imageMetadata={satelliteUrl ? {
+                  bounds: {
+                    north: coordinates.latitude + 0.001,
+                    south: coordinates.latitude - 0.001,
+                    east: coordinates.longitude + 0.001,
+                    west: coordinates.longitude - 0.001
+                  },
+                  width: 800,
+                  height: 600
+                } : undefined}
+                onModelGenerated={(model) => {
+                  setSelectedModel(model);
+                  setThreeDModels(prev => [...prev, model]);
+                  console.log('🏗️ 3D model generated:', model);
+                }}
+                className="mt-4"
+              />
+              
+              {selectedModel && (
+                <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <h3 className="font-medium text-purple-900 mb-2">Generated Model Details</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Model ID:</strong> {selectedModel.id.slice(-8)}</div>
+                    <div><strong>Point Cloud:</strong> {selectedModel.pointCloud.length.toLocaleString()} points</div>
+                    <div><strong>Surface Meshes:</strong> {selectedModel.meshes.length} surfaces</div>
+                    <div><strong>Quality:</strong> {selectedModel.quality.completeness}% complete, {selectedModel.quality.averageAccuracy}m accuracy</div>
+                    <div><strong>Point Density:</strong> {selectedModel.quality.pointDensity.toFixed(1)} pts/m²</div>
+                    
+                    {selectedModel.solar.roofPlanes.length > 0 && (
+                      <>
+                        <div className="mt-3 pt-3 border-t border-purple-200">
+                          <div><strong>Solar Analysis:</strong></div>
+                          <div>• Roof Planes: {selectedModel.solar.roofPlanes.length}</div>
+                          <div>• Total Area: {selectedModel.solar.roofPlanes.reduce((sum, plane) => sum + plane.area, 0).toFixed(0)} m²</div>
+                          <div>• Usable Area: {selectedModel.solar.roofPlanes.reduce((sum, plane) => sum + plane.usableArea, 0).toFixed(0)} m²</div>
+                          <div>• Panel Capacity: {selectedModel.solar.roofPlanes.reduce((sum, plane) => sum + plane.panelCapacity, 0).toFixed(1)} kW</div>
+                          <div>• Annual Generation: {selectedModel.solar.shadingAnalysis.annualSolarPotential.toLocaleString()} kWh/year</div>
+                        </div>
+                      </>
+                    )}
+                    
+                    <div className="mt-3 pt-3 border-t border-purple-200">
+                      <div className="text-xs text-purple-700">
+                        <div><strong>Processing:</strong> {selectedModel.processing.algorithm} in {selectedModel.processing.processingTime}s</div>
+                        <div><strong>Source Images:</strong> {selectedModel.processing.sourceImages.length} aerial views</div>
+                        <div><strong>Created:</strong> {selectedModel.processing.createdAt.toLocaleString()}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 pt-3 border-t border-purple-200">
+                      <button
+                        onClick={() => {
+                          // Log model save (attachment creation would be implemented here)
+                          console.log('💾 3D model would be saved to project:', {
+                            id: selectedModel.id,
+                            meshes: selectedModel.meshes.length,
+                            points: selectedModel.pointCloud.length,
+                            solar: selectedModel.solar
+                          });
+                        }}
+                        className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors"
+                      >
+                        Save Model to Project
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Weather Data Overlay */}
+          {viewMode === 'weather' && coordinates && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Download className="h-5 w-5 text-blue-600" />
+                  Weather Data & Solar Analysis
+                </h2>
+                <div className="text-sm text-gray-600">
+                  📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                </div>
+              </div>
+              
+              <WeatherOverlayPanel
+                location={{
+                  latitude: coordinates.latitude,
+                  longitude: coordinates.longitude,
+                  elevation: 0 // TODO: Get elevation from 3D model or elevation service
+                }}
+                systemParameters={solarData ? {
+                  panelCapacity: (solarData.solarPotential?.maxArrayAreaMeters2 || 100) * 0.2, // Estimate 200W/m²
+                  panelEfficiency: 20,
+                  systemEfficiency: 85,
+                  temperatureCoefficient: -0.4,
+                  tiltAngle: solarData.solarPotential?.roofSegmentSummaries[0]?.tiltDegrees || 30,
+                  azimuthAngle: solarData.solarPotential?.roofSegmentSummaries[0]?.azimuthDegrees || 180,
+                  tracking: 'fixed'
+                } : undefined}
+                onWeatherUpdate={(weather) => {
+                  setCurrentWeather(weather);
+                  console.log('🌤️ Weather data updated:', weather);
+                }}
+                onPerformanceUpdate={(performance) => {
+                  setSolarPerformance(performance);
+                  console.log('⚡ Solar performance updated:', performance);
+                }}
+                className="mt-4"
+              />
+              
+              {currentWeather && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="font-medium text-blue-900 mb-2">Current Weather Impact</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Solar Irradiance:</strong> {currentWeather.irradiance.ghi.toFixed(0)} W/m² (affects current production)</div>
+                    <div><strong>Temperature:</strong> {currentWeather.atmosphere.temperature.toFixed(1)}°C (affects panel efficiency)</div>
+                    <div><strong>Cloud Cover:</strong> {currentWeather.clouds.totalCloudCover.toFixed(0)}% (reduces solar output)</div>
+                    <div><strong>Production Factor:</strong> {(currentWeather.irradiance.ghi / 1000 * (1 - currentWeather.clouds.totalCloudCover / 100 * 0.8)).toFixed(2)} (0-1 scale)</div>
+                    
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="text-xs text-blue-700">
+                        <div><strong>Data Quality:</strong> {Math.round(currentWeather.quality.confidence * 100)}% confidence</div>
+                        <div><strong>Source:</strong> {currentWeather.quality.dataSource}</div>
+                        <div><strong>Last Updated:</strong> {currentWeather.quality.lastUpdated.toLocaleTimeString()}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <button
+                        onClick={() => {
+                          // Log weather save (attachment creation would be implemented here)
+                          console.log('💾 Weather data would be saved to project:', {
+                            irradiance: currentWeather.irradiance,
+                            conditions: currentWeather.conditions,
+                            timestamp: currentWeather.timestamp
+                          });
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                      >
+                        Save Weather Data to Project
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {solarPerformance && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="font-medium text-green-900 mb-2">Solar Performance Analysis</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Annual Production:</strong> {solarPerformance.performance.annualProduction.toLocaleString()} kWh/year</div>
+                    <div><strong>Capacity Factor:</strong> {solarPerformance.performance.capacityFactor.toFixed(1)}%</div>
+                    <div><strong>Specific Yield:</strong> {solarPerformance.performance.specificYield.toFixed(0)} kWh/kW/year</div>
+                    <div><strong>Performance Ratio:</strong> {(solarPerformance.performance.performanceRatio * 100).toFixed(1)}%</div>
+                    
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <div><strong>Environmental Factors:</strong></div>
+                      <div>• Temperature losses: {solarPerformance.environmentalFactors.temperatureLoss.toFixed(1)}%</div>
+                      <div>• Soiling losses: {solarPerformance.environmentalFactors.soilingLoss.toFixed(1)}%</div>
+                      <div>• System losses: {(solarPerformance.environmentalFactors.inverterLoss + solarPerformance.environmentalFactors.wireingLoss).toFixed(1)}%</div>
+                    </div>
+                    
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <button
+                        onClick={() => {
+                          // Log performance save (attachment creation would be implemented here)
+                          console.log('💾 Solar performance would be saved to project:', {
+                            annualProduction: solarPerformance.performance.annualProduction,
+                            capacityFactor: solarPerformance.performance.capacityFactor,
+                            environmentalFactors: solarPerformance.environmentalFactors
+                          });
+                        }}
+                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                      >
+                        Save Performance Analysis to Project
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Project Attachments Panel */}
           {state.attachments.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg p-6">

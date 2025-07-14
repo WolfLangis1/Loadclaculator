@@ -1,10 +1,148 @@
-import type { LoadItem, ValidationMessage } from '../types';
+import type { 
+  LoadState, 
+  ValidationMessage, 
+  GeneralLoad, 
+  HVACLoad, 
+  EVSELoad, 
+  SolarBatteryLoad,
+  CalculationMethod,
+  PanelDetails 
+} from '../types';
 
-export const validateLoad = (load: LoadItem): ValidationMessage[] => {
+export interface ValidationRule<T = any> {
+  field: keyof T;
+  validator: (value: any, item?: T, context?: ValidationContext) => ValidationResult;
+  priority: 'error' | 'warning' | 'info';
+  message: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  message?: string;
+  suggestion?: string;
+}
+
+export interface ValidationContext {
+  loads: LoadState;
+  method: CalculationMethod;
+  squareFootage: number;
+  mainBreaker: number;
+  panelDetails: PanelDetails;
+}
+
+// Validation rules for different load types
+export const generalLoadValidationRules: ValidationRule<GeneralLoad>[] = [
+  {
+    field: 'name',
+    priority: 'error',
+    message: 'Load description is required',
+    validator: (value) => ({
+      isValid: Boolean(value && value.trim().length > 0),
+      message: 'Please provide a description for this load'
+    })
+  },
+  {
+    field: 'amps',
+    priority: 'error',
+    message: 'Amperage must be valid',
+    validator: (value) => ({
+      isValid: value >= 0 && value <= 200,
+      message: value < 0 ? 'Amperage cannot be negative' : 
+               value > 200 ? 'Amperage over 200A is unusual for general loads' :
+               'Amperage is required'
+    })
+  },
+  {
+    field: 'volts',
+    priority: 'warning',
+    message: 'Non-standard voltage',
+    validator: (value) => ({
+      isValid: [120, 240, 277, 480].includes(value),
+      message: 'Standard voltages are 120V, 240V, 277V, or 480V',
+      suggestion: 'Verify voltage is correct for this load type'
+    })
+  }
+];
+
+export class ValidationService {
+  static generalLoadValidationRules = generalLoadValidationRules;
+  
+  static validateLoad<T>(
+    load: T, 
+    rules: ValidationRule<T>[], 
+    context?: ValidationContext
+  ): ValidationMessage[] {
+    const messages: ValidationMessage[] = [];
+
+    for (const rule of rules) {
+      const value = (load as any)[rule.field];
+      const result = rule.validator(value, load, context);
+      
+      if (!result.isValid || result.suggestion) {
+        messages.push({
+          type: result.isValid ? 'warning' : rule.priority as 'error' | 'warning',
+          message: result.message || rule.message,
+          code: `${String(rule.field)}_validation`,
+          field: String(rule.field)
+        });
+      }
+    }
+
+    return messages;
+  }
+
+  static getFieldValidation(
+    value: any, 
+    field: string, 
+    loadType: 'general' | 'hvac' | 'evse' | 'solar'
+  ): ValidationResult {
+    let rules: ValidationRule<any>[] = [];
+    
+    switch (loadType) {
+      case 'general':
+        rules = generalLoadValidationRules;
+        break;
+      default:
+        return { isValid: true };
+    }
+
+    const rule = rules.find(r => r.field === field);
+    if (!rule) {
+      return { isValid: true };
+    }
+
+    return rule.validator(value);
+  }
+  
+  static validateOverallSystem(
+    loads: LoadState,
+    calculationMethod: CalculationMethod,
+    mainBreaker: number,
+    totalDemand: number
+  ): ValidationMessage[] {
+    const messages: ValidationMessage[] = [];
+    
+    // Check service capacity
+    const serviceCapacity = mainBreaker * 240 * 0.8; // 80% rule
+    if (totalDemand > serviceCapacity) {
+      messages.push({
+        type: 'error',
+        message: `Total demand (${totalDemand.toLocaleString()}VA) exceeds 80% of service capacity (${serviceCapacity.toLocaleString()}VA)`,
+        code: 'service_overload',
+        field: 'system'
+      });
+    }
+    
+    return messages;
+  }
+}
+
+// Legacy validation function for backward compatibility
+export const validateLoad = (load: any): ValidationMessage[] => {
   const errors: ValidationMessage[] = [];
   
   // Validate required fields
-  if (!load.name.trim()) {
+  if (!load.name || !load.name.trim()) {
     errors.push({
       type: 'error',
       message: 'Load name is required',

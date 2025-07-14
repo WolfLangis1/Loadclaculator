@@ -1,4 +1,5 @@
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
 
 export const HVACLoadsTable: React.FC = () => {
@@ -34,33 +35,65 @@ export const HVACLoadsTable: React.FC = () => {
     });
   };
 
+  const addLoad = () => {
+    const newId = Math.max(...hvacLoads.map(l => l.id), 0) + 1;
+    dispatch({
+      type: 'ADD_LOAD',
+      payload: {
+        category: 'hvac',
+        id: newId,
+        name: 'Custom HVAC Load',
+        quantity: 0,
+        amps: 0,
+        volts: 240,
+        va: 0,
+        total: 0,
+        type: 'other' as const,
+        critical: false,
+        circuit: ''
+      }
+    });
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium text-gray-900">HVAC Equipment</h3>
+        <button
+          onClick={addLoad}
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add HVAC Load
+        </button>
+      </div>
+
+      <div className="overflow-x-auto" style={{ height: 'auto', maxHeight: 'none' }}>
+      <table className="min-w-full divide-y divide-gray-200 table-fixed" style={{ height: 'auto' }}>
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-2/5 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               HVAC Equipment
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Qty
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Amps
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Volts
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               VA
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Total VA
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Type
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               HP
             </th>
           </tr>
@@ -71,7 +104,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="text"
-                  value={load.name}
+                  value={load.name || ''}
                   onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
                   className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   placeholder="HVAC equipment description"
@@ -80,7 +113,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="number"
-                  value={load.quantity}
+                  value={load.quantity || 0}
                   onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   min="0"
@@ -89,7 +122,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="number"
-                  value={load.amps}
+                  value={load.amps || 0}
                   onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   min="0"
@@ -98,7 +131,7 @@ export const HVACLoadsTable: React.FC = () => {
               </td>
               <td className="px-4 py-3">
                 <select
-                  value={load.volts}
+                  value={load.volts || 240}
                   onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 >
@@ -131,7 +164,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="number"
-                  value={load.hp || ''}
+                  value={load.hp || 0}
                   onChange={(e) => updateLoad(load.id, 'hp', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   min="0"
@@ -143,6 +176,7 @@ export const HVACLoadsTable: React.FC = () => {
           ))}
         </tbody>
       </table>
+      </div>
       
       <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
         <h4 className="text-sm font-medium text-yellow-800 mb-2">HVAC Load Guidelines</h4>

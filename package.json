@@ -27,10 +27,16 @@
     "docker:logs:prod": "docker-compose -f docker-compose.prod.yml logs -f"
   },
   "dependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.45.0",
+    "@tensorflow/tfjs": "^4.15.0",
+    "@tensorflow/tfjs-backend-cpu": "^4.15.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.15.0",
+    "@types/svg.js": "^0.0.17",
     "jspdf": "^3.0.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "svg.js": "^2.7.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

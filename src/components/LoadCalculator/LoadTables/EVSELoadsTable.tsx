@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Info, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, Info, Zap, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
 import { TooltipWrapper } from '../../UI/TooltipWrapper';
 
@@ -44,6 +44,25 @@ export const EVSELoadsTable: React.FC = () => {
         type: 'UPDATE_EVSE_LOAD',
         payload: { id, field: updateField as any, value: updateValue }
       });
+    });
+  };
+
+  const addLoad = () => {
+    const newId = Math.max(...evseLoads.map(l => l.id), 0) + 1;
+    dispatch({
+      type: 'ADD_LOAD',
+      payload: {
+        category: 'evse',
+        id: newId,
+        name: 'Custom EV Charger',
+        quantity: 0,
+        amps: 40,
+        volts: 240,
+        va: 9600,
+        total: 0,
+        continuous: true as const,
+        circuit: ''
+      }
     });
   };
 
@@ -229,13 +248,13 @@ export const EVSELoadsTable: React.FC = () => {
                           
                           let selectedLoad = null;
                           if (type === 'general') {
-                            const load = generalLoads.find(l => l.id === id && l.quantity > 0);
+                            const load = generalLoads.find(l => l.id === id);
                             if (load) selectedLoad = { type: 'general' as const, id, name: load.name, amps: load.amps };
                           } else if (type === 'hvac') {
-                            const load = hvacLoads.find(l => l.id === id && l.quantity > 0);
+                            const load = hvacLoads.find(l => l.id === id);
                             if (load) selectedLoad = { type: 'hvac' as const, id, name: load.name, amps: load.amps };
                           } else if (type === 'evse') {
-                            const load = evseLoads.find(l => l.id === id && l.quantity > 0);
+                            const load = evseLoads.find(l => l.id === id);
                             if (load) selectedLoad = { type: 'evse' as const, id, name: load.name, amps: load.amps };
                           }
                           
@@ -245,21 +264,21 @@ export const EVSELoadsTable: React.FC = () => {
                       >
                         <option value="">Select Load A</option>
                         <optgroup label="General Loads">
-                          {generalLoads.filter(load => load.quantity > 0).map(load => (
+                          {generalLoads.map(load => (
                             <option key={`general-${load.id}`} value={`general-${load.id}`}>
                               {load.name} ({load.amps}A)
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="HVAC Loads">
-                          {hvacLoads.filter(load => load.quantity > 0).map(load => (
+                          {hvacLoads.map(load => (
                             <option key={`hvac-${load.id}`} value={`hvac-${load.id}`}>
                               {load.name} ({load.amps}A)
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="EVSE Loads">
-                          {evseLoads.filter(load => load.quantity > 0).map(load => (
+                          {evseLoads.map(load => (
                             <option key={`evse-${load.id}`} value={`evse-${load.id}`}>
                               {load.name} ({load.amps}A)
                             </option>
@@ -289,13 +308,13 @@ export const EVSELoadsTable: React.FC = () => {
                           
                           let selectedLoad = null;
                           if (type === 'general') {
-                            const load = generalLoads.find(l => l.id === id && l.quantity > 0);
+                            const load = generalLoads.find(l => l.id === id);
                             if (load) selectedLoad = { type: 'general' as const, id, name: load.name, amps: load.amps };
                           } else if (type === 'hvac') {
-                            const load = hvacLoads.find(l => l.id === id && l.quantity > 0);
+                            const load = hvacLoads.find(l => l.id === id);
                             if (load) selectedLoad = { type: 'hvac' as const, id, name: load.name, amps: load.amps };
                           } else if (type === 'evse') {
-                            const load = evseLoads.find(l => l.id === id && l.quantity > 0);
+                            const load = evseLoads.find(l => l.id === id);
                             if (load) selectedLoad = { type: 'evse' as const, id, name: load.name, amps: load.amps };
                           }
                           
@@ -305,21 +324,21 @@ export const EVSELoadsTable: React.FC = () => {
                       >
                         <option value="">Select Load B</option>
                         <optgroup label="General Loads">
-                          {generalLoads.filter(load => load.quantity > 0).map(load => (
+                          {generalLoads.map(load => (
                             <option key={`general-${load.id}`} value={`general-${load.id}`}>
                               {load.name} ({load.amps}A)
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="HVAC Loads">
-                          {hvacLoads.filter(load => load.quantity > 0).map(load => (
+                          {hvacLoads.map(load => (
                             <option key={`hvac-${load.id}`} value={`hvac-${load.id}`}>
                               {load.name} ({load.amps}A)
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="EVSE Loads">
-                          {evseLoads.filter(load => load.quantity > 0).map(load => (
+                          {evseLoads.map(load => (
                             <option key={`evse-${load.id}`} value={`evse-${load.id}`}>
                               {load.name} ({load.amps}A)
                             </option>
@@ -371,7 +390,7 @@ export const EVSELoadsTable: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={state.loadManagementMaxLoad}
+                      value={state.loadManagementMaxLoad || 0}
                       onChange={(e) => updateSettings({ loadManagementMaxLoad: parseFloat(e.target.value) || 0 })}
                       className="w-32 text-center border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500 text-sm"
                       min="0"
@@ -415,7 +434,7 @@ export const EVSELoadsTable: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  value={state.loadManagementType === 'ems' ? state.emsMaxLoad : state.loadManagementMaxLoad}
+                  value={state.loadManagementType === 'ems' ? (state.emsMaxLoad || 0) : (state.loadManagementMaxLoad || 0)}
                   onChange={(e) => {
                     const value = parseFloat(e.target.value) || 0;
                     
@@ -514,29 +533,40 @@ export const EVSELoadsTable: React.FC = () => {
       )}
 
       {/* EVSE Loads Table */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium text-gray-900">EV Charging Equipment</h3>
+        <button
+          onClick={addLoad}
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add EV Charger
+        </button>
+      </div>
+
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-2/5 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 EV Charging Equipment
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Qty
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amps
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Volts
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 VA
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Total VA
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Continuous
               </th>
             </tr>
@@ -547,7 +577,7 @@ export const EVSELoadsTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="text"
-                    value={load.name}
+                    value={load.name || ''}
                     onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
                     className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     placeholder="EVSE description"
@@ -556,7 +586,7 @@ export const EVSELoadsTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={load.quantity}
+                    value={load.quantity || 0}
                     onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     min="0"
@@ -565,7 +595,7 @@ export const EVSELoadsTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={load.amps}
+                    value={load.amps || 0}
                     onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     min="0"
@@ -574,7 +604,7 @@ export const EVSELoadsTable: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <select
-                    value={load.volts}
+                    value={load.volts || 240}
                     onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   >
@@ -595,7 +625,7 @@ export const EVSELoadsTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
-                    checked={load.continuous}
+                    checked={load.continuous || false}
                     onChange={(e) => updateLoad(load.id, 'continuous', e.target.checked)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />

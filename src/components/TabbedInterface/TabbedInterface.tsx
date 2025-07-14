@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { Calculator, MapPin, Zap, FolderOpen } from 'lucide-react';
-import { SingleLineDiagram } from '../SLD/SingleLineDiagram';
-import { AerialViewMain } from '../AerialView/AerialViewMain';
+import React, { useState, Suspense, lazy } from 'react';
+import { Calculator, MapPin, Zap, FolderOpen, Brain } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
-import { ProjectManager } from '../ProjectManager/ProjectManager';
+import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
+import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
+
+// Lazy load heavy components  
+const UnifiedSLDMain = lazy(() => import('../SLD/UnifiedSLDMain').then(module => ({ default: module.UnifiedSLDMain })));
+const RefactoredAerialViewMain = lazy(() => import('../AerialView/RefactoredAerialViewMain').then(module => ({ default: module.RefactoredAerialViewMain })));
+const ProjectManager = lazy(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })));
 
 type TabType = 'calculator' | 'sld' | 'aerial';
 
@@ -29,18 +33,40 @@ export const TabbedInterface: React.FC = () => {
       id: 'sld',
       label: 'Single Line Diagram',
       icon: Zap,
-      component: SingleLineDiagram
+      component: UnifiedSLDMain
     },
     {
       id: 'aerial',
       label: 'Aerial View & Site Analysis',
       icon: MapPin,
-      component: AerialViewMain
+      component: RefactoredAerialViewMain
     }
   ];
 
   const activeTabData = tabs.find(tab => tab.id === activeTab);
   const ActiveComponent = activeTabData?.component || LoadCalculatorMain;
+
+  // Loading component for lazy-loaded features
+  const LoadingComponent = () => (
+    <LazyLoadingSpinner componentName={activeTabData?.label} />
+  );
+
+  // Render component with appropriate wrapper
+  const renderActiveComponent = () => {
+    // Load Calculator doesn't need lazy loading as it's the main feature
+    if (activeTab === 'calculator') {
+      return <ActiveComponent />;
+    }
+
+    // Other components use lazy loading with error boundaries
+    return (
+      <AsyncComponentErrorBoundary componentName={activeTabData?.label || 'Component'}>
+        <Suspense fallback={<LoadingComponent />}>
+          <ActiveComponent />
+        </Suspense>
+      </AsyncComponentErrorBoundary>
+    );
+  };
 
   const handleTabClick = (tabId: TabType) => {
     setActiveTab(tabId);
@@ -83,7 +109,7 @@ export const TabbedInterface: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between px-4">
             <div role="tablist" aria-label="Main application navigation" className="flex space-x-8">
-            {tabs.map((tab, index) => {
+            {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
@@ -133,14 +159,20 @@ export const TabbedInterface: React.FC = () => {
             : 'max-w-7xl mx-auto'
         }`}
       >
-        <ActiveComponent />
+        {renderActiveComponent()}
       </div>
       
       {/* Project Manager Modal */}
-      <ProjectManager 
-        isOpen={showProjectManager} 
-        onClose={() => setShowProjectManager(false)} 
-      />
+      {showProjectManager && (
+        <AsyncComponentErrorBoundary componentName="Project Manager">
+          <Suspense fallback={<LazyLoadingSpinner componentName="Project Manager" />}>
+            <ProjectManager 
+              isOpen={showProjectManager} 
+              onClose={() => setShowProjectManager(false)} 
+            />
+          </Suspense>
+        </AsyncComponentErrorBoundary>
+      )}
     </div>
   );
 };

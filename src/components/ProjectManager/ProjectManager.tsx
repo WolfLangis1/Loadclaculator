@@ -7,14 +7,13 @@ import {
   Download, 
   Upload, 
   Clock,
-  Settings,
   X,
   AlertCircle,
   Check,
   Star
 } from 'lucide-react';
 import { useProjectManager } from '../../hooks/useProjectManager';
-import { useLoadCalculator } from '../../hooks/useLoadCalculator';
+import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { TemplateSelector } from './TemplateSelector';
 import { type ProjectTemplate } from '../../services/projectTemplateService';
 
@@ -24,7 +23,7 @@ interface ProjectManagerProps {
 }
 
 export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
-  const { state } = useLoadCalculator();
+  const { settings } = useProjectSettings();
   const {
     projects,
     currentProject,
@@ -109,7 +108,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
   };
 
   const generateDefaultProjectName = () => {
-    const customer = state.projectInfo.customerName || 'Unnamed Project';
+    const customer = settings.projectInfo.customerName || 'Unnamed Project';
     const date = new Date().toLocaleDateString();
     return `${customer} - ${date}`;
   };

@@ -4,27 +4,33 @@ import { LOAD_TEMPLATES } from '../constants';
 import type { LoadState, CalculationMethod, PanelDetails, ActualDemandData } from '../types';
 
 const createTestLoadState = (): LoadState => ({
-  generalLoads: [...LOAD_TEMPLATES.GENERAL],
-  hvacLoads: [...LOAD_TEMPLATES.HVAC],
-  evseLoads: [...LOAD_TEMPLATES.EVSE],
-  solarBatteryLoads: [...LOAD_TEMPLATES.SOLAR_BATTERY]
+  generalLoads: [...LOAD_TEMPLATES.general],
+  hvacLoads: [...LOAD_TEMPLATES.hvac],
+  evseLoads: [...LOAD_TEMPLATES.evse],
+  solarBatteryLoads: [...LOAD_TEMPLATES.solar]
 });
 
 const testPanelDetails: PanelDetails = {
   manufacturer: 'Square D',
   model: 'QO',
+  type: 'Main Panel',
+  phases: 1,
+  voltage: 240,
   busRating: 200,
-  mainBreakerRating: 200,
-  spaces: 40,
-  phase: 1
+  interruptingRating: 10000,
+  availableSpaces: 40,
+  usedSpaces: 0
 };
 
 const testActualDemandData: ActualDemandData = {
   enabled: false,
+  averageDemand: 0,
+  peakDemand: 0,
+  dataSource: 'test',
+  measurementPeriod: '12 months',
   month1: 0, month2: 0, month3: 0, month4: 0,
   month5: 0, month6: 0, month7: 0, month8: 0,
-  month9: 0, month10: 0, month11: 0, month12: 0,
-  averageDemand: 0
+  month9: 0, month10: 0, month11: 0, month12: 0
 };
 
 describe('NEC Load Calculations', () => {

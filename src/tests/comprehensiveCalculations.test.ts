@@ -4,10 +4,10 @@ import { LOAD_TEMPLATES } from '../constants';
 import type { LoadState, CalculationMethod, PanelDetails, ActualDemandData } from '../types';
 
 const createTestLoadState = (): LoadState => ({
-  generalLoads: [...LOAD_TEMPLATES.GENERAL].map(load => ({ ...load, quantity: 0, total: 0 })), // Start with zero loads
-  hvacLoads: [...LOAD_TEMPLATES.HVAC].map(load => ({ ...load, quantity: 0, total: 0 })),
-  evseLoads: [...LOAD_TEMPLATES.EVSE].map(load => ({ ...load, quantity: 0, total: 0 })),
-  solarBatteryLoads: [...LOAD_TEMPLATES.SOLAR_BATTERY].map(load => ({ ...load, quantity: 0, total: 0, kw: 0, inverterAmps: 0 }))
+  generalLoads: [...LOAD_TEMPLATES.general].map(load => ({ ...load, quantity: 0, total: 0 })), // Start with zero loads
+  hvacLoads: [...LOAD_TEMPLATES.hvac].map(load => ({ ...load, quantity: 0, total: 0 })),
+  evseLoads: [...LOAD_TEMPLATES.evse].map(load => ({ ...load, quantity: 0, total: 0 })),
+  solarBatteryLoads: [...LOAD_TEMPLATES.solar].map(load => ({ ...load, quantity: 0, total: 0, kw: 0, inverterAmps: 0 }))
 });
 
 const setLoadQuantity = (loadState: LoadState, loadType: 'general' | 'hvac' | 'evse' | 'solar', index: number, quantity: number) => {

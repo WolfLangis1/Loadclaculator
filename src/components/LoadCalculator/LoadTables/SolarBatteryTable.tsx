@@ -1,4 +1,5 @@
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
 import { TooltipWrapper } from '../../UI/TooltipWrapper';
 
@@ -34,6 +35,29 @@ export const SolarBatteryTable: React.FC = () => {
         type: 'UPDATE_SOLAR_BATTERY_LOAD',
         payload: { id, field: updateField as any, value: updateValue }
       });
+    });
+  };
+
+  const addLoad = () => {
+    const newId = Math.max(...solarBatteryLoads.map(l => l.id), 0) + 1;
+    dispatch({
+      type: 'ADD_LOAD',
+      payload: {
+        category: 'solar',
+        id: newId,
+        name: 'Custom Solar/Battery System',
+        kw: 0,
+        inverterAmps: 0,
+        volts: 240,
+        breaker: 0,
+        type: 'solar' as const,
+        location: 'backfeed' as const,
+        amps: 0,
+        va: 0,
+        total: 0,
+        quantity: 0,
+        circuit: ''
+      }
     });
   };
 
@@ -73,29 +97,40 @@ export const SolarBatteryTable: React.FC = () => {
       </div>
 
       {/* Solar/Battery Loads Table */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium text-gray-900">Solar/Battery Systems</h3>
+        <button
+          onClick={addLoad}
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Solar/Battery
+        </button>
+      </div>
+
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-2/5 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 System Description
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <TooltipWrapper term="solar_battery_type">Type</TooltipWrapper>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <TooltipWrapper term="solar capacity">Capacity (kW)</TooltipWrapper>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <TooltipWrapper term="inverter amps">Inverter Amps</TooltipWrapper>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Breaker Size
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <TooltipWrapper term="connection_type">Connection Type</TooltipWrapper>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Volts
               </th>
             </tr>
@@ -106,7 +141,7 @@ export const SolarBatteryTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="text"
-                    value={load.name}
+                    value={load.name || ''}
                     onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
                     className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     placeholder="System description"
@@ -114,7 +149,7 @@ export const SolarBatteryTable: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <select
-                    value={load.type}
+                    value={load.type || 'solar'}
                     onChange={(e) => updateLoad(load.id, 'type', e.target.value)}
                     className="w-28 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   >
@@ -125,7 +160,7 @@ export const SolarBatteryTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={load.kw}
+                    value={load.kw || 0}
                     onChange={(e) => updateLoad(load.id, 'kw', e.target.value)}
                     className="w-24 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     min="0"
@@ -141,7 +176,7 @@ export const SolarBatteryTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={load.breaker}
+                    value={load.breaker || 0}
                     onChange={(e) => updateLoad(load.id, 'breaker', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     min="0"
@@ -151,7 +186,7 @@ export const SolarBatteryTable: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <select
-                    value={load.location}
+                    value={load.location || 'backfeed'}
                     onChange={(e) => updateLoad(load.id, 'location', e.target.value)}
                     className="w-32 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     title="Choose connection type - affects NEC 705.12 compliance"
@@ -163,7 +198,7 @@ export const SolarBatteryTable: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <select
-                    value={load.volts}
+                    value={load.volts || 240}
                     onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   >

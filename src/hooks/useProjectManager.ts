@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { dataStorage, type StoredProject } from '../services/dataStorageService';
-import { useLoadCalculator } from './useLoadCalculator';
+import { useProjectSettings } from '../context/ProjectSettingsContext';
+import { useLoadData } from '../context/LoadDataContext';
 import { ProjectTemplateService, type ProjectTemplate } from '../services/projectTemplateService';
-import type { LoadCalculatorState } from '../context/LoadCalculatorContext';
 
 export interface ProjectManagerState {
   projects: StoredProject[];
@@ -13,7 +13,8 @@ export interface ProjectManagerState {
 }
 
 export const useProjectManager = () => {
-  const { state: currentState, dispatch, updateProjectInfo, updateSettings } = useLoadCalculator();
+  const { settings, updateProjectInfo, updateCalculationSettings } = useProjectSettings();
+  const { loads, resetLoads } = useLoadData();
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [currentProject, setCurrentProject] = useState<StoredProject | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +49,7 @@ export const useProjectManager = () => {
     setError(null);
     
     try {
+      const currentState = { ...settings, loads };
       const projectId = await dataStorage.saveProject(currentState, projectName);
       
       // Update projects list
@@ -65,7 +67,7 @@ export const useProjectManager = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentState, loadProjects]);
+  }, [settings, loads, loadProjects]);
 
   /**
    * Load a specific project
@@ -90,11 +92,11 @@ export const useProjectManager = () => {
       
       // Update loads
       if (projectState.loads) {
-        dispatch({ type: 'RESET_LOADS', payload: projectState.loads });
+        resetLoads(projectState.loads);
       }
       
       // Update settings (excluding loads and projectInfo which are handled separately)
-      updateSettings({
+      updateCalculationSettings({
         squareFootage: projectState.squareFootage,
         codeYear: projectState.codeYear,
         calculationMethod: projectState.calculationMethod,
@@ -129,7 +131,7 @@ export const useProjectManager = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [updateProjectInfo, updateSettings, dispatch]);
+  }, [updateProjectInfo, updateCalculationSettings, resetLoads]);
 
   /**
    * Delete a project
@@ -212,11 +214,12 @@ export const useProjectManager = () => {
     if (!autoSaveEnabled || !currentProject) return;
     
     try {
+      const currentState = { ...settings, loads };
       await dataStorage.saveProject(currentState, currentProject.name + ' (Auto-saved)');
     } catch (err) {
       console.error('Auto-save failed:', err);
     }
-  }, [currentState, currentProject, autoSaveEnabled]);
+  }, [settings, loads, currentProject, autoSaveEnabled]);
 
   /**
    * Export project to JSON

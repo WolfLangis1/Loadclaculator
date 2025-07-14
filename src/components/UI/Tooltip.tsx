@@ -101,11 +101,14 @@ export const Tooltip: React.FC<TooltipProps> = React.memo(({
   const tooltipElement = isVisible && (
     <div
       ref={tooltipRef}
+      id={tooltipId}
+      role="tooltip"
       className={`fixed z-50 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg shadow-lg max-w-xs pointer-events-none ${className}`}
       style={{
         left: tooltipPosition.x,
         top: tooltipPosition.y,
       }}
+      aria-hidden={!isVisible}
     >
       {content}
       <div
@@ -115,6 +118,7 @@ export const Tooltip: React.FC<TooltipProps> = React.memo(({
           position === 'left' ? 'right-0 top-1/2 -translate-y-1/2 translate-x-1/2' :
           'left-0 top-1/2 -translate-y-1/2 -translate-x-1/2'
         }`}
+        aria-hidden="true"
       />
     </div>
   );
@@ -125,11 +129,16 @@ export const Tooltip: React.FC<TooltipProps> = React.memo(({
         ref={triggerRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
         className="inline-block"
+        aria-describedby={isVisible ? tooltipId : undefined}
+        tabIndex={0}
       >
         {children}
       </div>
       {typeof document !== 'undefined' && createPortal(tooltipElement, document.body)}
     </>
   );
-};
+});

@@ -139,14 +139,14 @@ export const MainLayout: React.FC = () => {
               </div>
 
               {/* Two Column Layout - Load Inputs + Results */}
-              <div className="col-span-12 lg:col-span-7">
+              <div className="col-span-12 lg:col-span-8">
                 <div className="bg-white rounded-xl p-6">
                   <LoadInputTabs />
                 </div>
               </div>
 
               {/* Calculation Results - Sticky Sidebar */}
-              <div className="col-span-12 lg:col-span-5">
+              <div className="col-span-12 lg:col-span-4">
                 <div className="lg:sticky lg:top-4 space-y-3">
                   <CalculationResults />
                   <CalculationTransparency />

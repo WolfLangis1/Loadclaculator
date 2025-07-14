@@ -1,13 +1,15 @@
-import { LoadCalculatorProvider } from './context/LoadCalculatorContext';
+import { UnifiedAppProvider } from './context/UnifiedAppContext';
 import { TabbedInterface } from './components/TabbedInterface/TabbedInterface';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
+import { DeviceTogglePanel } from './components/UI/DeviceTogglePanel';
 
 function App() {
   return (
     <ErrorBoundary>
-      <LoadCalculatorProvider>
+      <UnifiedAppProvider>
         <TabbedInterface />
-      </LoadCalculatorProvider>
+        <DeviceTogglePanel />
+      </UnifiedAppProvider>
     </ErrorBoundary>
   );
 }

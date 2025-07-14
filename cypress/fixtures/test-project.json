@@ -1,0 +1,93 @@
+{
+  "projectInfo": {
+    "customerName": "Test Customer",
+    "propertyAddress": "123 Test Street, Test City, TC 12345",
+    "projectDescription": "Solar and EVSE installation for residential property",
+    "jurisdiction": "Test City Building Department",
+    "permitNumber": "P2024-TEST-001"
+  },
+  "loads": {
+    "general": [
+      {
+        "name": "General Lighting",
+        "va": 3000,
+        "quantity": 1,
+        "demandFactor": 1.0
+      },
+      {
+        "name": "Small Appliance Circuits",
+        "va": 3000,
+        "quantity": 2,
+        "demandFactor": 1.0
+      }
+    ],
+    "hvac": [
+      {
+        "name": "Central Air Conditioning",
+        "tons": 3.5,
+        "type": "air_conditioning",
+        "voltage": 240,
+        "amps": 18
+      },
+      {
+        "name": "Electric Heat Pump",
+        "kw": 12,
+        "type": "heat_pump",
+        "voltage": 240,
+        "amps": 50
+      }
+    ],
+    "evse": [
+      {
+        "name": "Tesla Wall Connector",
+        "amps": 48,
+        "voltage": 240,
+        "level": 2,
+        "quantity": 1,
+        "manufacturer": "Tesla"
+      },
+      {
+        "name": "ChargePoint Home Flex",
+        "amps": 40,
+        "voltage": 240,
+        "level": 2,
+        "quantity": 1,
+        "manufacturer": "ChargePoint"
+      }
+    ],
+    "solar": [
+      {
+        "name": "Rooftop Solar Array",
+        "kw": 12.8,
+        "quantity": 1,
+        "type": "solar",
+        "modules": 32,
+        "moduleWattage": 400
+      }
+    ],
+    "battery": [
+      {
+        "name": "Tesla Powerwall 3",
+        "kw": 13.5,
+        "kwh": 13.5,
+        "quantity": 1,
+        "type": "battery",
+        "manufacturer": "Tesla"
+      }
+    ]
+  },
+  "systemConfiguration": {
+    "mainBreakerSize": 200,
+    "serviceVoltage": 240,
+    "necCodeYear": "2023",
+    "calculationMethod": "optional",
+    "jurisdiction": "Test City"
+  },
+  "expectedResults": {
+    "totalLoad": 28560,
+    "demandLoad": 18200,
+    "serviceRequired": 200,
+    "necCompliant": true,
+    "solarInterconnectionCompliant": true
+  }
+}

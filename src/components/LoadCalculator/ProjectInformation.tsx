@@ -25,7 +25,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="customer-name"
             type="text"
-            value={projectInfo.customerName}
+            value={projectInfo.customerName || ''}
             onChange={(e) => updateProjectInfo({ customerName: e.target.value })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter customer name"
@@ -35,7 +35,7 @@ export const ProjectInformation: React.FC = () => {
 
         <div>
           <AddressAutocomplete
-            value={projectInfo.propertyAddress}
+            value={projectInfo.propertyAddress || ''}
             onChange={(address) => updateProjectInfo({ propertyAddress: address })}
             onPlaceSelect={(place) => {
               console.log('🏠 Project address selected:', place);
@@ -63,7 +63,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="city"
             type="text"
-            value={projectInfo.city}
+            value={projectInfo.city || ''}
             onChange={(e) => updateProjectInfo({ city: e.target.value })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter city"
@@ -77,7 +77,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="state"
             type="text"
-            value={projectInfo.state}
+            value={projectInfo.state || ''}
             onChange={(e) => updateProjectInfo({ state: e.target.value })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter state"
@@ -91,7 +91,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="zip-code"
             type="text"
-            value={projectInfo.zipCode}
+            value={projectInfo.zipCode || ''}
             onChange={(e) => updateProjectInfo({ zipCode: e.target.value })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter ZIP code"
@@ -105,7 +105,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="square-footage"
             type="number"
-            value={state.squareFootage}
+            value={state.squareFootage || 0}
             onChange={(e) => updateSettings({ squareFootage: parseInt(e.target.value) || 0 })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter square footage"
@@ -121,7 +121,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="project-name"
             type="text"
-            value={projectInfo.projectName}
+            value={projectInfo.projectName || ''}
             onChange={(e) => updateProjectInfo({ projectName: e.target.value })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter project name"
@@ -135,7 +135,7 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="calculated-by"
             type="text"
-            value={projectInfo.calculatedBy}
+            value={projectInfo.calculatedBy || ''}
             onChange={(e) => updateProjectInfo({ calculatedBy: e.target.value })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter calculator name"
@@ -149,7 +149,7 @@ export const ProjectInformation: React.FC = () => {
           </label>
           <select
             id="main-breaker"
-            value={state.mainBreaker}
+            value={state.mainBreaker || 200}
             onChange={(e) => updateSettings({ mainBreaker: parseInt(e.target.value) })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
           >
@@ -165,7 +165,7 @@ export const ProjectInformation: React.FC = () => {
           </label>
           <select
             id="bus-rating"
-            value={state.panelDetails.busRating}
+            value={state.panelDetails?.busRating || 200}
             onChange={(e) => updateSettings({ 
               panelDetails: { 
                 ...state.panelDetails, 

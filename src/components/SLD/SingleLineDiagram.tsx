@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Zap, Image, FileText, Settings, RefreshCw, AlertCircle, CheckCircle, Layout } from 'lucide-react';
 import { SLDCanvas } from './SLDCanvas';
 import { AerialView } from './AerialView';
+import { SLDTemplateModal } from './SLDTemplateModal';
 import { SLDService } from '../../services/sldService';
 import { AerialViewService } from '../../services/aerialViewService';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
@@ -22,6 +23,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
   const [aerialView, setAerialView] = useState<AerialViewType | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingAerial, setIsLoadingAerial] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [config, setConfig] = useState<SLDGenerationConfig>({
     style: 'professional',
     includeSpecifications: true,
@@ -125,7 +127,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
         </button>
 
         <button
-          onClick={() => {/* TODO: Implement templates modal */}}
+          onClick={() => setIsTemplateModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
           <Layout className="h-4 w-4" />
@@ -413,6 +415,14 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
         {activeTab === 'aerial' && renderAerialTab()}
         {activeTab === 'export' && renderExportTab()}
       </div>
+
+      {/* SLD Template Modal */}
+      <SLDTemplateModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onApplyTemplate={(diagram) => setDiagram(diagram)}
+        loadData={state.loads}
+      />
     </div>
   );
 };

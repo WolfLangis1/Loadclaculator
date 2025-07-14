@@ -1,6 +1,7 @@
 export interface CalculationResults {
   totalAmps: number;
   totalVA: number;
+  totalDemand: number;
   generalLoadVA: number;
   generalDemand: number;
   applianceDemand: number;
@@ -35,15 +36,22 @@ export interface ProjectInformation {
   state: string;
   zipCode: string;
   projectName: string;
+  projectNumber: string;
+  engineerName: string;
+  engineerLicense: string;
+  contractorName: string;
+  contractorLicense: string;
   calculatedBy: string;
   date: string;
   permitNumber: string;
   jobNumber: string;
   prnNumber: string;
   issueDate: string;
+  inspectionDate: string;
   approvedBy: string;
   jurisdiction: string;
   phone: string;
+  notes: string;
 }
 
 export interface ContractorInformation {
@@ -66,27 +74,33 @@ export interface AHJInformation {
 export interface PanelDetails {
   manufacturer: string;
   model: string;
+  type: string;
+  phases: number;
+  voltage: number;
   busRating: number;
-  mainBreakerRating: number;
-  spaces: number;
-  phase: number;
+  interruptingRating: number;
+  availableSpaces: number;
+  usedSpaces: number;
 }
 
 export interface ActualDemandData {
   enabled: boolean;
-  month1: number;
-  month2: number;
-  month3: number;
-  month4: number;
-  month5: number;
-  month6: number;
-  month7: number;
-  month8: number;
-  month9: number;
-  month10: number;
-  month11: number;
-  month12: number;
   averageDemand: number;
+  peakDemand: number;
+  dataSource: string;
+  measurementPeriod: string;
+  month1?: number;
+  month2?: number;
+  month3?: number;
+  month4?: number;
+  month5?: number;
+  month6?: number;
+  month7?: number;
+  month8?: number;
+  month9?: number;
+  month10?: number;
+  month11?: number;
+  month12?: number;
 }
 
 export interface WireSizeResult {

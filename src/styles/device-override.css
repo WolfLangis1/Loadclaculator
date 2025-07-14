@@ -1,0 +1,242 @@
+/**
+ * Device Override Styles (Development Only)
+ * 
+ * CSS overrides for mobile/desktop UI testing in development
+ */
+
+/* Device Override Container */
+.dev-device-override {
+  /* Create a constrained viewport for testing */
+  max-width: var(--dev-viewport-width, 100vw);
+  max-height: var(--dev-viewport-height, 100vh);
+  overflow: hidden;
+  margin: 0 auto;
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  background: #f8fafc;
+  position: relative;
+}
+
+.dev-device-override::before {
+  content: '';
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3b82f6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px 4px 0 0;
+  font-size: 10px;
+  font-family: monospace;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+.dev-device-override::before {
+  content: 'DEV: ' var(--dev-viewport-width) ' × ' var(--dev-viewport-height);
+}
+
+/* Device-specific styles */
+.dev-device-override.mobile {
+  border-color: #10b981;
+}
+
+.dev-device-override.mobile::before {
+  background: #10b981;
+  content: 'MOBILE: ' var(--dev-viewport-width) ' × ' var(--dev-viewport-height);
+}
+
+.dev-device-override.tablet {
+  border-color: #f59e0b;
+}
+
+.dev-device-override.tablet::before {
+  background: #f59e0b;
+  content: 'TABLET: ' var(--dev-viewport-width) ' × ' var(--dev-viewport-height);
+}
+
+/* Responsive behavior overrides */
+.dev-device-override .container {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+/* Touch optimization for mobile mode */
+.dev-device-override.mobile * {
+  /* Larger touch targets */
+  min-height: 44px;
+}
+
+.dev-device-override.mobile button,
+.dev-device-override.mobile .button,
+.dev-device-override.mobile input[type="button"],
+.dev-device-override.mobile input[type="submit"] {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+
+.dev-device-override.mobile input,
+.dev-device-override.mobile textarea,
+.dev-device-override.mobile select {
+  min-height: 44px;
+  padding: 12px;
+  font-size: 16px; /* Prevent zoom on iOS */
+}
+
+/* Tablet-specific optimizations */
+.dev-device-override.tablet .grid {
+  /* Optimize grid layouts for tablet */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* Desktop mode optimizations */
+.dev-device-override.desktop {
+  /* Ensure desktop interactions work properly */
+  border-color: #6366f1;
+}
+
+.dev-device-override.desktop::before {
+  background: #6366f1;
+  content: 'DESKTOP: ' var(--dev-viewport-width) ' × ' var(--dev-viewport-height);
+}
+
+/* SLD Canvas responsive adjustments */
+.dev-device-override .sld-canvas {
+  /* Adjust canvas for different screen sizes */
+  width: 100% !important;
+  height: calc(100vh - 120px) !important;
+}
+
+.dev-device-override.mobile .sld-canvas {
+  height: calc(100vh - 80px) !important;
+}
+
+.dev-device-override.tablet .sld-canvas {
+  height: calc(100vh - 100px) !important;
+}
+
+/* Component library responsive adjustments */
+.dev-device-override.mobile .component-library {
+  /* Stack component library on mobile */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  z-index: 100;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  transform: translateY(calc(100% - 40px));
+  transition: transform 0.3s ease;
+}
+
+.dev-device-override.mobile .component-library.expanded {
+  transform: translateY(0);
+}
+
+.dev-device-override.mobile .component-library-toggle {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Tab navigation responsive adjustments */
+.dev-device-override.mobile .tab-navigation {
+  /* Bottom tab bar on mobile */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 8px;
+  z-index: 200;
+}
+
+.dev-device-override.mobile .tab-navigation .tab {
+  flex-direction: column;
+  min-height: 60px;
+  font-size: 10px;
+  gap: 4px;
+}
+
+.dev-device-override.mobile .tab-navigation .tab-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Hide device panel when in override mode to prevent conflicts */
+.dev-device-override + .device-toggle-panel {
+  bottom: 80px !important;
+}
+
+/* Scrollbar adjustments for mobile */
+.dev-device-override.mobile {
+  scrollbar-width: thin;
+}
+
+.dev-device-override.mobile::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dev-device-override.mobile::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dev-device-override.mobile::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Loading states for touch devices */
+.dev-device-override.mobile .loading,
+.dev-device-override.tablet .loading {
+  /* More prominent loading indicators on touch devices */
+  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Animation performance optimizations for mobile */
+.dev-device-override.mobile * {
+  will-change: auto !important;
+}
+
+.dev-device-override.mobile .animate-spin,
+.dev-device-override.mobile .animate-pulse {
+  animation-duration: 1s !important; /* Slower animations on mobile */
+}
+
+/* Reduce motion for mobile devices */
+@media (prefers-reduced-motion: reduce) {
+  .dev-device-override.mobile *,
+  .dev-device-override.mobile *::before,
+  .dev-device-override.mobile *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles - hide device override */
+@media print {
+  .dev-device-override::before {
+    display: none !important;
+  }
+  
+  .dev-device-override {
+    border: none !important;
+    max-width: none !important;
+    max-height: none !important;
+  }
+}
