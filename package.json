@@ -33,11 +33,13 @@
     "@tensorflow/tfjs-backend-cpu": "^4.15.0",
     "@tensorflow/tfjs-backend-webgl": "^4.15.0",
     "@types/svg.js": "^0.0.17",
+    "@vitejs/plugin-react": "^4.1.1",
     "jspdf": "^3.0.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "svg.js": "^2.7.1"
+    "svg.js": "^2.7.1",
+    "vite": "^5.0.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.45.0",
@@ -53,7 +55,6 @@
     "@types/react-dom": "^18.2.15",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
-    "@vitejs/plugin-react": "^4.1.1",
     "@vitest/ui": "^1.0.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.53.0",
@@ -66,7 +67,6 @@
     "tailwindcss": "^3.4.17",
     "terser": "^5.43.1",
     "typescript": "^5.2.2",
-    "vite": "^5.0.0",
     "vitest": "^1.0.0"
   }
 }
