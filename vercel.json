@@ -4,7 +4,6 @@
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm ci",
-  "functions": {},
   "env": {
     "NODE_ENV": "production"
   },
