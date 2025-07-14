@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
+// Production-ready Vite configuration in JavaScript
+// Eliminates TypeScript import issues during Vercel deployment
 export default defineConfig(({ mode }) => ({
   plugins: [react({
     // Ensure React is properly configured for all modes
