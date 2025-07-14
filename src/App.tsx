@@ -1,23 +1,25 @@
-import { TabbedInterface } from './components/TabbedInterface/TabbedInterface';
+import { LoadCalculatorMain } from './components/LoadCalculator/LoadCalculatorMain';
 import { ProjectSettingsProvider } from './context/ProjectSettingsContext';
 import { LoadDataProvider } from './context/LoadDataContext';
 import { CalculationProvider } from './context/CalculationContext';
-import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
-import { DeviceTogglePanel } from './components/UI/DeviceTogglePanel';
 
-// Full load calculator app with essential contexts (no SLD)
+// Stable working version - LoadCalculatorMain only
 function App() {
   return (
-    <ErrorBoundary>
-      <ProjectSettingsProvider>
-        <LoadDataProvider>
-          <CalculationProvider>
-            <TabbedInterface />
-            <DeviceTogglePanel />
-          </CalculationProvider>
-        </LoadDataProvider>
-      </ProjectSettingsProvider>
-    </ErrorBoundary>
+    <ProjectSettingsProvider>
+      <LoadDataProvider>
+        <CalculationProvider>
+          <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+            <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px' }}>
+              <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '24px', color: '#1f2937' }}>
+                Professional Electrical Load Calculator
+              </h1>
+              <LoadCalculatorMain />
+            </div>
+          </div>
+        </CalculationProvider>
+      </LoadDataProvider>
+    </ProjectSettingsProvider>
   );
 }
 
