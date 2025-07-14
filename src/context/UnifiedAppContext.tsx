@@ -2,7 +2,7 @@ import React from 'react';
 import { LoadDataProvider, useLoadData } from './LoadDataContext';
 import { ProjectSettingsProvider, useProjectSettings } from './ProjectSettingsContext';
 import { CalculationProvider, useCalculations } from './CalculationContext';
-import { SLDProvider } from './SLDContext';
+// import { SLDProvider } from './SLDContext'; // Temporarily disabled for deployment
 
 /**
  * Unified App Context Provider
@@ -21,9 +21,7 @@ export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     <ProjectSettingsProvider>
       <LoadDataProvider>
         <CalculationProvider>
-          <SLDProvider>
-            {children}
-          </SLDProvider>
+          {children}
         </CalculationProvider>
       </LoadDataProvider>
     </ProjectSettingsProvider>

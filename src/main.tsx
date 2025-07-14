@@ -20,6 +20,12 @@ class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Application error:', error, errorInfo)
+    // Send error to console for debugging in production
+    if (typeof window !== 'undefined') {
+      window.onerror = (message, source, lineno, colno, error) => {
+        console.error('Global error:', { message, source, lineno, colno, error })
+      }
+    }
   }
 
   render() {
@@ -45,19 +51,13 @@ class ErrorBoundary extends React.Component<
 // Fix for React scheduler issues in production
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
-// Always wrap in error boundary, disable strict mode in production
+// Simple render without error boundary for now to isolate issues
 if (import.meta.env.DEV) {
   root.render(
-    <ErrorBoundary>
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    </ErrorBoundary>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
   )
 } else {
-  root.render(
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  )
+  root.render(<App />)
 }
