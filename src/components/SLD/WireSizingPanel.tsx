@@ -11,7 +11,6 @@ import {
   Calculator, 
   CheckCircle, 
   AlertTriangle, 
-  Info, 
   Settings,
   Zap,
   Ruler,
@@ -68,7 +67,20 @@ export const WireSizingPanel: React.FC<WireSizingPanelProps> = ({
   // Calculate wire sizing options
   const wireSizingResults = useMemo(() => {
     try {
-      return IntelligentWireSizingService.getWireSizingOptions(inputs);
+      // Map WireSizingInputs to WireSizingParameters
+      const params = {
+        amperage: inputs.amperage,
+        voltage: inputs.voltage,
+        length: inputs.length,
+        ambientTemperature: inputs.ambientTemp, // Map ambientTemp to ambientTemperature
+        installationMethod: inputs.installationMethod,
+        conductorCount: inputs.conductorCount,
+        conduitFill: inputs.conduitFill,
+        maxVoltageDrop: inputs.maxVoltageDrop,
+        wireType: inputs.wireType,
+        temperatureRating: inputs.temperatureRating
+      };
+      return IntelligentWireSizingService.getWireSizingOptions(params);
     } catch (error) {
       console.error('Wire sizing calculation error:', error);
       return null;

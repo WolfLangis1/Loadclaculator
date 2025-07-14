@@ -725,21 +725,21 @@ export const UnifiedSLDMain: React.FC = () => {
                     />
                   )}
                   {/* Instrumentation Components */}
-                  {(component.type === 'ct' || component.type === 'vt') && (
+                  {('type' in component && (component.type as string) === 'ct' || (component.type as string) === 'vt') && (
                     <RealisticElectricalSymbols.TransformerPadMount
-                      width={component.size.width}
-                      height={component.size.height}
-                      amperage={component.specifications?.rating?.replace('A', '') || 100}
+                      width={component.size?.width || 50}
+                      height={component.size?.height || 50}
+                      amperage={component.specifications?.rating?.replace?.('A', '') || 100}
                       voltage={component.specifications?.voltage || '120V'}
                       showRating={true}
                     />
                   )}
                   {/* Control Components */}
-                  {(component.type === 'contactor' || component.type === 'relay') && (
+                  {('type' in component && (component.type as string) === 'contactor' || (component.type as string) === 'relay') && (
                     <RealisticElectricalSymbols.CircuitBreakerSP
-                      width={component.size.width}
-                      height={component.size.height}
-                      amperage={component.specifications?.rating?.replace('A', '') || 30}
+                      width={component.size?.width || 50}
+                      height={component.size?.height || 50}
+                      amperage={component.specifications?.rating?.replace?.('A', '') || 30}
                       showRating={true}
                     />
                   )}
@@ -772,8 +772,8 @@ export const UnifiedSLDMain: React.FC = () => {
                     {/* Wire label */}
                     {connection.label && (
                       <text
-                        x={(connection.startPoint?.x || 0 + connection.endPoint?.x || 0) / 2}
-                        y={(connection.startPoint?.y || 0 + connection.endPoint?.y || 0) / 2 - 5}
+                        x={((connection.startPoint?.x || 0) + (connection.endPoint?.x || 0)) / 2}
+                        y={((connection.startPoint?.y || 0) + (connection.endPoint?.y || 0)) / 2 - 5}
                         textAnchor="middle"
                         fontSize="10"
                         fill="#374151"
@@ -786,8 +786,8 @@ export const UnifiedSLDMain: React.FC = () => {
                     {/* Wire gauge info */}
                     {connection.wireGauge && (
                       <text
-                        x={(connection.startPoint?.x || 0 + connection.endPoint?.x || 0) / 2}
-                        y={(connection.startPoint?.y || 0 + connection.endPoint?.y || 0) / 2 + 10}
+                        x={((connection.startPoint?.x || 0) + (connection.endPoint?.x || 0)) / 2}
+                        y={((connection.startPoint?.y || 0) + (connection.endPoint?.y || 0)) / 2 + 10}
                         textAnchor="middle"
                         fontSize="8"
                         fill="#6b7280"
@@ -868,15 +868,66 @@ export const UnifiedSLDMain: React.FC = () => {
             <div className="absolute top-4 left-4">
               <LayerManager
                 layers={[
-                  { id: 'components', name: 'Components', visible: true, color: '#374151' },
-                  { id: 'connections', name: 'Connections', visible: true, color: '#059669' },
-                  { id: 'annotations', name: 'Annotations', visible: true, color: '#dc2626' }
+                  { 
+                    id: 'components', 
+                    name: 'Components', 
+                    visible: true, 
+                    locked: false,
+                    color: '#374151',
+                    lineWeight: 1,
+                    lineType: 'solid' as const,
+                    opacity: 1,
+                    printable: true,
+                    elementIds: [],
+                    order: 1,
+                    category: 'electrical' as const
+                  },
+                  { 
+                    id: 'connections', 
+                    name: 'Connections', 
+                    visible: true, 
+                    locked: false,
+                    color: '#059669',
+                    lineWeight: 2,
+                    lineType: 'solid' as const,
+                    opacity: 1,
+                    printable: true,
+                    elementIds: [],
+                    order: 2,
+                    category: 'electrical' as const
+                  },
+                  { 
+                    id: 'annotations', 
+                    name: 'Annotations', 
+                    visible: true, 
+                    locked: false,
+                    color: '#dc2626',
+                    lineWeight: 1,
+                    lineType: 'solid' as const,
+                    opacity: 1,
+                    printable: true,
+                    elementIds: [],
+                    order: 3,
+                    category: 'annotations' as const
+                  }
                 ]}
-                onLayerToggle={(layerId, visible) => {
-                  logger.info('Layer toggled', { layerId, visible });
+                onLayerChange={(layerId: string, changes: any) => {
+                  logger.info('Layer changed', { layerId, changes });
                 }}
-                onLayerColorChange={(layerId, color) => {
-                  logger.info('Layer color changed', { layerId, color });
+                onLayerCreate={(layer: any) => {
+                  logger.info('Layer created', { layer });
+                }}
+                onLayerDelete={(layerId: string) => {
+                  logger.info('Layer deleted', { layerId });
+                }}
+                onLayerDuplicate={(layerId: string) => {
+                  logger.info('Layer duplicated', { layerId });
+                }}
+                onLayerReorder={(layerId: string, newOrder: number) => {
+                  logger.info('Layer reordered', { layerId, newOrder });
+                }}
+                onLayerSelect={(layerId: string) => {
+                  logger.info('Layer selected', { layerId });
                 }}
               />
             </div>
