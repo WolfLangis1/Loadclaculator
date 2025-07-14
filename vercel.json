@@ -1,6 +1,21 @@
 {
-  "buildCommand": "npm install && npx vite build",
+  "version": 2,
+  "buildCommand": "npm ci && npx vite build --mode production",
   "outputDirectory": "dist",
   "framework": null,
-  "installCommand": "npm install"
+  "installCommand": "npm ci",
+  "functions": {},
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "VITE_NODE_ENV": "production"
+    }
+  },
+  "ignoreCommand": "echo 'Skipping build step in favor of custom buildCommand'",
+  "github": {
+    "silent": true
+  }
 }

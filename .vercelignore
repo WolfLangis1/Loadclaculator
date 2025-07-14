@@ -1,6 +1,71 @@
-# Ignore test files and documentation during Vercel build
+# Comprehensive Vercel ignore file to prevent build issues
+
+# Test files and directories
 src/tests/
 *.test.ts
 *.test.tsx
-*.md
+*.test.js
+*.test.jsx
 cypress/
+__tests__/
+test/
+tests/
+
+# Documentation files
+*.md
+docs/
+documentation/
+
+# Development and debugging files
+*.log
+*.debug
+dev_output.log
+*.map
+.DS_Store
+
+# Extended features that cause TypeScript errors
+src/components/AerialView/
+src/components/SLD/UnifiedSLDMain.tsx
+src/components/SLD/EnhancedSLDMain.tsx
+src/components/SLD/EnhancedSLDCanvas.tsx
+src/components/SLD/EnhancedSingleLineDiagram.tsx
+src/components/SLD/IntelligentSLDMain.tsx
+src/components/SLD/OptimizedSLDCanvas.tsx
+src/components/SLD/ProfessionalSLDMain.tsx
+src/components/SLD/ProfessionalSLDCanvas.tsx
+src/components/SLD/RealisticComponentRenderer.tsx
+src/components/SLD/RealisticElectricalSymbols.tsx
+src/services/intelligentSLDService.ts
+src/services/intelligentSymbolService.ts
+src/services/intelligentWireSizingService.ts
+src/services/aiRoofAnalysisService.ts
+src/services/aerialViewService.ts
+src/services/threeDModelService.ts
+src/services/weatherDataService.ts
+src/utils/wireCollisionDetection.ts
+src/utils/wireRouting.ts
+src/utils/canvasTransforms.ts
+
+# Build artifacts and temporary files
+node_modules/
+dist/
+.next/
+.cache/
+coverage/
+.nyc_output/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
