@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:production": "vite build --mode production",
     "build:vite": "vite build",
-    "build:vercel": "vite build --config vite.config.production.ts --mode production",
+    "build:vercel": "vite build --mode production",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",

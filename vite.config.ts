@@ -2,8 +2,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => ({
+  plugins: [react({
+    // Ensure React is properly configured for all modes
+    include: "**/*.{jsx,tsx}",
+    babel: {
+      plugins: []
+    }
+  })],
   build: {
     outDir: 'dist',
     sourcemap: false, // Disable in production for smaller bundle
@@ -64,6 +70,20 @@ export default defineConfig({
       }
     }
   },
+  // Production-specific settings
+  define: {
+    'process.env.NODE_ENV': mode === 'production' ? '"production"' : '"development"',
+    ...(mode === 'production' && {
+      'import.meta.env.DEV': 'false',
+      'import.meta.env.PROD': 'true'
+    })
+  },
+  esbuild: {
+    ...(mode === 'production' && {
+      drop: ['console', 'debugger'],
+      jsx: 'automatic'
+    })
+  },
   optimizeDeps: {
     include: [
       'react',
@@ -91,4 +111,4 @@ export default defineConfig({
     // Prevent automatic page reload on certain file changes
     middlewareMode: false,
   },
-})
+}))
