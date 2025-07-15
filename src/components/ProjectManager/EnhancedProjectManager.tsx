@@ -21,7 +21,7 @@ import {
   Save,
   Settings,
   Image as ImageIcon,
-  Template as TemplateIcon,
+  FileText as TemplateIcon,
   BarChart3,
   FileText,
   ChevronDown,

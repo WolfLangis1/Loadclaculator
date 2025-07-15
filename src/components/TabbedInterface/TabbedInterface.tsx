@@ -5,11 +5,9 @@ import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 
-// Lazy load heavy components with fallbacks for Vercel compatibility
-const EnhancedSLDCanvas = lazy(() => 
-  import('../SLD/EnhancedSLDCanvas').then(module => ({ default: module.EnhancedSLDCanvas }))
-    .catch(() => import('../SLD/SimplifiedIntelligentSLDCanvas').then(module => ({ default: module.SimplifiedIntelligentSLDCanvas })))
-    .catch(() => import('../SLD/IntelligentSLDCanvas').then(module => ({ default: module.IntelligentSLDCanvas })))
+// Lazy load heavy components with Vercel-compatible fallback
+const WorkingIntelligentSLDCanvas = lazy(() => 
+  import('../SLD/WorkingIntelligentSLDCanvas').then(module => ({ default: module.WorkingIntelligentSLDCanvas }))
 );
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
 const EnhancedProjectManager = lazy(() => 
@@ -47,7 +45,7 @@ export const TabbedInterface: React.FC = () => {
       id: 'sld-intelligent',
       label: 'SLD',
       icon: Zap,
-      component: EnhancedSLDCanvas
+      component: WorkingIntelligentSLDCanvas
     },
     {
       id: 'aerial',

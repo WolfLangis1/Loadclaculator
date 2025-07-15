@@ -54,13 +54,10 @@ src/components/SLD/ComponentCard.tsx
 src/components/SLD/ComponentGrid.tsx
 src/components/SLD/RefactoredComponentLibrary.tsx
 src/components/SLD/ProfessionalGrid.tsx
-src/components/SLD/LayerManager.tsx
+# Only exclude truly problematic files - keep essential dependencies
 src/components/SLD/ExpandedIEEESymbols.tsx
 src/components/SLD/PerformanceMonitor.tsx
-src/components/SLD/TitleBlock.tsx
-src/components/SLD/SLDToolbar.tsx
 src/components/SLD/ExpandedComponentLibrary.tsx
-src/components/SLD/WireSizingPanel.tsx
 src/services/intelligentSLDService.ts
 src/services/intelligentSymbolService.ts
 src/services/intelligentWireSizingService.ts

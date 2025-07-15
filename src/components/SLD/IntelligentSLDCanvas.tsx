@@ -21,21 +21,27 @@ import {
 import { useSLDData } from '../../context/SLDDataContext';
 import { useLoadData } from '../../context/LoadDataContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
+import { 
+  generateIntelligentSLD, 
+  type SLDGenerationOptions, 
+  type GeneratedSLDComponent 
+} from '../../services/intelligentSLDGenerator';
 import { EnhancedComponentLibrary } from './EnhancedComponentLibrary';
+import { LayerManager, DEFAULT_LAYERS, type DrawingLayer } from './LayerManager';
+import { CanvasTools, type CanvasTool } from './CanvasTools';
+import { 
+  StandardTitleBlock, 
+  ProfessionalTitleBlock, 
+  DrawingBorder,
+  type TitleBlockData 
+} from './TitleBlockTemplates';
+import { 
+  generateTitleBlockFromProject, 
+  TITLE_BLOCK_TEMPLATES 
+} from '../../services/titleBlockService';
+import { DynamicWireRenderer } from './DynamicWireRenderer';
+import { RealTimeNECValidator, type RealTimeValidationResult } from '../../services/realTimeNECValidator';
 import { DraggableTitleBlock } from './DraggableTitleBlock';
-
-// Simple interfaces for Vercel compatibility
-interface SLDGenerationOptions {
-  includeLoadCalculations: boolean;
-  includeCircuitNumbers: boolean;
-  includeWireSizing: boolean;
-  includeNECReferences: boolean;
-  diagramStyle: string;
-  voltageLevel: number;
-  serviceSize: number;
-}
-
-type CanvasTool = 'select' | 'pan' | 'zoom';
 
 export const IntelligentSLDCanvas: React.FC = () => {
   const { state: sldState, updateDiagram, addComponent, updateComponent } = useSLDData();
