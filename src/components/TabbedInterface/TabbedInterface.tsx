@@ -8,6 +8,7 @@ import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 // Lazy load heavy components with fallbacks for Vercel compatibility
 const EnhancedSLDCanvas = lazy(() => 
   import('../SLD/EnhancedSLDCanvas').then(module => ({ default: module.EnhancedSLDCanvas }))
+    .catch(() => import('../SLD/SimplifiedIntelligentSLDCanvas').then(module => ({ default: module.SimplifiedIntelligentSLDCanvas })))
     .catch(() => import('../SLD/IntelligentSLDCanvas').then(module => ({ default: module.IntelligentSLDCanvas })))
 );
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
