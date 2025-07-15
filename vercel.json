@@ -5,10 +5,16 @@
   "framework": "vite",
   "installCommand": "npm ci",
   "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x"
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
     }
   },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },

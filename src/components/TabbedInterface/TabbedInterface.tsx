@@ -6,9 +6,9 @@ import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBounda
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 
 // Lazy load heavy components  
-const IntelligentSLDCanvas = lazy(() => import('../SLD/IntelligentSLDCanvas').then(module => ({ default: module.IntelligentSLDCanvas })));
+const EnhancedSLDCanvas = lazy(() => import('../SLD/EnhancedSLDCanvas').then(module => ({ default: module.EnhancedSLDCanvas })));
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
-const ProjectManager = lazy(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })));
+const EnhancedProjectManager = lazy(() => import('../ProjectManager/EnhancedProjectManager').then(module => ({ default: module.EnhancedProjectManager })));
 
 type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing';
 
@@ -40,7 +40,7 @@ export const TabbedInterface: React.FC = () => {
       id: 'sld-intelligent',
       label: 'SLD',
       icon: Zap,
-      component: IntelligentSLDCanvas
+      component: EnhancedSLDCanvas
     },
     {
       id: 'aerial',
@@ -180,7 +180,7 @@ export const TabbedInterface: React.FC = () => {
       {showProjectManager && (
         <AsyncComponentErrorBoundary componentName="Project Manager">
           <Suspense fallback={<LazyLoadingSpinner componentName="Project Manager" />}>
-            <ProjectManager 
+            <EnhancedProjectManager 
               isOpen={showProjectManager} 
               onClose={() => setShowProjectManager(false)} 
             />
