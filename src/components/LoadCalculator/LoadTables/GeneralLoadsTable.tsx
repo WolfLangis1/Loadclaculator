@@ -14,9 +14,9 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showAdvancedLoads, setShowAdvancedLoads] = useState(false);
   
-  // Split loads into basic (first 15) and advanced (rest)
-  const basicLoads = generalLoads.slice(0, 15);
-  const advancedLoads = generalLoads.slice(15);
+  // Split loads into basic (first 9) and advanced (rest)
+  const basicLoads = generalLoads.slice(0, 9);
+  const advancedLoads = generalLoads.slice(9);
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

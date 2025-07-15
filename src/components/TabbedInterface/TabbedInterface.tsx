@@ -1,15 +1,17 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { Calculator, FolderOpen, Zap, MapPin } from 'lucide-react';
+import { Calculator, FolderOpen, Zap, MapPin, Cable } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 
 // Lazy load heavy components  
 const SimpleSLDMain = lazy(() => import('../SLD/SimpleSLDMain').then(module => ({ default: module.SimpleSLDMain })));
+const IntelligentSLDCanvas = lazy(() => import('../SLD/IntelligentSLDCanvas').then(module => ({ default: module.IntelligentSLDCanvas })));
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
+const WireSizingChart = lazy(() => import('../LoadCalculator/WireSizingChart').then(module => ({ default: module.WireSizingChart })));
 const ProjectManager = lazy(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })));
 
-type TabType = 'calculator' | 'sld' | 'aerial';
+type TabType = 'calculator' | 'sld' | 'sld-intelligent' | 'aerial' | 'wire-sizing';
 
 interface Tab {
   id: TabType;
@@ -30,10 +32,22 @@ export const TabbedInterface: React.FC = () => {
       component: LoadCalculatorMain
     },
     {
+      id: 'wire-sizing',
+      label: 'Wire Sizing',
+      icon: Cable,
+      component: WireSizingChart
+    },
+    {
       id: 'sld',
-      label: 'Single Line Diagram',
+      label: 'Manual SLD',
       icon: Zap,
       component: SimpleSLDMain
+    },
+    {
+      id: 'sld-intelligent',
+      label: 'Intelligent SLD',
+      icon: Zap,
+      component: IntelligentSLDCanvas
     },
     {
       id: 'aerial',
@@ -156,6 +170,8 @@ export const TabbedInterface: React.FC = () => {
         className={`${
           activeTab === 'sld' || activeTab === 'aerial' 
             ? 'h-[calc(100vh-80px)]' 
+            : activeTab === 'wire-sizing'
+            ? 'max-w-7xl mx-auto py-6'
             : 'max-w-7xl mx-auto'
         }`}
       >

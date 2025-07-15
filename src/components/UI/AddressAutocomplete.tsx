@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Loader2 } from 'lucide-react';
+import { Search, MapPin, Loader2 } from 'lucide-react';
+import { SecureApiService } from '../../services/secureApiService';
 
 interface AddressAutocompleteProps {
   value: string;
@@ -52,15 +53,13 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [apiAvailable, setApiAvailable] = useState(true);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
 
-  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const USE_REAL_DATA = import.meta.env.VITE_USE_REAL_AERIAL_DATA === 'true';
-
-  // Mock suggestions for development
+  // Mock suggestions for development/fallback
   const mockSuggestions = [
     {
       place_id: 'mock_1',
@@ -88,6 +87,21 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     }
   ];
 
+  // Check API availability on component mount
+  useEffect(() => {
+    const checkApiHealth = async () => {
+      try {
+        const isHealthy = await SecureApiService.healthCheck();
+        setApiAvailable(isHealthy);
+      } catch (error) {
+        console.warn('API health check failed, using fallback mode');
+        setApiAvailable(false);
+      }
+    };
+    
+    checkApiHealth();
+  }, []);
+
   const searchPlaces = async (query: string) => {
     if (query.length < 3) {
       setSuggestions([]);
@@ -97,23 +111,20 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     setIsLoading(true);
 
     try {
-      if (USE_REAL_DATA && GOOGLE_MAPS_API_KEY !== 'YOUR_GOOGLE_MAPS_API_KEY') {
-        // Use real Google Places API
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=address&key=${GOOGLE_MAPS_API_KEY}`
-        );
+      if (apiAvailable) {
+        // Use secure backend API
+        const result = await SecureApiService.getPlaceSuggestions(query);
         
-        if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data.predictions || []);
+        if (result.predictions) {
+          setSuggestions(result.predictions);
         } else {
-          console.warn('Places API request failed, using mock data');
+          console.warn('No predictions returned from secure API, using mock data');
           setSuggestions(mockSuggestions.filter(place => 
             place.description.toLowerCase().includes(query.toLowerCase())
           ));
         }
       } else {
-        // Use mock data for development
+        // Use mock data for development/fallback
         await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API delay
         setSuggestions(mockSuggestions.filter(place => 
           place.description.toLowerCase().includes(query.toLowerCase())
@@ -130,8 +141,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   };
 
   const getPlaceDetails = async (placeId: string) => {
-    if (!USE_REAL_DATA || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') {
-      // Return mock place details
+    if (!apiAvailable || placeId.startsWith('mock_')) {
+      // Return mock place details for fallback
       return {
         address: value,
         coordinates: { latitude: 40.7128, longitude: -74.0060 },
@@ -147,17 +158,15 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     }
 
     try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,geometry,address_components&key=${GOOGLE_MAPS_API_KEY}`
-      );
+      // Use secure backend for place details
+      const result = await SecureApiService.getPlaceSuggestions(value, 'session-token');
       
-      if (response.ok) {
-        const data = await response.json();
-        const result = data.result;
+      if (result.result) {
+        const placeResult = result.result;
         
         // Parse address components
         const components: any = {};
-        result.address_components?.forEach((component: any) => {
+        placeResult.address_components?.forEach((component: any) => {
           if (component.types.includes('street_number')) {
             components.streetNumber = component.long_name;
           }
@@ -179,10 +188,10 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         });
 
         return {
-          address: result.formatted_address,
+          address: placeResult.formatted_address,
           coordinates: {
-            latitude: result.geometry.location.lat,
-            longitude: result.geometry.location.lng
+            latitude: placeResult.geometry.location.lat,
+            longitude: placeResult.geometry.location.lng
           },
           components
         };
@@ -249,6 +258,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         break;
       case 'Escape':
         setShowSuggestions(false);
+        setSuggestions([]);
         setSelectedIndex(-1);
         break;
     }
@@ -263,22 +273,23 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   };
 
   const handleFocus = () => {
-    if (suggestions.length > 0) {
+    if (value.length >= 3 && suggestions.length > 0) {
       setShowSuggestions(true);
     }
   };
 
-  // Cleanup timeout on unmount
+  // Auto-scroll to selected suggestion
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    if (selectedIndex >= 0 && suggestionsRef.current) {
+      const selectedElement = suggestionsRef.current.children[selectedIndex] as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ block: 'nearest' });
       }
-    };
-  }, []);
+    }
+  }, [selectedIndex]);
 
   return (
-    <div className="relative">
+    <div className={`relative ${className}`}>
       {label && (
         <label className={labelClassName}>
           {label}
@@ -288,7 +299,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <MapPin className="h-4 w-4 text-gray-400" />
+          <Search className="h-5 w-5 text-gray-400" />
         </div>
         
         <input
@@ -301,14 +312,12 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           onFocus={handleFocus}
           placeholder={placeholder}
           disabled={disabled}
-          required={required}
-          className={`w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
-          autoComplete="off"
+          className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
         
         {isLoading && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+            <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
           </div>
         )}
       </div>
@@ -316,27 +325,23 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
         >
           {suggestions.map((suggestion, index) => (
             <div
               key={suggestion.place_id}
               onClick={() => handleSuggestionClick(suggestion)}
-              className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                index === selectedIndex
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'hover:bg-gray-50'
+              className={`px-4 py-2 cursor-pointer hover:bg-gray-100 flex items-center ${
+                index === selectedIndex ? 'bg-blue-50 border-l-4 border-blue-500' : ''
               }`}
             >
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">
-                    {suggestion.structured_formatting.main_text}
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
-                    {suggestion.structured_formatting.secondary_text}
-                  </div>
+              <MapPin className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {suggestion.structured_formatting.main_text}
+                </div>
+                <div className="text-sm text-gray-500 truncate">
+                  {suggestion.structured_formatting.secondary_text}
                 </div>
               </div>
             </div>
@@ -345,12 +350,13 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       )}
 
       {helperText && (
-        <p className={helperClassName}>{helperText}</p>
-      )}
-      
-      {!USE_REAL_DATA && (
-        <p className="mt-1 text-xs text-amber-600">
-          ⚠️ Using mock address suggestions - Enable VITE_USE_REAL_AERIAL_DATA for real Google Places
+        <p className={helperClassName}>
+          {helperText}
+          {!apiAvailable && (
+            <span className="text-yellow-600 ml-2">
+              ⚠️ Using mock address suggestions - Secure API not available
+            </span>
+          )}
         </p>
       )}
     </div>

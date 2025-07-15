@@ -15,8 +15,18 @@ import {
   Info,
   CheckCircle,
   Thermometer,
-  Settings
+  Settings,
+  Shield,
+  BookOpen,
+  CheckSquare
 } from 'lucide-react';
+import { 
+  getComplianceWireSize, 
+  analyzeCircuit, 
+  generateComplianceReport,
+  type CircuitAnalysis,
+  type ComplianceAnalysis 
+} from '../../services/necComplianceEngine';
 
 interface WireData {
   awg: string;
@@ -215,6 +225,11 @@ export const WireSizingChart: React.FC = () => {
   const [conductorCount, setConductorCount] = useState<number>(3);
   const [wireLength, setWireLength] = useState<number>(100);
   const [maxVoltageDrop, setMaxVoltageDrop] = useState<number>(3);
+  const [isContinuous, setIsContinuous] = useState<boolean>(false);
+  const [isMotorLoad, setIsMotorLoad] = useState<boolean>(false);
+  const [isEVSE, setIsEVSE] = useState<boolean>(false);
+  const [materialType, setMaterialType] = useState<'copper' | 'aluminum'>('copper');
+  const [showCompliance, setShowCompliance] = useState<boolean>(false);
 
   // Filter wire data based on search and filters
   const filteredWireData = useMemo(() => {
@@ -282,6 +297,48 @@ export const WireSizingChart: React.FC = () => {
       } : null
     };
   }, [requiredAmps, ambientTemp, conduitFill, conductorCount, wireLength, maxVoltageDrop, temperatureRating]);
+
+  // Enhanced NEC compliance calculation
+  const complianceAnalysis = useMemo(() => {
+    if (requiredAmps === 0) return null;
+
+    const complianceResult = getComplianceWireSize(
+      requiredAmps,
+      240, // voltage
+      wireLength,
+      temperatureRating,
+      conductorCount,
+      materialType,
+      ambientTemp,
+      isContinuous,
+      isMotorLoad,
+      maxVoltageDrop
+    );
+
+    const circuitAnalysis = analyzeCircuit(
+      'calc-circuit',
+      'Calculator Circuit',
+      requiredAmps,
+      240,
+      complianceResult.wireSize,
+      materialType,
+      temperatureRating,
+      conductorCount,
+      wireLength,
+      ambientTemp,
+      isContinuous,
+      isMotorLoad,
+      isEVSE
+    );
+
+    const report = generateComplianceReport([circuitAnalysis]);
+
+    return {
+      recommended: complianceResult,
+      analysis: circuitAnalysis,
+      report
+    };
+  }, [requiredAmps, wireLength, temperatureRating, conductorCount, materialType, ambientTemp, isContinuous, isMotorLoad, isEVSE, maxVoltageDrop]);
 
   /**
    * Export wire sizing data to CSV
@@ -352,6 +409,14 @@ export const WireSizingChart: React.FC = () => {
             </button>
             
             <button
+              onClick={() => setShowCompliance(!showCompliance)}
+              className="flex items-center gap-2 px-3 py-1 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+            >
+              <Shield className="h-4 w-4" />
+              NEC Compliance
+            </button>
+            
+            <button
               onClick={exportToCSV}
               className="flex items-center gap-2 px-3 py-1 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
             >
@@ -371,6 +436,19 @@ export const WireSizingChart: React.FC = () => {
           </h3>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Wire Material
+              </label>
+              <select
+                value={materialType}
+                onChange={(e) => setMaterialType(e.target.value as 'copper' | 'aluminum')}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              >
+                <option value="copper">Copper</option>
+                <option value="aluminum">Aluminum</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Required Amps
@@ -429,6 +507,46 @@ export const WireSizingChart: React.FC = () => {
                 className="w-full border border-gray-300 rounded px-3 py-2"
                 placeholder="100"
               />
+            </div>
+          </div>
+          
+          {/* Load Type Controls */}
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="continuous"
+                checked={isContinuous}
+                onChange={(e) => setIsContinuous(e.target.checked)}
+                className="mr-2"
+              />
+              <label htmlFor="continuous" className="text-sm text-gray-700">
+                Continuous Load (125% factor)
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="motor"
+                checked={isMotorLoad}
+                onChange={(e) => setIsMotorLoad(e.target.checked)}
+                className="mr-2"
+              />
+              <label htmlFor="motor" className="text-sm text-gray-700">
+                Motor Load (125% factor)
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="evse"
+                checked={isEVSE}
+                onChange={(e) => setIsEVSE(e.target.checked)}
+                className="mr-2"
+              />
+              <label htmlFor="evse" className="text-sm text-gray-700">
+                EVSE Circuit (NEC 625)
+              </label>
             </div>
           </div>
 
@@ -507,6 +625,156 @@ export const WireSizingChart: React.FC = () => {
               </div>
             </div>
           )}
+          
+          {/* Enhanced NEC Compliance Results */}
+          {complianceAnalysis && requiredAmps > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-green-200 mt-4">
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-green-600" />
+                NEC Compliance Analysis
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Recommended Wire Size */}
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-900">Compliant Wire Size</span>
+                  </div>
+                  
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Recommended:</span>
+                      <span className="font-bold">{complianceAnalysis.recommended.wireSize} AWG {materialType}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Ampacity:</span>
+                      <span>{complianceAnalysis.recommended.ampacity}A</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Voltage Drop:</span>
+                      <span className={complianceAnalysis.recommended.voltageDropPercent <= maxVoltageDrop ? 'text-green-600' : 'text-red-600'}>
+                        {complianceAnalysis.recommended.voltageDropPercent.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Compliance:</span>
+                      <span className={complianceAnalysis.recommended.isCompliant ? 'text-green-600' : 'text-red-600'}>
+                        {complianceAnalysis.recommended.isCompliant ? 'Compliant' : 'Non-Compliant'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Violations & Warnings */}
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-900">Code Compliance</span>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    {complianceAnalysis.analysis.violations.length === 0 ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckSquare className="h-3 w-3" />
+                        <span>No violations found</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {complianceAnalysis.analysis.violations.slice(0, 3).map((violation, index) => (
+                          <div key={index} className={`flex items-start gap-2 ${
+                            violation.severity === 'error' ? 'text-red-600' : 
+                            violation.severity === 'warning' ? 'text-yellow-600' : 'text-blue-600'
+                          }`}>
+                            <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <div className="font-medium">{violation.section}</div>
+                              <div className="text-xs">{violation.description}</div>
+                            </div>
+                          </div>
+                        ))}
+                        {complianceAnalysis.analysis.violations.length > 3 && (
+                          <div className="text-xs text-gray-500">
+                            +{complianceAnalysis.analysis.violations.length - 3} more violations
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">Calculation Details</span>
+                </div>
+                <div className="text-xs text-gray-700 space-y-1">
+                  <p>• Load factors applied: {isContinuous ? 'Continuous (125%)' : ''} {isMotorLoad ? 'Motor (125%)' : ''}</p>
+                  <p>• Temperature derating: {ambientTemp}°C ambient</p>
+                  <p>• Conduit fill derating: {conductorCount} conductors</p>
+                  <p>• Material: {materialType.charAt(0).toUpperCase() + materialType.slice(1)}</p>
+                  {isEVSE && <p>• EVSE circuit per NEC Article 625</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* NEC Compliance Panel */}
+      {showCompliance && (
+        <div className="border-b border-gray-200 p-4 bg-blue-50">
+          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-600" />
+            NEC Compliance Guide
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="p-3 bg-white rounded border">
+                <h4 className="font-medium text-gray-900 mb-2">Wire Sizing Requirements</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• NEC 210.19: Minimum conductor ampacity</li>
+                  <li>• NEC 240.4: Overcurrent protection</li>
+                  <li>• NEC 310.15: Ampacity tables and derating</li>
+                  <li>• 125% factor for continuous loads (3+ hours)</li>
+                </ul>
+              </div>
+              
+              <div className="p-3 bg-white rounded border">
+                <h4 className="font-medium text-gray-900 mb-2">Voltage Drop Limits</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• Branch circuits: 3% maximum recommended</li>
+                  <li>• Feeders: 2% maximum recommended</li>
+                  <li>• Combined: 5% maximum total</li>
+                  <li>• Calculated at rated load conditions</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="p-3 bg-white rounded border">
+                <h4 className="font-medium text-gray-900 mb-2">Special Applications</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• EVSE: NEC 625.17 - 125% continuous factor</li>
+                  <li>• Motors: NEC 430.22 - 125% for FLC</li>
+                  <li>• Solar PV: NEC 690.8 - 125% for continuous current</li>
+                  <li>• Temperature ratings per NEC 110.14</li>
+                </ul>
+              </div>
+              
+              <div className="p-3 bg-white rounded border">
+                <h4 className="font-medium text-gray-900 mb-2">Derating Factors</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• 4-6 conductors: 80% derating</li>
+                  <li>• 7-9 conductors: 70% derating</li>
+                  <li>• 10+ conductors: 50% derating</li>
+                  <li>• Ambient temperature corrections apply</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

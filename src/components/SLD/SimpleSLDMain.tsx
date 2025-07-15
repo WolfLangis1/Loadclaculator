@@ -10,11 +10,16 @@ import {
   RotateCw,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  Layers
 } from 'lucide-react';
 import { useSLDData } from '../../context/SLDDataContext';
 import { useLoadData } from '../../context/LoadDataContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
+import { EnhancedComponentLibrary } from './EnhancedComponentLibrary';
+import { IEEESymbolRenderer } from './IEEESymbolsSimple';
+import { LayerManager, DEFAULT_LAYERS, type DrawingLayer } from './LayerManager';
+import { CanvasTools, type CanvasTool } from './CanvasTools';
 import type { SLDComponent, SLDPosition } from '../../types/sld';
 
 // Basic electrical component templates
@@ -112,6 +117,150 @@ export const SimpleSLDMain: React.FC = () => {
     offset: { x: 0, y: 0 }
   });
 
+  // Layer management state
+  const [layers, setLayers] = useState<DrawingLayer[]>(() => 
+    DEFAULT_LAYERS.map((layer, index) => ({
+      ...layer,
+      id: `layer-${index}`,
+      componentIds: []
+    }))
+  );
+  const [activeLayerId, setActiveLayerId] = useState<string>(layers[0]?.id || '');
+
+  // Canvas tools state
+  const [activeTool, setActiveTool] = useState<CanvasTool>('select');
+  const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+
+  // Layer management functions
+  const handleLayerUpdate = useCallback((layerId: string, updates: Partial<DrawingLayer>) => {
+    setLayers(prev => prev.map(layer => 
+      layer.id === layerId ? { ...layer, ...updates } : layer
+    ));
+  }, []);
+
+  const handleLayerAdd = useCallback((newLayer: Omit<DrawingLayer, 'id'>) => {
+    const id = `layer-${Date.now()}`;
+    setLayers(prev => [...prev, { ...newLayer, id }]);
+  }, []);
+
+  const handleLayerDelete = useCallback((layerId: string) => {
+    setLayers(prev => prev.filter(layer => layer.id !== layerId));
+    if (activeLayerId === layerId) {
+      setActiveLayerId(layers[0]?.id || '');
+    }
+  }, [activeLayerId, layers]);
+
+  const handleLayerReorder = useCallback((fromIndex: number, toIndex: number) => {
+    setLayers(prev => {
+      const newLayers = [...prev];
+      const [removed] = newLayers.splice(fromIndex, 1);
+      newLayers.splice(toIndex, 0, removed);
+      return newLayers;
+    });
+  }, []);
+
+  // Canvas tool handlers
+  const handleZoomChange = useCallback((zoom: number) => {
+    updateCanvasState({ zoom });
+  }, [updateCanvasState]);
+
+  const handleZoomFit = useCallback(() => {
+    // Calculate bounds of all components
+    if (!state.diagram?.components.length) return;
+    
+    const components = state.diagram.components;
+    const minX = Math.min(...components.map(c => c.position.x));
+    const maxX = Math.max(...components.map(c => c.position.x + c.width));
+    const minY = Math.min(...components.map(c => c.position.y));
+    const maxY = Math.max(...components.map(c => c.position.y + c.height));
+    
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+    
+    const diagramWidth = maxX - minX;
+    const diagramHeight = maxY - minY;
+    const zoomX = (canvasRect.width - 100) / diagramWidth;
+    const zoomY = (canvasRect.height - 100) / diagramHeight;
+    const newZoom = Math.min(zoomX, zoomY, 3);
+    
+    updateCanvasState({ zoom: newZoom });
+  }, [state.diagram, updateCanvasState]);
+
+  const handleZoomReset = useCallback(() => {
+    updateCanvasState({ zoom: 1 });
+  }, [updateCanvasState]);
+
+  const handleDeleteSelected = useCallback(() => {
+    selectedComponents.forEach(componentId => {
+      removeComponent(componentId);
+    });
+    setSelectedComponents([]);
+  }, [selectedComponents, removeComponent]);
+
+  const handleCopySelected = useCallback(() => {
+    if (!state.diagram) return;
+    
+    const componentsToCopy = state.diagram.components.filter(c => 
+      selectedComponents.includes(c.id)
+    );
+    
+    componentsToCopy.forEach(component => {
+      const id = `${component.type}-copy-${Date.now()}`;
+      addComponent({
+        ...component,
+        id,
+        position: {
+          x: component.position.x + 20,
+          y: component.position.y + 20
+        }
+      });
+    });
+  }, [selectedComponents, state.diagram, addComponent]);
+
+  const handleRotateSelected = useCallback(() => {
+    selectedComponents.forEach(componentId => {
+      const component = state.diagram?.components.find(c => c.id === componentId);
+      if (component) {
+        // Simple 90-degree rotation by swapping width/height
+        updateComponent(componentId, {
+          width: component.height,
+          height: component.width
+        });
+      }
+    });
+  }, [selectedComponents, state.diagram, updateComponent]);
+
+  const handleGridToggle = useCallback(() => {
+    updateCanvasState({ gridEnabled: !state.canvasState.gridEnabled });
+  }, [state.canvasState.gridEnabled, updateCanvasState]);
+
+  const handleSnapToggle = useCallback(() => {
+    setSnapToGrid(prev => !prev);
+  }, []);
+
+  // Handle canvas click for deselecting
+  const handleCanvasClick = useCallback((event: React.MouseEvent) => {
+    if (event.target === event.currentTarget) {
+      setSelectedComponents([]);
+    }
+  }, []);
+
+  // Assign new components to active layer
+  const assignComponentToLayer = useCallback((componentId: string) => {
+    if (activeLayerId) {
+      setLayers(prev => prev.map(layer => {
+        if (layer.id === activeLayerId) {
+          return {
+            ...layer,
+            componentIds: [...layer.componentIds, componentId]
+          };
+        }
+        return layer;
+      }));
+    }
+  }, [activeLayerId]);
+
   // Auto-generate basic diagram from load calculator data
   const generateDiagramFromLoads = useCallback(() => {
     if (!state.diagram) return;
@@ -184,8 +333,30 @@ export const SimpleSLDMain: React.FC = () => {
     });
   }, [state.diagram, loads, settings, addComponent, removeComponent]);
 
+  // Handle component selection and interaction
+  const handleComponentClick = useCallback((componentId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (activeTool === 'select') {
+      if (event.ctrlKey || event.metaKey) {
+        // Multi-select
+        setSelectedComponents(prev => 
+          prev.includes(componentId) 
+            ? prev.filter(id => id !== componentId)
+            : [...prev, componentId]
+        );
+      } else {
+        // Single select
+        setSelectedComponents([componentId]);
+      }
+    }
+  }, [activeTool]);
+
   // Handle component drag
   const handleMouseDown = useCallback((componentId: string, event: React.MouseEvent) => {
+    if (activeTool !== 'select') return;
+    
     event.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -193,9 +364,13 @@ export const SimpleSLDMain: React.FC = () => {
     const component = state.diagram?.components.find(c => c.id === componentId);
     if (!component) return;
 
+    // Check if component's layer is locked
+    const componentLayer = layers.find(layer => layer.componentIds.includes(componentId));
+    if (componentLayer?.locked) return;
+
     const startPosition = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+      x: (event.clientX - rect.left) / state.canvasState.zoom,
+      y: (event.clientY - rect.top) / state.canvasState.zoom
     };
 
     setDragState({
@@ -207,7 +382,12 @@ export const SimpleSLDMain: React.FC = () => {
         y: startPosition.y - component.position.y
       }
     });
-  }, [state.diagram]);
+
+    // Select component if not already selected
+    if (!selectedComponents.includes(componentId)) {
+      setSelectedComponents([componentId]);
+    }
+  }, [activeTool, state.diagram, state.canvasState.zoom, layers, selectedComponents]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
     if (!dragState.isDragging || !dragState.draggedComponent) return;
@@ -215,13 +395,20 @@ export const SimpleSLDMain: React.FC = () => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const newPosition = {
-      x: event.clientX - rect.left - dragState.offset.x,
-      y: event.clientY - rect.top - dragState.offset.y
+    let newPosition = {
+      x: (event.clientX - rect.left) / state.canvasState.zoom - dragState.offset.x,
+      y: (event.clientY - rect.top) / state.canvasState.zoom - dragState.offset.y
     };
 
+    // Snap to grid if enabled
+    if (snapToGrid) {
+      const gridSize = state.canvasState.gridSize;
+      newPosition.x = Math.round(newPosition.x / gridSize) * gridSize;
+      newPosition.y = Math.round(newPosition.y / gridSize) * gridSize;
+    }
+
     updateComponent(dragState.draggedComponent, { position: newPosition });
-  }, [dragState, updateComponent]);
+  }, [dragState, updateComponent, state.canvasState.zoom, state.canvasState.gridSize, snapToGrid]);
 
   const handleMouseUp = useCallback(() => {
     setDragState({
@@ -248,7 +435,10 @@ export const SimpleSLDMain: React.FC = () => {
       id,
       position
     });
-  }, [addComponent]);
+
+    // Assign to active layer
+    assignComponentToLayer(id);
+  }, [addComponent, assignComponentToLayer]);
 
   // Zoom controls
   const handleZoomIn = useCallback(() => {
@@ -410,47 +600,54 @@ export const SimpleSLDMain: React.FC = () => {
       </div>
 
       <div className="flex flex-1">
-        {/* Component Library */}
-        {state.ui.showComponentLibrary && (
-          <div className="w-64 bg-white border-r border-gray-200 p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Component Library
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(COMPONENT_TEMPLATES).map(([type, template]) => (
-                <button
-                  key={type}
-                  onClick={() => addComponentToCanvas(type as keyof typeof COMPONENT_TEMPLATES)}
-                  className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 text-center"
-                  title={template.name}
-                >
-                  <div className="text-2xl mb-1">{template.symbol}</div>
-                  <div className="text-xs text-gray-600">{template.name}</div>
-                </button>
-              ))}
-            </div>
-            
-            <div className="mt-6">
-              <button
-                onClick={() => updateUIState({ showComponentLibrary: false })}
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-              >
-                <EyeOff className="h-4 w-4" />
-                Hide Library
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Layer Manager */}
+        <LayerManager
+          layers={layers}
+          onLayerUpdate={handleLayerUpdate}
+          onLayerAdd={handleLayerAdd}
+          onLayerDelete={handleLayerDelete}
+          onLayerReorder={handleLayerReorder}
+          activeLayerId={activeLayerId}
+          onActiveLayerChange={setActiveLayerId}
+        />
+
+        {/* Enhanced Component Library */}
+        <EnhancedComponentLibrary />
 
         {/* Canvas */}
         <div className="flex-1 relative overflow-hidden">
+          {/* Canvas Tools */}
+          <div className="absolute top-4 right-4 z-10">
+            <CanvasTools
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              zoom={state.canvasState.zoom}
+              onZoomChange={handleZoomChange}
+              onZoomFit={handleZoomFit}
+              onZoomReset={handleZoomReset}
+              selectedComponents={selectedComponents}
+              onDeleteSelected={handleDeleteSelected}
+              onCopySelected={handleCopySelected}
+              onRotateSelected={handleRotateSelected}
+              gridEnabled={state.canvasState.gridEnabled}
+              onGridToggle={handleGridToggle}
+              snapToGrid={snapToGrid}
+              onSnapToggle={handleSnapToggle}
+            />
+          </div>
           <div
             ref={canvasRef}
-            className="w-full h-full cursor-move"
+            className={`w-full h-full ${
+              activeTool === 'pan' ? 'cursor-grab' : 
+              activeTool === 'zoom_in' ? 'cursor-zoom-in' :
+              activeTool === 'zoom_out' ? 'cursor-zoom-out' :
+              'cursor-default'
+            }`}
             style={{
               transform: `scale(${state.canvasState.zoom})`,
               transformOrigin: 'top left'
             }}
+            onClick={handleCanvasClick}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
@@ -473,13 +670,21 @@ export const SimpleSLDMain: React.FC = () => {
             {state.diagram.components.map(component => (
               <div
                 key={component.id}
-                className="absolute border-2 border-gray-400 bg-white cursor-move select-none shadow-sm hover:shadow-md transition-shadow"
+                className={`absolute border-2 bg-white select-none shadow-sm hover:shadow-md transition-all ${
+                  selectedComponents.includes(component.id) 
+                    ? 'border-blue-500 shadow-lg' 
+                    : 'border-gray-400'
+                } ${
+                  activeTool === 'select' ? 'cursor-move' : 'cursor-pointer'
+                }`}
                 style={{
                   left: component.position.x,
                   top: component.position.y,
                   width: component.width,
-                  height: component.height
+                  height: component.height,
+                  opacity: layers.find(l => l.componentIds.includes(component.id))?.opacity || 1
                 }}
+                onClick={(e) => handleComponentClick(component.id, e)}
                 onMouseDown={(e) => handleMouseDown(component.id, e)}
               >
                 {/* Component Symbol */}
@@ -500,6 +705,13 @@ export const SimpleSLDMain: React.FC = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     removeComponent(component.id);
+                    // Remove from all layers
+                    setLayers(prev => prev.map(layer => ({
+                      ...layer,
+                      componentIds: layer.componentIds.filter(id => id !== component.id)
+                    })));
+                    // Remove from selection
+                    setSelectedComponents(prev => prev.filter(id => id !== component.id));
                   }}
                   className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600 flex items-center justify-center"
                   title="Delete Component"
@@ -510,16 +722,6 @@ export const SimpleSLDMain: React.FC = () => {
             ))}
           </div>
 
-          {/* Show Component Library Toggle */}
-          {!state.ui.showComponentLibrary && (
-            <button
-              onClick={() => updateUIState({ showComponentLibrary: true })}
-              className="absolute top-4 left-4 p-2 bg-white border border-gray-200 rounded-md shadow-sm hover:bg-gray-50"
-              title="Show Component Library"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-          )}
         </div>
       </div>
     </div>

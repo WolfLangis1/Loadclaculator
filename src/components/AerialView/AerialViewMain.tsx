@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Camera, Sun, Navigation, Plus, Check, X, FileImage, Download, Search, Ruler } from 'lucide-react';
-import { AerialViewService } from '../../services/aerialViewService';
+import { SecureAerialViewService } from '../../services/secureAerialViewService';
 import { GoogleSolarService, type SolarInsights } from '../../services/googleSolarService';
 import { AttachmentService } from '../../services/attachmentService';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
@@ -71,22 +71,29 @@ export const AerialViewMain: React.FC = () => {
     try {
       console.log('🏠 Capturing aerial view for:', address);
       
-      // Geocode the address
-      const geocodeResult = await AerialViewService.geocodeAddress(address);
-      setCoordinates({ latitude: geocodeResult.latitude, longitude: geocodeResult.longitude });
+      // Geocode the address using secure service
+      const geocodeResult = await SecureAerialViewService.geocodeAddress(address);
+      if (!geocodeResult) {
+        throw new Error('Failed to geocode address');
+      }
+      
+      setCoordinates({ 
+        latitude: geocodeResult.coordinates.latitude, 
+        longitude: geocodeResult.coordinates.longitude 
+      });
       
       if (viewMode === 'satellite') {
-        const imageUrl = await AerialViewService.getSatelliteImage(
-          geocodeResult.latitude,
-          geocodeResult.longitude,
+        const imageUrl = await SecureAerialViewService.getSatelliteImage(
+          geocodeResult.coordinates.latitude,
+          geocodeResult.coordinates.longitude,
           { width: 800, height: 600, zoom: zoom }
         );
         setSatelliteUrl(imageUrl);
         
       } else if (viewMode === 'streetview') {
-        const streetViews = await AerialViewService.getMultiAngleStreetView(
-          geocodeResult.latitude,
-          geocodeResult.longitude,
+        const streetViews = await SecureAerialViewService.getMultiAngleStreetView(
+          geocodeResult.coordinates.latitude,
+          geocodeResult.coordinates.longitude,
           { width: 500, height: 400 }
         );
         setStreetViewImages(streetViews);
@@ -94,14 +101,14 @@ export const AerialViewMain: React.FC = () => {
       } else if (viewMode === 'solar') {
         // Get both satellite and solar data
         const [imageUrl, solarInsights] = await Promise.all([
-          AerialViewService.getSatelliteImage(
-            geocodeResult.latitude,
-            geocodeResult.longitude,
+          SecureAerialViewService.getSatelliteImage(
+            geocodeResult.coordinates.latitude,
+            geocodeResult.coordinates.longitude,
             { width: 800, height: 600, zoom: zoom }
           ),
           GoogleSolarService.getSolarInsights(
-            geocodeResult.latitude,
-            geocodeResult.longitude
+            geocodeResult.coordinates.latitude,
+            geocodeResult.coordinates.longitude
           )
         ]);
         setSatelliteUrl(imageUrl);
@@ -167,7 +174,7 @@ export const AerialViewMain: React.FC = () => {
     }
   };
 
-  const configStatus = AerialViewService.getConfigurationStatus();
+  const configStatus = SecureAerialViewService.getConfigurationStatus();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">

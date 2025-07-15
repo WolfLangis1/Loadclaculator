@@ -13,13 +13,16 @@ export interface SLDSize {
 
 export interface SLDConnection {
   id: string;
-  fromComponentId: string;
-  toComponentId: string;
+  from: string; // Simplified from fromComponentId for compatibility
+  to: string; // Simplified from toComponentId for compatibility
+  fromComponentId?: string; // Keep for backward compatibility
+  toComponentId?: string; // Keep for backward compatibility
   fromPort?: string;
   toPort?: string;
   startPoint?: SLDPosition;
   endPoint?: SLDPosition;
-  wireType?: 'dc' | 'ac' | 'ground';
+  type: 'power' | 'dc' | 'ac' | 'ground' | 'control'; // Enhanced connection types
+  wireType?: 'dc' | 'ac' | 'ground'; // Keep for backward compatibility
   voltage?: number;
   current?: number;
   conductorSize?: string;
@@ -27,6 +30,17 @@ export interface SLDConnection {
   conduitType?: string;
   conduitSize?: string;
   label?: string;
+  specifications?: {
+    wireSize?: string;
+    conduitSize?: string;
+    circuitNumber?: string;
+    ampacity?: string;
+    voltageDrop?: string;
+    necCompliant?: boolean;
+    autoSized?: boolean;
+    material?: 'copper' | 'aluminum';
+    insulation?: '60C' | '75C' | '90C';
+  };
   metadata?: {
     voltageDrop?: string;
     ampacity?: string;
@@ -53,11 +67,15 @@ export interface SLDComponentBase {
   name?: string;
   label?: string;
   position: SLDPosition;
-  size: SLDSize;
-  rotation: number;
+  size?: SLDSize; // Made optional for backward compatibility
+  width?: number; // Simplified width for compatibility
+  height?: number; // Simplified height for compatibility
+  symbol?: string; // Visual symbol representation
+  rotation?: number;
   labels?: SLDLabel[];
   necLabels?: string[];
   specifications?: Record<string, any>;
+  properties?: Record<string, any>; // Backward compatibility
   terminals?: SLDTerminal[];
   visual?: {
     fillColor?: string;
@@ -242,6 +260,48 @@ export interface SLDEVCharger extends SLDComponentBase {
   necCompliant: boolean;
 }
 
+// Additional component types for intelligent generation
+export interface SLDUtilityService extends SLDComponentBase {
+  type: 'utility_service';
+  utilityName?: string;
+  serviceType: 'overhead' | 'underground';
+  voltage: number;
+  rating: string;
+}
+
+export interface SLDMeterSocket extends SLDComponentBase {
+  type: 'meter_socket';
+  rating: string;
+  voltage: number;
+  meterType?: 'analog' | 'digital' | 'smart';
+}
+
+export interface SLDServiceDisconnect extends SLDComponentBase {
+  type: 'service_disconnect';
+  rating: string;
+  voltage: number;
+  fusible?: boolean;
+  location?: string;
+}
+
+export interface SLDSubPanel extends SLDComponentBase {
+  type: 'sub_panel';
+  rating: number;
+  busRating?: number;
+  voltage: number;
+  phase?: 1 | 3;
+  manufacturer?: string;
+  model?: string;
+}
+
+export interface SLDLoadGeneric extends SLDComponentBase {
+  type: 'load_generic';
+  rating: string;
+  voltage: number;
+  loadType?: 'lighting' | 'receptacle' | 'appliance' | 'hvac' | 'motor';
+  continuous?: boolean;
+}
+
 // Union of all component types
 export type SLDComponent = 
   | SLDPVArray
@@ -251,19 +311,25 @@ export type SLDComponent =
   | SLDTeslaPowerwall3
   | SLDEnphaseIQ10C
   | SLDMainPanel
+  | SLDSubPanel
   | SLDCombinerBox
   | SLDEVSECharger
   | SLDEVCharger
   | SLDBreaker
   | SLDGrid
   | SLDMeter
-  | SLDGroundingElectrode;
+  | SLDGroundingElectrode
+  | SLDUtilityService
+  | SLDMeterSocket
+  | SLDServiceDisconnect
+  | SLDLoadGeneric;
 
 // Complete SLD Diagram
 export interface SLDDiagram {
   id: string;
   projectId?: string;
   name: string;
+  description?: string; // Added for intelligent generation
   created?: Date;
   lastModified?: Date;
   version?: string;
@@ -299,12 +365,23 @@ export interface SLDDiagram {
 
   // Metadata
   metadata?: {
+    serviceSize?: number;
+    voltageLevel?: number;
+    diagramStyle?: string;
+    generatedAt?: string;
+    generatedFrom?: string;
+    necCompliant?: boolean;
+    includedFeatures?: {
+      loadCalculations?: boolean;
+      circuitNumbers?: boolean;
+      wireSizing?: boolean;
+      necReferences?: boolean;
+    };
     necCompliance?: string;
     drawingStandard?: string;
     createdBy?: string;
     createdDate?: string;
     lastModified?: string;
-    generatedFrom?: string;
     [key: string]: any;
   };
 }

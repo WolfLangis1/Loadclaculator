@@ -1,10 +1,15 @@
-import React from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, ChevronDown, ChevronUp, Settings, Trash2 } from 'lucide-react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
 
 export const HVACLoadsTable: React.FC = () => {
   const { state, dispatch } = useLoadCalculator();
   const { hvacLoads } = state.loads;
+  const [showAdvancedLoads, setShowAdvancedLoads] = useState(false);
+  
+  // Split loads into basic (first 4) and advanced (rest)
+  const basicLoads = hvacLoads.slice(0, 4);
+  const advancedLoads = hvacLoads.slice(4);
 
   const updateLoad = (id: number, field: string, value: any) => {
     let processedValue = value;
@@ -55,6 +60,16 @@ export const HVACLoadsTable: React.FC = () => {
     });
   };
 
+  const removeLoad = (id: number) => {
+    dispatch({
+      type: 'REMOVE_LOAD',
+      payload: { 
+        category: 'hvac',
+        id 
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -96,10 +111,13 @@ export const HVACLoadsTable: React.FC = () => {
             <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               HP
             </th>
+            <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sr-only">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {hvacLoads.map((load) => (
+          {basicLoads.map((load) => (
             <tr key={load.id} className="hover:bg-gray-50">
               <td className="px-4 py-3">
                 <input
@@ -172,11 +190,166 @@ export const HVACLoadsTable: React.FC = () => {
                   placeholder="HP"
                 />
               </td>
+              <td className="px-4 py-3">
+                <button
+                  onClick={() => removeLoad(load.id)}
+                  className="text-red-600 hover:text-red-900 focus:outline-none"
+                  aria-label="Remove HVAC load"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
       </div>
+
+      {/* Advanced HVAC Loads Section */}
+      {advancedLoads.length > 0 && (
+        <div className="mt-4">
+          <button
+            onClick={() => setShowAdvancedLoads(!showAdvancedLoads)}
+            className="w-full flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          >
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">
+                Additional HVAC Loads ({advancedLoads.length} items)
+              </span>
+            </div>
+            {showAdvancedLoads ? (
+              <ChevronUp className="h-4 w-4 text-gray-600" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-600" />
+            )}
+          </button>
+
+          {showAdvancedLoads && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="w-2/5 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      HVAC Equipment
+                    </th>
+                    <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Qty
+                    </th>
+                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amps
+                    </th>
+                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Volts
+                    </th>
+                    <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      VA
+                    </th>
+                    <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total VA
+                    </th>
+                    <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      HP
+                    </th>
+                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sr-only">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {advancedLoads.map((load) => (
+                    <tr key={load.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          value={load.name || ''}
+                          onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
+                          className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                          placeholder="HVAC equipment description"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={load.quantity || 0}
+                          onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                          min="0"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={load.amps || 0}
+                          onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                          min="0"
+                          step="0.1"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={load.volts || 240}
+                          onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        >
+                          <option value={120}>120</option>
+                          <option value={240}>240</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-mono text-gray-700">
+                          {load.va?.toLocaleString() || '0'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-mono font-medium text-gray-900">
+                          {load.total?.toLocaleString() || '0'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={load.type || 'hvac'}
+                          onChange={(e) => updateLoad(load.id, 'type', e.target.value)}
+                          className="w-32 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="hvac">AC/Heat Pump</option>
+                          <option value="resistance_heat">Electric Heat</option>
+                          <option value="motor">Motor</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={load.hp || 0}
+                          onChange={(e) => updateLoad(load.id, 'hp', e.target.value)}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                          min="0"
+                          step="0.25"
+                          placeholder="HP"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => removeLoad(load.id)}
+                          className="text-red-600 hover:text-red-900 focus:outline-none"
+                          aria-label="Remove HVAC load"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
         <h4 className="text-sm font-medium text-yellow-800 mb-2">HVAC Load Guidelines</h4>

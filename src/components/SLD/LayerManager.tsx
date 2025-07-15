@@ -1,7 +1,8 @@
 /**
- * Professional Layer Manager
+ * Layer Manager Component - Professional CAD-style layer management
  * 
- * CAD-style layer management for electrical drawings
+ * Provides layer visibility, locking, and organization for electrical drawings
+ * Based on professional CAD software patterns
  */
 
 import React, { useState } from 'react';
@@ -10,461 +11,390 @@ import {
   EyeOff, 
   Lock, 
   Unlock, 
-  Edit3, 
+  Plus, 
   Trash2, 
-  Plus,
+  Move, 
+  Palette,
   ChevronDown,
-  ChevronRight,
-  Copy,
-  MoreVertical
+  ChevronRight
 } from 'lucide-react';
 
 export interface DrawingLayer {
   id: string;
   name: string;
-  description?: string;
+  color: string;
   visible: boolean;
   locked: boolean;
-  color: string;
   lineWeight: number;
-  lineType: 'solid' | 'dashed' | 'dotted' | 'dashdot';
+  lineType: 'solid' | 'dashed' | 'dotted';
   opacity: number;
-  printable: boolean;
-  elementIds: string[];
-  parentLayerId?: string;
-  order: number;
-  category: LayerCategory;
+  componentIds: string[];
+  category: 'electrical' | 'structural' | 'architectural' | 'annotations' | 'dimensions' | 'grids';
 }
-
-export type LayerCategory = 
-  | 'electrical'
-  | 'structural' 
-  | 'architectural'
-  | 'annotations'
-  | 'dimensions'
-  | 'grids'
-  | 'backgrounds'
-  | 'custom';
 
 interface LayerManagerProps {
   layers: DrawingLayer[];
-  onLayerChange: (layerId: string, changes: Partial<DrawingLayer>) => void;
-  onLayerCreate: (layer: Omit<DrawingLayer, 'id'>) => void;
+  onLayerUpdate: (layerId: string, updates: Partial<DrawingLayer>) => void;
+  onLayerAdd: (layer: Omit<DrawingLayer, 'id'>) => void;
   onLayerDelete: (layerId: string) => void;
-  onLayerDuplicate: (layerId: string) => void;
-  onLayerReorder: (layerId: string, newOrder: number) => void;
-  selectedLayerId?: string;
-  onLayerSelect: (layerId: string) => void;
-  className?: string;
+  onLayerReorder: (fromIndex: number, toIndex: number) => void;
+  activeLayerId?: string;
+  onActiveLayerChange: (layerId: string) => void;
 }
 
-const LAYER_CATEGORIES: Record<LayerCategory, { name: string; icon: string; defaultColor: string }> = {
-  electrical: { name: 'Electrical', icon: '⚡', defaultColor: '#3b82f6' },
-  structural: { name: 'Structural', icon: '🏗️', defaultColor: '#6b7280' },
-  architectural: { name: 'Architectural', icon: '🏢', defaultColor: '#64748b' },
-  annotations: { name: 'Annotations', icon: '📝', defaultColor: '#f59e0b' },
-  dimensions: { name: 'Dimensions', icon: '📏', defaultColor: '#10b981' },
-  grids: { name: 'Grids', icon: '⊞', defaultColor: '#8b5cf6' },
-  backgrounds: { name: 'Backgrounds', icon: '🖼️', defaultColor: '#e5e7eb' },
-  custom: { name: 'Custom', icon: '🎨', defaultColor: '#ef4444' }
-};
-
-const DEFAULT_LAYERS: Omit<DrawingLayer, 'id'>[] = [
+const DEFAULT_LAYERS: Omit<DrawingLayer, 'id' | 'componentIds'>[] = [
   {
-    name: 'Background',
+    name: 'Power Distribution',
+    color: '#DC2626',
     visible: true,
     locked: false,
-    color: '#f8fafc',
-    lineWeight: 1,
-    lineType: 'solid',
-    opacity: 1,
-    printable: true,
-    elementIds: [],
-    order: 0,
-    category: 'backgrounds'
-  },
-  {
-    name: 'Grid',
-    visible: true,
-    locked: true,
-    color: '#e2e8f0',
-    lineWeight: 0.5,
-    lineType: 'dotted',
-    opacity: 0.5,
-    printable: false,
-    elementIds: [],
-    order: 1,
-    category: 'grids'
-  },
-  {
-    name: 'Electrical - Power',
-    visible: true,
-    locked: false,
-    color: '#dc2626',
     lineWeight: 2,
     lineType: 'solid',
     opacity: 1,
-    printable: true,
-    elementIds: [],
-    order: 10,
     category: 'electrical'
   },
   {
-    name: 'Electrical - Lighting',
+    name: 'Control Circuits',
+    color: '#2563EB',
     visible: true,
     locked: false,
-    color: '#f59e0b',
-    lineWeight: 1.5,
-    lineType: 'solid',
-    opacity: 1,
-    printable: true,
-    elementIds: [],
-    order: 11,
-    category: 'electrical'
-  },
-  {
-    name: 'Electrical - Controls',
-    visible: true,
-    locked: false,
-    color: '#3b82f6',
     lineWeight: 1,
+    lineType: 'dashed',
+    opacity: 1,
+    category: 'electrical'
+  },
+  {
+    name: 'Grounding',
+    color: '#059669',
+    visible: true,
+    locked: false,
+    lineWeight: 2,
     lineType: 'solid',
     opacity: 1,
-    printable: true,
-    elementIds: [],
-    order: 12,
+    category: 'electrical'
+  },
+  {
+    name: 'Equipment',
+    color: '#7C3AED',
+    visible: true,
+    locked: false,
+    lineWeight: 2,
+    lineType: 'solid',
+    opacity: 1,
     category: 'electrical'
   },
   {
     name: 'Annotations',
+    color: '#374151',
     visible: true,
     locked: false,
-    color: '#1f2937',
     lineWeight: 1,
     lineType: 'solid',
     opacity: 1,
-    printable: true,
-    elementIds: [],
-    order: 20,
     category: 'annotations'
   },
   {
-    name: 'Dimensions',
+    name: 'Grid',
+    color: '#D1D5DB',
     visible: true,
-    locked: false,
-    color: '#059669',
+    locked: true,
     lineWeight: 0.5,
-    lineType: 'solid',
-    opacity: 1,
-    printable: true,
-    elementIds: [],
-    order: 30,
-    category: 'dimensions'
+    lineType: 'dotted',
+    opacity: 0.3,
+    category: 'grids'
   }
 ];
 
+const LAYER_COLORS = [
+  '#DC2626', '#2563EB', '#059669', '#7C3AED', '#EA580C', '#0891B2',
+  '#9333EA', '#C2410C', '#15803D', '#1D4ED8', '#BE185D', '#374151'
+];
+
+const LINE_WEIGHTS = [0.5, 1, 1.5, 2, 2.5, 3];
+
 export const LayerManager: React.FC<LayerManagerProps> = ({
   layers,
-  onLayerChange,
-  onLayerCreate,
+  onLayerUpdate,
+  onLayerAdd,
   onLayerDelete,
-  onLayerDuplicate,
   onLayerReorder,
-  selectedLayerId,
-  onLayerSelect,
-  className = ''
+  activeLayerId,
+  onActiveLayerChange
 }) => {
-  const [expandedCategories, setExpandedCategories] = useState<Record<LayerCategory, boolean>>({
-    electrical: true,
-    structural: false,
-    architectural: false,
-    annotations: false,
-    dimensions: false,
-    grids: false,
-    backgrounds: false,
-    custom: false
-  });
-  
-  const [showCreateLayer, setShowCreateLayer] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [showAddLayer, setShowAddLayer] = useState(false);
   const [newLayerName, setNewLayerName] = useState('');
-  const [newLayerCategory, setNewLayerCategory] = useState<LayerCategory>('electrical');
+  const [newLayerColor, setNewLayerColor] = useState(LAYER_COLORS[0]);
 
-  // Group layers by category
-  const layersByCategory = layers.reduce((acc, layer) => {
+  const toggleLayerVisibility = (layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (layer) {
+      onLayerUpdate(layerId, { visible: !layer.visible });
+    }
+  };
+
+  const toggleLayerLock = (layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (layer) {
+      onLayerUpdate(layerId, { locked: !layer.locked });
+    }
+  };
+
+  const addNewLayer = () => {
+    if (newLayerName.trim()) {
+      const newLayer: Omit<DrawingLayer, 'id'> = {
+        name: newLayerName.trim(),
+        color: newLayerColor,
+        visible: true,
+        locked: false,
+        lineWeight: 1,
+        lineType: 'solid',
+        opacity: 1,
+        componentIds: [],
+        category: 'electrical'
+      };
+      onLayerAdd(newLayer);
+      setNewLayerName('');
+      setShowAddLayer(false);
+    }
+  };
+
+  const groupedLayers = layers.reduce((acc, layer) => {
     if (!acc[layer.category]) {
       acc[layer.category] = [];
     }
     acc[layer.category].push(layer);
     return acc;
-  }, {} as Record<LayerCategory, DrawingLayer[]>);
+  }, {} as Record<string, DrawingLayer[]>);
 
-  // Sort layers by order within each category
-  Object.keys(layersByCategory).forEach(category => {
-    layersByCategory[category as LayerCategory].sort((a, b) => a.order - b.order);
-  });
-
-  const toggleCategory = (category: LayerCategory) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
-
-  const handleCreateLayer = () => {
-    if (!newLayerName.trim()) return;
-
-    const categoryLayers = layersByCategory[newLayerCategory] || [];
-    const maxOrder = categoryLayers.length > 0 
-      ? Math.max(...categoryLayers.map(l => l.order))
-      : LAYER_CATEGORIES[newLayerCategory] === LAYER_CATEGORIES.electrical ? 10 : 0;
-
-    const newLayer: Omit<DrawingLayer, 'id'> = {
-      name: newLayerName.trim(),
-      visible: true,
-      locked: false,
-      color: LAYER_CATEGORIES[newLayerCategory].defaultColor,
-      lineWeight: 1,
-      lineType: 'solid',
-      opacity: 1,
-      printable: true,
-      elementIds: [],
-      order: maxOrder + 1,
-      category: newLayerCategory
-    };
-
-    onLayerCreate(newLayer);
-    setNewLayerName('');
-    setShowCreateLayer(false);
-  };
-
-  const LayerItem: React.FC<{ layer: DrawingLayer }> = ({ layer }) => {
-    const [showActions, setShowActions] = useState(false);
-    const isSelected = selectedLayerId === layer.id;
-    const hasElements = layer.elementIds.length > 0;
-
+  if (!isExpanded) {
     return (
-      <div
-        className={`flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer group ${
-          isSelected ? 'bg-blue-50 border-l-2 border-blue-500' : ''
-        }`}
-        onClick={() => onLayerSelect(layer.id)}
-        onMouseEnter={() => setShowActions(true)}
-        onMouseLeave={() => setShowActions(false)}
-      >
-        {/* Visibility toggle */}
+      <div className="w-8 bg-white border-r border-gray-200 p-2">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onLayerChange(layer.id, { visible: !layer.visible });
-          }}
-          className="p-1 hover:bg-gray-200 rounded"
-          title={layer.visible ? 'Hide layer' : 'Show layer'}
+          onClick={() => setIsExpanded(true)}
+          className="w-full p-1 text-gray-500 hover:text-gray-700"
+          title="Show Layer Manager"
         >
-          {layer.visible ? (
-            <Eye className="h-3 w-3 text-blue-600" />
-          ) : (
-            <EyeOff className="h-3 w-3 text-gray-400" />
-          )}
+          <ChevronRight className="h-4 w-4" />
         </button>
-
-        {/* Lock toggle */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onLayerChange(layer.id, { locked: !layer.locked });
-          }}
-          className="p-1 hover:bg-gray-200 rounded"
-          title={layer.locked ? 'Unlock layer' : 'Lock layer'}
-        >
-          {layer.locked ? (
-            <Lock className="h-3 w-3 text-red-600" />
-          ) : (
-            <Unlock className="h-3 w-3 text-gray-400" />
-          )}
-        </button>
-
-        {/* Color indicator */}
-        <div
-          className="w-4 h-4 rounded border border-gray-300"
-          style={{ backgroundColor: layer.color }}
-          title="Layer color"
-        />
-
-        {/* Layer name */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className={`text-sm truncate ${layer.locked ? 'text-gray-500' : 'text-gray-900'}`}>
-              {layer.name}
-            </span>
-            {hasElements && (
-              <span className="text-xs text-gray-500 bg-gray-200 px-1 rounded">
-                {layer.elementIds.length}
-              </span>
-            )}
-          </div>
-          {layer.description && (
-            <div className="text-xs text-gray-500 truncate">
-              {layer.description}
-            </div>
-          )}
-        </div>
-
-        {/* Layer actions */}
-        {(showActions || isSelected) && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onLayerDuplicate(layer.id);
-              }}
-              className="p-1 hover:bg-gray-200 rounded"
-              title="Duplicate layer"
-            >
-              <Copy className="h-3 w-3 text-gray-600" />
-            </button>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm(`Delete layer "${layer.name}"?`)) {
-                  onLayerDelete(layer.id);
-                }
-              }}
-              className="p-1 hover:bg-gray-200 rounded"
-              title="Delete layer"
-              disabled={hasElements}
-            >
-              <Trash2 className={`h-3 w-3 ${hasElements ? 'text-gray-300' : 'text-red-600'}`} />
-            </button>
-
-            <button
-              className="p-1 hover:bg-gray-200 rounded"
-              title="Layer properties"
-            >
-              <MoreVertical className="h-3 w-3 text-gray-600" />
-            </button>
-          </div>
-        )}
       </div>
     );
-  };
-
-  const CategorySection: React.FC<{ category: LayerCategory }> = ({ category }) => {
-    const categoryLayers = layersByCategory[category] || [];
-    const isExpanded = expandedCategories[category];
-    const categoryInfo = LAYER_CATEGORIES[category];
-
-    if (categoryLayers.length === 0) return null;
-
-    return (
-      <div className="border-b border-gray-200 last:border-b-0">
-        <button
-          onClick={() => toggleCategory(category)}
-          className="w-full flex items-center gap-2 p-2 bg-gray-50 hover:bg-gray-100 text-left"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-600" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-gray-600" />
-          )}
-          <span className="text-lg">{categoryInfo.icon}</span>
-          <span className="text-sm font-medium text-gray-900">{categoryInfo.name}</span>
-          <span className="text-xs text-gray-500 ml-auto">({categoryLayers.length})</span>
-        </button>
-
-        {isExpanded && (
-          <div className="divide-y divide-gray-100">
-            {categoryLayers.map(layer => (
-              <LayerItem key={layer.id} layer={layer} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg ${className}`}>
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900">Layers</h3>
-        
-        <button
-          onClick={() => setShowCreateLayer(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          <Plus className="h-3 w-3" />
-          New
-        </button>
-      </div>
-
-      {/* Create layer form */}
-      {showCreateLayer && (
-        <div className="p-3 bg-blue-50 border-b border-blue-200">
-          <div className="space-y-2">
-            <div>
-              <input
-                type="text"
-                value={newLayerName}
-                onChange={(e) => setNewLayerName(e.target.value)}
-                placeholder="Layer name"
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateLayer();
-                  if (e.key === 'Escape') setShowCreateLayer(false);
-                }}
-                autoFocus
-              />
-            </div>
-            
-            <div>
-              <select
-                value={newLayerCategory}
-                onChange={(e) => setNewLayerCategory(e.target.value as LayerCategory)}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {Object.entries(LAYER_CATEGORIES).map(([key, info]) => (
-                  <option key={key} value={key}>
-                    {info.icon} {info.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={handleCreateLayer}
-                className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                disabled={!newLayerName.trim()}
-              >
-                Create
-              </button>
-              <button
-                onClick={() => setShowCreateLayer(false)}
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </div>
+      <div className="p-3 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <Move className="h-4 w-4" />
+            Layers
+          </h3>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowAddLayer(!showAddLayer)}
+              className="p-1 text-gray-500 hover:text-gray-700"
+              title="Add Layer"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="p-1 text-gray-500 hover:text-gray-700"
+              title="Hide Layer Manager"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Layer list */}
-      <div className="max-h-96 overflow-y-auto">
-        {Object.entries(LAYER_CATEGORIES).map(([category]) => (
-          <CategorySection key={category} category={category as LayerCategory} />
+        {/* Add New Layer */}
+        {showAddLayer && (
+          <div className="mt-3 p-2 bg-gray-50 rounded border">
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Layer name"
+                value={newLayerName}
+                onChange={(e) => setNewLayerName(e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                onKeyPress={(e) => e.key === 'Enter' && addNewLayer()}
+              />
+              <div className="flex items-center gap-2">
+                <select
+                  value={newLayerColor}
+                  onChange={(e) => setNewLayerColor(e.target.value)}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  {LAYER_COLORS.map(color => (
+                    <option key={color} value={color} style={{ backgroundColor: color }}>
+                      {color}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={addNewLayer}
+                  className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Layer List */}
+      <div className="flex-1 overflow-y-auto">
+        {Object.entries(groupedLayers).map(([category, categoryLayers]) => (
+          <div key={category} className="border-b border-gray-100">
+            <div className="px-3 py-2 bg-gray-50 text-xs font-medium text-gray-600 uppercase tracking-wider">
+              {category.replace('_', ' ')} ({categoryLayers.length})
+            </div>
+            
+            {categoryLayers.map((layer) => (
+              <div
+                key={layer.id}
+                className={`px-3 py-2 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${
+                  activeLayerId === layer.id ? 'bg-blue-50 border-blue-200' : ''
+                }`}
+                onClick={() => onActiveLayerChange(layer.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {/* Color Indicator */}
+                    <div
+                      className="w-3 h-3 rounded border border-gray-300 flex-shrink-0"
+                      style={{ backgroundColor: layer.color }}
+                    />
+                    
+                    {/* Layer Name */}
+                    <div className="text-xs font-medium text-gray-900 truncate">
+                      {layer.name}
+                    </div>
+                    
+                    {/* Component Count */}
+                    {layer.componentIds.length > 0 && (
+                      <div className="text-xs text-gray-500 bg-gray-100 px-1 rounded">
+                        {layer.componentIds.length}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Layer Controls */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLayerVisibility(layer.id);
+                      }}
+                      className={`p-1 rounded ${
+                        layer.visible ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400'
+                      }`}
+                      title={layer.visible ? 'Hide Layer' : 'Show Layer'}
+                    >
+                      {layer.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                    </button>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLayerLock(layer.id);
+                      }}
+                      className={`p-1 rounded ${
+                        layer.locked ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                      title={layer.locked ? 'Unlock Layer' : 'Lock Layer'}
+                    >
+                      {layer.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                    </button>
+
+                    {layer.category !== 'grids' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onLayerDelete(layer.id);
+                        }}
+                        className="p-1 rounded text-gray-400 hover:text-red-600"
+                        title="Delete Layer"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Layer Properties */}
+                {activeLayerId === layer.id && (
+                  <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="block text-gray-600 mb-1">Color</label>
+                        <input
+                          type="color"
+                          value={layer.color}
+                          onChange={(e) => onLayerUpdate(layer.id, { color: e.target.value })}
+                          className="w-full h-6 rounded border border-gray-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-600 mb-1">Weight</label>
+                        <select
+                          value={layer.lineWeight}
+                          onChange={(e) => onLayerUpdate(layer.id, { lineWeight: parseFloat(e.target.value) })}
+                          className="w-full px-1 py-1 border border-gray-300 rounded text-xs"
+                        >
+                          {LINE_WEIGHTS.map(weight => (
+                            <option key={weight} value={weight}>{weight}px</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="block text-gray-600 mb-1">Line Type</label>
+                        <select
+                          value={layer.lineType}
+                          onChange={(e) => onLayerUpdate(layer.id, { lineType: e.target.value as any })}
+                          className="w-full px-1 py-1 border border-gray-300 rounded text-xs"
+                        >
+                          <option value="solid">Solid</option>
+                          <option value="dashed">Dashed</option>
+                          <option value="dotted">Dotted</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-gray-600 mb-1">Opacity</label>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="1"
+                          step="0.1"
+                          value={layer.opacity}
+                          onChange={(e) => onLayerUpdate(layer.id, { opacity: parseFloat(e.target.value) })}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         ))}
       </div>
 
-      {/* Quick actions */}
-      <div className="p-2 border-t border-gray-200 bg-gray-50">
-        <div className="flex justify-between text-xs text-gray-600">
-          <span>Layers: {layers.length}</span>
-          <span>Visible: {layers.filter(l => l.visible).length}</span>
-          <span>Locked: {layers.filter(l => l.locked).length}</span>
+      {/* Footer */}
+      <div className="p-3 border-t border-gray-200 bg-gray-50">
+        <div className="text-xs text-gray-600 text-center">
+          <div className="font-medium">Professional Layers</div>
+          <div>CAD-style organization</div>
         </div>
       </div>
     </div>
   );
 };
+
+export { DEFAULT_LAYERS };
+export default LayerManager;

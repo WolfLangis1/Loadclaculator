@@ -1,271 +1,252 @@
 import React, { useState } from 'react';
-import { AerialViewService } from '../services/aerialViewService';
+import { SecureAerialViewService, type AerialView } from '../services/secureAerialViewService';
 import { GoogleSolarService, type SolarInsights } from '../services/googleSolarService';
 
-type ViewType = 'satellite' | 'solar' | 'streetview';
-
-export const TestAerialView: React.FC = () => {
-  const [address, setAddress] = useState('');
-  const [viewType, setViewType] = useState<ViewType>('satellite');
-  const [imageUrl, setImageUrl] = useState('');
-  const [streetViewImages, setStreetViewImages] = useState<{heading: number; imageUrl: string; label: string}[]>([]);
-  const [solarData, setSolarData] = useState<SolarInsights | null>(null);
+const TestAerialView: React.FC = () => {
+  const [address, setAddress] = useState('123 Main St, New York, NY');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [zoom, setZoom] = useState(20);
+  const [results, setResults] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleTest = async () => {
-    if (!address) {
-      setError('Please enter an address');
-      return;
-    }
-
+  const testAerialView = async () => {
     setLoading(true);
-    setError('');
-    setImageUrl('');
-    setStreetViewImages([]);
-    setSolarData(null);
-    
+    setError(null);
+    setResults(null);
+
     try {
-      console.log('🧪 Testing API with address:', address, 'view type:', viewType);
-      
+      console.log('Testing secure aerial view service...');
+
       // Test geocoding
-      const geocodeResult = await AerialViewService.geocodeAddress(address);
-      console.log('✅ Geocoding result:', geocodeResult);
-      
-      if (viewType === 'satellite') {
-        // Test satellite imagery
-        const satelliteUrl = await AerialViewService.getSatelliteImage(
-          geocodeResult.latitude,
-          geocodeResult.longitude,
-          { width: 600, height: 400, zoom: zoom }
-        );
-        console.log('✅ Satellite image URL:', satelliteUrl);
-        setImageUrl(satelliteUrl);
-        
-      } else if (viewType === 'streetview') {
-        // Test Street View - Multiple angles
-        console.log('🚶 Testing Street View for multiple angles...');
-        const streetViews = await AerialViewService.getMultiAngleStreetView(
-          geocodeResult.latitude,
-          geocodeResult.longitude,
-          { width: 400, height: 300 }
-        );
-        console.log('✅ Street View images:', streetViews);
-        setStreetViewImages(streetViews);
-        
-      } else if (viewType === 'solar') {
-        // Test Solar API
-        console.log('☀️ Testing Solar API...');
-        const solarInsights = await GoogleSolarService.getSolarInsights(
-          geocodeResult.latitude,
-          geocodeResult.longitude
-        );
-        console.log('✅ Solar insights:', solarInsights);
-        setSolarData(solarInsights);
-        
-        // Also get a satellite image for solar overlay
-        const satelliteUrl = await AerialViewService.getSatelliteImage(
-          geocodeResult.latitude,
-          geocodeResult.longitude,
-          { width: 600, height: 400, zoom: zoom }
-        );
-        setImageUrl(satelliteUrl);
+      console.log('1. Testing geocoding...');
+      const geocodeResult = await SecureAerialViewService.geocodeAddress(address);
+      console.log('Geocode result:', geocodeResult);
+
+      if (!geocodeResult) {
+        throw new Error('Failed to geocode address');
       }
+
+      // Test satellite imagery
+      console.log('2. Testing satellite imagery...');
+      const satelliteUrl = await SecureAerialViewService.getSatelliteImage(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude,
+        { zoom: 18, width: 800, height: 600 }
+      );
+      console.log('Satellite URL:', satelliteUrl);
+
+      // Test street view
+      console.log('3. Testing street view...');
+      const streetViews = await SecureAerialViewService.getMultiAngleStreetView(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude
+      );
+      console.log('Street views:', streetViews);
+
+      // Test weather data
+      console.log('4. Testing weather data...');
+      const weatherData = await SecureAerialViewService.getWeatherData(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude
+      );
+      console.log('Weather data:', weatherData);
+
+      // Test solar insights (still using direct service for now)
+      console.log('5. Testing solar insights...');
+      const solarInsights = await GoogleSolarService.getSolarInsights(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude
+      );
+      console.log('Solar insights:', solarInsights);
+
+      // Test creating full aerial view
+      console.log('6. Testing full aerial view creation...');
+      const aerialView = await SecureAerialViewService.createAerialView(address);
+      console.log('Aerial view:', aerialView);
+
+      // Test satellite image with different provider
+      console.log('7. Testing satellite with Mapbox...');
+      const mapboxSatelliteUrl = await SecureAerialViewService.getSatelliteImage(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude,
+        { zoom: 18, width: 800, height: 600, provider: 'mapbox' }
+      );
+      console.log('Mapbox satellite URL:', mapboxSatelliteUrl);
+
+      setResults({
+        geocodeResult,
+        satelliteUrl,
+        streetViews,
+        weatherData,
+        solarInsights,
+        aerialView,
+        mapboxSatelliteUrl
+      });
+
     } catch (err) {
-      console.error('❌ Test failed:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('Test failed:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const configStatus = AerialViewService.getConfigurationStatus();
+  const testApiHealth = async () => {
+    try {
+      const isHealthy = await SecureAerialViewService.checkApiHealth();
+      console.log('API Health Check:', isHealthy ? 'Healthy' : 'Unhealthy');
+      alert(`API Health: ${isHealthy ? 'Healthy' : 'Unhealthy'}`);
+    } catch (error) {
+      console.error('Health check failed:', error);
+      alert('Health check failed');
+    }
+  };
+
+  const getConfigStatus = () => {
+    const status = SecureAerialViewService.getConfigurationStatus();
+    console.log('Configuration Status:', status);
+    alert(`Config Status: ${status.status}`);
+  };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-xl font-bold mb-4">🧪 Aerial View API Test</h2>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Secure Aerial View Service Test</h1>
       
-      {/* Status */}
-      <div className={`p-3 rounded mb-4 ${
-        configStatus.isReal ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-      }`}>
-        <strong>Status:</strong> {configStatus.message}
-        {configStatus.setupInstructions && (
-          <div className="text-sm mt-1">{configStatus.setupInstructions}</div>
-        )}
-      </div>
-
-      {/* Test Form */}
-      <div className="space-y-4">
+      <div className="mb-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Test Address:</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Address to Test:
+          </label>
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter an address (e.g., 1600 Pennsylvania Ave Washington DC)"
-            className="w-full px-3 py-2 border border-gray-300 rounded"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter address..."
           />
         </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-1">View Type:</label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewType('satellite')}
-              className={`px-3 py-2 rounded text-sm ${
-                viewType === 'satellite' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              🛰️ Satellite
-            </button>
-            <button
-              onClick={() => setViewType('streetview')}
-              className={`px-3 py-2 rounded text-sm ${
-                viewType === 'streetview' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              🚶 Street View
-            </button>
-            <button
-              onClick={() => setViewType('solar')}
-              className={`px-3 py-2 rounded text-sm ${
-                viewType === 'solar' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              ☀️ Solar Analysis
-            </button>
-          </div>
+
+        <div className="flex space-x-4">
+          <button
+            onClick={testAerialView}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? 'Testing...' : 'Test Aerial View'}
+          </button>
+
+          <button
+            onClick={testApiHealth}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            Test API Health
+          </button>
+
+          <button
+            onClick={getConfigStatus}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          >
+            Get Config Status
+          </button>
         </div>
-        
-        {(viewType === 'satellite' || viewType === 'solar') && (
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Zoom Level: {zoom} {zoom === 20 && '(Maximum Detail)'}
-            </label>
-            <input
-              type="range"
-              min="10"
-              max="20"
-              value={zoom}
-              onChange={(e) => setZoom(parseInt(e.target.value))}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>10 (Street)</span>
-              <span>15 (Building)</span>
-              <span>20 (Max Detail)</span>
-            </div>
-          </div>
-        )}
-        
-        <button
-          onClick={handleTest}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Testing...' : `Test ${viewType === 'satellite' ? 'Satellite' : viewType === 'streetview' ? 'Street View' : 'Solar'} API`}
-        </button>
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="mt-4 p-3 bg-red-100 text-red-800 rounded">
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      {/* Results */}
-      {viewType === 'satellite' && imageUrl && (
-        <div className="mt-6">
-          <h3 className="font-medium mb-2">🛰️ Satellite View Result:</h3>
-          <img 
-            src={imageUrl} 
-            alt="Satellite view" 
-            className="border border-gray-300 rounded max-w-full"
-            onError={() => setError('Failed to load satellite image')}
-          />
-          <div className="text-sm text-gray-600 mt-2">
-            Image URL: <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-              {imageUrl.substring(0, 100)}...
-            </a>
+      {results && (
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold">Test Results</h2>
+
+          {/* Geocoding Results */}
+          <div className="bg-gray-50 p-4 rounded-md">
+            <h3 className="font-medium mb-2">Geocoding Result:</h3>
+            <pre className="text-sm overflow-auto">
+              {JSON.stringify(results.geocodeResult, null, 2)}
+            </pre>
           </div>
-        </div>
-      )}
-      
-      {viewType === 'streetview' && streetViewImages.length > 0 && (
-        <div className="mt-6">
-          <h3 className="font-medium mb-2">🚶 Street View Results (Multi-Angle):</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {streetViewImages.map((streetView, index) => (
-              <div key={index} className="border border-gray-300 rounded p-2">
-                <h4 className="text-sm font-medium mb-2">{streetView.label}</h4>
-                <img 
-                  src={streetView.imageUrl} 
-                  alt={streetView.label}
-                  className="w-full rounded"
-                  onError={() => setError(`Failed to load ${streetView.label}`)}
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  Heading: {streetView.heading}°
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {viewType === 'solar' && (solarData || imageUrl) && (
-        <div className="mt-6">
-          <h3 className="font-medium mb-2">☀️ Solar Analysis Results:</h3>
-          
-          {imageUrl && (
-            <div className="mb-4">
-              <h4 className="text-sm font-medium mb-2">📍 Site Location:</h4>
+
+          {/* Satellite Image */}
+          {results.satelliteUrl && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2">Satellite Image (Google):</h3>
               <img 
-                src={imageUrl} 
-                alt="Solar site view" 
-                className="border border-gray-300 rounded max-w-full"
-                onError={() => setError('Failed to load solar site image')}
+                src={results.satelliteUrl} 
+                alt="Satellite" 
+                className="max-w-full h-auto border rounded-md"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/800x600/ffcccc/cc0000?text=Image+Load+Error';
+                }}
               />
             </div>
           )}
-          
-          {solarData && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
-              <h4 className="text-sm font-medium mb-2">☀️ Solar Potential Summary:</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Max Panels:</strong> {solarData.solarPotential.maxArrayPanelsCount}
-                </div>
-                <div>
-                  <strong>Max Array Area:</strong> {solarData.solarPotential.maxArrayAreaMeters2}m²
-                </div>
-                <div>
-                  <strong>Annual Sunshine:</strong> {solarData.solarPotential.maxSunshineHoursPerYear} hours
-                </div>
-                <div>
-                  <strong>Roof Segments:</strong> {solarData.roofSegmentStats?.length || 0}
-                </div>
-              </div>
-              
-              {solarData.roofSegmentStats && solarData.roofSegmentStats.length > 0 && (
-                <div className="mt-3">
-                  <strong className="text-sm">Best Roof Segment:</strong>
-                  <div className="text-xs text-gray-600 mt-1">
-                    {solarData.roofSegmentStats[0].panelsCount} panels • 
-                    {solarData.roofSegmentStats[0].yearlyEnergyDcKwh.toLocaleString()} kWh/year • 
-                    {solarData.roofSegmentStats[0].azimuthDegrees}° azimuth
+
+          {/* Mapbox Satellite Image */}
+          {results.mapboxSatelliteUrl && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2">Satellite Image (Mapbox):</h3>
+              <img 
+                src={results.mapboxSatelliteUrl} 
+                alt="Satellite Mapbox" 
+                className="max-w-full h-auto border rounded-md"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/800x600/ffcccc/cc0000?text=Mapbox+Image+Load+Error';
+                }}
+              />
+            </div>
+          )}
+
+          {/* Street Views */}
+          {results.streetViews && results.streetViews.length > 0 && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2">Street Views:</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {results.streetViews.map((url: string, index: number) => (
+                  <div key={index}>
+                    <p className="text-sm text-gray-600 mb-1">Angle {index * 90}°</p>
+                    <img 
+                      src={url} 
+                      alt={`Street View ${index * 90}°`} 
+                      className="w-full h-auto border rounded-md"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/400x300/ffcccc/cc0000?text=Street+View+Error';
+                      }}
+                    />
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Weather Data */}
+          {results.weatherData && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2">Weather Data:</h3>
+              <pre className="text-sm overflow-auto">
+                {JSON.stringify(results.weatherData, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {/* Solar Insights */}
+          {results.solarInsights && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2">Solar Insights:</h3>
+              <pre className="text-sm overflow-auto">
+                {JSON.stringify(results.solarInsights, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {/* Full Aerial View */}
+          {results.aerialView && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2">Complete Aerial View:</h3>
+              <pre className="text-sm overflow-auto">
+                {JSON.stringify(results.aerialView, null, 2)}
+              </pre>
             </div>
           )}
         </div>
@@ -273,3 +254,5 @@ export const TestAerialView: React.FC = () => {
     </div>
   );
 };
+
+export default TestAerialView;
