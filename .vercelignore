@@ -34,11 +34,9 @@ src/components/AerialView/AnalysisControls.tsx
 src/components/AerialView/ProgressTracker.tsx
 src/components/AerialView/ResultsDisplay.tsx
 src/components/AerialView/RefactoredAerialViewMain.tsx
-# Problematic SLD components (keep SimpleSLDMain.tsx available)
+# Problematic SLD components (keep SimpleSLDMain.tsx and new enhanced components available)
 src/components/SLD/UnifiedSLDMain.tsx
 src/components/SLD/EnhancedSLDMain.tsx
-src/components/SLD/EnhancedSLDCanvas.tsx
-src/components/SLD/EnhancedSingleLineDiagram.tsx
 src/components/SLD/IntelligentSLDMain.tsx
 src/components/SLD/OptimizedSLDCanvas.tsx
 src/components/SLD/ProfessionalSLDMain.tsx
@@ -46,8 +44,6 @@ src/components/SLD/ProfessionalSLDCanvas.tsx
 src/components/SLD/RealisticComponentRenderer.tsx
 src/components/SLD/RealisticElectricalSymbols.tsx
 src/components/SLD/ComponentLibrary.tsx
-src/components/SLD/EnhancedSLDCanvas.tsx
-src/components/SLD/EnhancedSingleLineDiagram.tsx
 src/components/SLD/IEEESymbolLibrary.tsx
 src/components/SLD/ProfessionalSymbolRenderer.tsx
 src/components/SLD/LayerPanel.tsx

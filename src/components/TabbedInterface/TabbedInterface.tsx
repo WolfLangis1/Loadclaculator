@@ -5,10 +5,16 @@ import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 
-// Lazy load heavy components  
-const EnhancedSLDCanvas = lazy(() => import('../SLD/EnhancedSLDCanvas').then(module => ({ default: module.EnhancedSLDCanvas })));
+// Lazy load heavy components with fallbacks for Vercel compatibility
+const EnhancedSLDCanvas = lazy(() => 
+  import('../SLD/EnhancedSLDCanvas').then(module => ({ default: module.EnhancedSLDCanvas }))
+    .catch(() => import('../SLD/IntelligentSLDCanvas').then(module => ({ default: module.IntelligentSLDCanvas })))
+);
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
-const EnhancedProjectManager = lazy(() => import('../ProjectManager/EnhancedProjectManager').then(module => ({ default: module.EnhancedProjectManager })));
+const EnhancedProjectManager = lazy(() => 
+  import('../ProjectManager/EnhancedProjectManager').then(module => ({ default: module.EnhancedProjectManager }))
+    .catch(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })))
+);
 
 type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing';
 
