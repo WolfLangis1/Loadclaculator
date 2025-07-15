@@ -151,9 +151,18 @@ export const TITLE_BLOCK_TEMPLATES: TitleBlockTemplate[] = [
 export const generateTitleBlockFromProject = (
   projectInfo: any,
   loads: LoadState,
-  templateId: string = 'standard-residential'
+  templateId: string = 'professional'
 ): TitleBlockData => {
-  const template = TITLE_BLOCK_TEMPLATES.find(t => t.id === templateId);
+  // Map simple template names to actual template IDs
+  const templateMap: Record<string, string> = {
+    'professional': 'professional-commercial',
+    'standard': 'standard-residential',
+    'engineering': 'engineering-industrial',
+    'permit': 'permit-submission'
+  };
+  
+  const actualTemplateId = templateMap[templateId] || templateId;
+  const template = TITLE_BLOCK_TEMPLATES.find(t => t.id === actualTemplateId);
   if (!template) {
     throw new Error(`Template ${templateId} not found`);
   }

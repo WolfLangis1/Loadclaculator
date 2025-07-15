@@ -75,5 +75,27 @@ export default defineConfig(({ mode }) => ({
     },
     // Prevent automatic page reload on certain file changes
     middlewareMode: false,
+    // Proxy API calls to backend server
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001',
+        changeOrigin: true,
+        secure: false,
+        timeout: 5000,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('API proxy error:', err);
+            // Fallback to mock data on proxy error
+            if (!res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'API service unavailable', details: err.message }));
+            }
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying request:', req.method, req.url, 'to', proxyReq.host + ':' + proxyReq.port + proxyReq.path);
+          });
+        }
+      }
+    }
   },
 }))

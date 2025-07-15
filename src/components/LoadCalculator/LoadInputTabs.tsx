@@ -5,14 +5,14 @@ import { OptimizedGeneralLoadsTable } from './LoadTables/OptimizedGeneralLoadsTa
 import { HVACLoadsTable } from './LoadTables/HVACLoadsTable';
 import { EVSELoadsTable } from './LoadTables/EVSELoadsTable';
 import { SolarBatteryTable } from './LoadTables/SolarBatteryTable';
-import { WireSizingChart } from './WireSizingChart';
+// import { WireSizingChart } from './WireSizingChart'; // Removed - now in separate tab
 
 const SECTIONS = [
   { id: 'general', label: 'General Loads', icon: Home, component: OptimizedGeneralLoadsTable, color: 'emerald' },
   { id: 'hvac', label: 'HVAC', icon: Zap, component: HVACLoadsTable, color: 'orange' },
   { id: 'evse', label: 'EV Charging', icon: Car, component: EVSELoadsTable, color: 'blue' },
   { id: 'solar', label: 'Solar/Battery', icon: Battery, component: SolarBatteryTable, color: 'yellow' },
-  { id: 'wiring', label: 'Wire Sizing Chart', icon: Cable, component: WireSizingChart, color: 'red' },
+  // { id: 'wiring', label: 'Wire Sizing Chart', icon: Cable, component: WireSizingChart, color: 'red' }, // Moved to separate tab
 ] as const;
 
 export const LoadInputTabs: React.FC = () => {

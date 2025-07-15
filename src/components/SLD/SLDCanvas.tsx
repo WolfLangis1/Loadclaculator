@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Download, Save, Undo, Redo, Grid, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, Save, Undo, Redo, Grid, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import type { SLDDiagram, SLDComponent, SLDConnection, SLDPosition } from '../../types/sld';
 
 interface SLDCanvasProps {
@@ -13,6 +13,15 @@ interface DragState {
   draggedComponent: string | null;
   startPosition: SLDPosition;
   offset: SLDPosition;
+}
+
+interface CanvasBounds {
+  width: number;
+  height: number;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
 }
 
 export const SLDCanvas: React.FC<SLDCanvasProps> = ({
@@ -30,6 +39,61 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     startPosition: { x: 0, y: 0 },
     offset: { x: 0, y: 0 }
   });
+
+  // Canvas dimensions and boundaries
+  const CANVAS_PADDING = 50;
+  const DEFAULT_CANVAS_SIZE = { width: 1200, height: 800 };
+
+  // Calculate canvas bounds based on components
+  const calculateCanvasBounds = useCallback((): CanvasBounds => {
+    if (diagram.components.length === 0) {
+      return {
+        width: DEFAULT_CANVAS_SIZE.width,
+        height: DEFAULT_CANVAS_SIZE.height,
+        minX: 0,
+        minY: 0,
+        maxX: DEFAULT_CANVAS_SIZE.width,
+        maxY: DEFAULT_CANVAS_SIZE.height
+      };
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    diagram.components.forEach(component => {
+      const left = component.position.x;
+      const top = component.position.y;
+      const right = left + component.size.width;
+      const bottom = top + component.size.height;
+
+      minX = Math.min(minX, left);
+      minY = Math.min(minY, top);
+      maxX = Math.max(maxX, right);
+      maxY = Math.max(maxY, bottom);
+    });
+
+    // Add padding around components
+    const boundsWidth = Math.max(maxX - minX + (CANVAS_PADDING * 2), DEFAULT_CANVAS_SIZE.width);
+    const boundsHeight = Math.max(maxY - minY + (CANVAS_PADDING * 2), DEFAULT_CANVAS_SIZE.height);
+
+    return {
+      width: boundsWidth,
+      height: boundsHeight,
+      minX: Math.min(minX - CANVAS_PADDING, 0),
+      minY: Math.min(minY - CANVAS_PADDING, 0),
+      maxX: Math.max(maxX + CANVAS_PADDING, DEFAULT_CANVAS_SIZE.width),
+      maxY: Math.max(maxY + CANVAS_PADDING, DEFAULT_CANVAS_SIZE.height)
+    };
+  }, [diagram.components]);
+
+  // Constrain position within canvas bounds
+  const constrainPosition = useCallback((position: SLDPosition, componentSize: { width: number; height: number }): SLDPosition => {
+    const bounds = calculateCanvasBounds();
+    
+    return {
+      x: Math.max(bounds.minX, Math.min(position.x, bounds.maxX - componentSize.width)),
+      y: Math.max(bounds.minY, Math.min(position.y, bounds.maxY - componentSize.height))
+    };
+  }, [calculateCanvasBounds]);
 
   // Handle component selection
   const handleComponentClick = useCallback((componentId: string, event: React.MouseEvent) => {
@@ -78,16 +142,26 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
       y: (event.clientY - rect.top) / zoom - pan.y
     };
 
-    const newPosition = {
+    let newPosition = {
       x: currentPosition.x - dragState.offset.x,
       y: currentPosition.y - dragState.offset.y
     };
+
+    // Find the component being dragged to get its size
+    const draggedComponent = diagram.components.find(c => c.id === dragState.draggedComponent);
+    if (!draggedComponent) return;
+
+    // Constrain position within canvas bounds
+    newPosition = constrainPosition(newPosition, draggedComponent.size);
 
     // Snap to grid if enabled
     if (diagram.snapToGrid) {
       const gridSize = 20;
       newPosition.x = Math.round(newPosition.x / gridSize) * gridSize;
       newPosition.y = Math.round(newPosition.y / gridSize) * gridSize;
+      
+      // Re-constrain after snapping to ensure we're still within bounds
+      newPosition = constrainPosition(newPosition, draggedComponent.size);
     }
 
     // Update component position
@@ -101,7 +175,7 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     };
 
     onDiagramChange(updatedDiagram);
-  }, [dragState, zoom, pan, diagram, onDiagramChange, readonly]);
+  }, [dragState, zoom, pan, diagram, onDiagramChange, readonly, constrainPosition]);
 
   // Handle mouse up to end dragging
   const handleMouseUp = useCallback(() => {
@@ -127,11 +201,144 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     setZoom(prev => Math.max(prev / 1.2, 0.3));
   }, []);
 
-  // Reset view
+  // Fit canvas to screen
+  const handleFitToScreen = useCallback(() => {
+    if (!canvasRef.current || diagram.components.length === 0) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const bounds = calculateCanvasBounds();
+    
+    // Calculate zoom to fit all components with some padding
+    const viewPadding = 50;
+    const scaleX = (canvasRect.width - viewPadding * 2) / bounds.width;
+    const scaleY = (canvasRect.height - viewPadding * 2) / bounds.height;
+    const optimalZoom = Math.min(scaleX, scaleY, 2); // Cap at 200% zoom
+    
+    // Center the view on the components
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    const canvasCenterX = canvasRect.width / 2 / optimalZoom;
+    const canvasCenterY = canvasRect.height / 2 / optimalZoom;
+    
+    setZoom(optimalZoom);
+    setPan({
+      x: canvasCenterX - centerX,
+      y: canvasCenterY - centerY
+    });
+  }, [diagram.components, calculateCanvasBounds]);
+
+  // Reset view to origin
   const handleResetView = useCallback(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, []);
+
+  // Zoom to fit selection or all components
+  const handleZoomToFit = useCallback(() => {
+    if (selectedComponent) {
+      // Zoom to selected component
+      const component = diagram.components.find(c => c.id === selectedComponent);
+      if (!component || !canvasRef.current) return;
+
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const componentCenterX = component.position.x + component.size.width / 2;
+      const componentCenterY = component.position.y + component.size.height / 2;
+      
+      const targetZoom = Math.min(
+        canvasRect.width / (component.size.width + 200),
+        canvasRect.height / (component.size.height + 200),
+        2
+      );
+      
+      setZoom(targetZoom);
+      setPan({
+        x: canvasRect.width / 2 / targetZoom - componentCenterX,
+        y: canvasRect.height / 2 / targetZoom - componentCenterY
+      });
+    } else {
+      // Fit all components
+      handleFitToScreen();
+    }
+  }, [selectedComponent, diagram.components, handleFitToScreen]);
+
+  // Auto-fit when components change significantly
+  useEffect(() => {
+    if (diagram.components.length > 0) {
+      // Debounce the auto-fit to avoid excessive updates
+      const timeoutId = setTimeout(() => {
+        const bounds = calculateCanvasBounds();
+        const isSignificantChange = 
+          bounds.width !== DEFAULT_CANVAS_SIZE.width || 
+          bounds.height !== DEFAULT_CANVAS_SIZE.height;
+          
+        if (isSignificantChange && canvasRef.current) {
+          handleFitToScreen();
+        }
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [diagram.components.length, calculateCanvasBounds, handleFitToScreen]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (readonly) return;
+
+      // Only handle shortcuts when canvas is focused or no input is focused
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' || 
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.contentEditable === 'true'
+      );
+
+      if (isInputFocused) return;
+
+      switch (event.key) {
+        case 'f':
+        case 'F':
+          event.preventDefault();
+          handleFitToScreen();
+          break;
+        case 'r':
+        case 'R':
+          event.preventDefault();
+          handleResetView();
+          break;
+        case '0':
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            handleFitToScreen();
+          }
+          break;
+        case '=':
+        case '+':
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            handleZoomIn();
+          }
+          break;
+        case '-':
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            handleZoomOut();
+          }
+          break;
+        case 'Escape':
+          event.preventDefault();
+          setSelectedComponent(null);
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [readonly, handleFitToScreen, handleResetView, handleZoomIn, handleZoomOut]);
 
   // Export diagram as SVG
   const handleExport = useCallback(() => {
@@ -336,11 +543,28 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
         </button>
         
         <button
+          onClick={handleFitToScreen}
+          className="px-3 py-2 text-sm rounded hover:bg-gray-100"
+          title="Fit to Screen"
+        >
+          <Maximize className="h-4 w-4 mr-1 inline" />
+          Fit
+        </button>
+        
+        <button
+          onClick={handleZoomToFit}
+          className="px-3 py-2 text-sm rounded hover:bg-gray-100"
+          title={selectedComponent ? "Zoom to Selected" : "Zoom to Fit All"}
+        >
+          🎯
+        </button>
+        
+        <button
           onClick={handleResetView}
           className="px-3 py-2 text-sm rounded hover:bg-gray-100"
-          title="Reset View"
+          title="Reset View (1:1)"
         >
-          Fit
+          <RotateCcw className="h-4 w-4" />
         </button>
         
         <div className="w-px h-6 bg-gray-300 mx-2" />
@@ -364,8 +588,14 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
           Export
         </button>
         
-        <div className="ml-auto text-sm text-gray-600">
-          Zoom: {Math.round(zoom * 100)}%
+        <div className="ml-auto flex items-center gap-4">
+          <div className="text-sm text-gray-600">
+            Zoom: {Math.round(zoom * 100)}%
+          </div>
+          
+          <div className="text-xs text-gray-500" title="Keyboard Shortcuts: F=Fit, R=Reset, Ctrl+0=Fit, Ctrl+±=Zoom, Esc=Deselect">
+            💡 Shortcuts
+          </div>
         </div>
       </div>
 
@@ -393,6 +623,27 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
             transformOrigin: '0 0'
           }}
         >
+          {/* Canvas boundaries visualization */}
+          {(() => {
+            const bounds = calculateCanvasBounds();
+            return (
+              <div
+                className="absolute border-2 border-dashed border-blue-300 bg-blue-50 bg-opacity-10 pointer-events-none"
+                style={{
+                  left: bounds.minX,
+                  top: bounds.minY,
+                  width: bounds.width,
+                  height: bounds.height,
+                  zIndex: -1
+                }}
+              >
+                <div className="absolute top-2 left-2 text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded">
+                  Canvas: {bounds.width} × {bounds.height}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Connection lines */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -444,12 +695,22 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
         <div>
           Components: {diagram.components.length} | 
           Connections: {diagram.connections.length} |
-          NEC Compliant: {diagram.necCompliant ? '✓' : '✗'}
+          NEC Compliant: {diagram.necCompliant ? '✓' : '✗'} |
+          Canvas: {(() => {
+            const bounds = calculateCanvasBounds();
+            return `${bounds.width} × ${bounds.height}`;
+          })()}
         </div>
-        <div>
-          {selectedComponent && (
-            <>Selected: {diagram.components.find(c => c.id === selectedComponent)?.name}</>
-          )}
+        <div className="flex items-center gap-4">
+          <div>
+            Pan: ({Math.round(pan.x)}, {Math.round(pan.y)}) | 
+            Zoom: {Math.round(zoom * 100)}%
+          </div>
+          <div>
+            {selectedComponent && (
+              <>Selected: {diagram.components.find(c => c.id === selectedComponent)?.name}</>
+            )}
+          </div>
         </div>
       </div>
     </div>

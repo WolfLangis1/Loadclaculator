@@ -1,11 +1,13 @@
 import React from 'react';
 import { Home } from 'lucide-react';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
+import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { TooltipWrapper } from '../UI/TooltipWrapper';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
 
 export const ProjectInformation: React.FC = () => {
   const { state, updateProjectInfo, updateSettings } = useLoadCalculator();
+  const { updatePanelDetails } = useProjectSettings();
   const { projectInfo } = state;
 
   return (
@@ -166,11 +168,8 @@ export const ProjectInformation: React.FC = () => {
           <select
             id="bus-rating"
             value={state.panelDetails?.busRating || 200}
-            onChange={(e) => updateSettings({ 
-              panelDetails: { 
-                ...state.panelDetails, 
-                busRating: parseInt(e.target.value) 
-              } 
+            onChange={(e) => updatePanelDetails({ 
+              busRating: parseInt(e.target.value) 
             })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
           >

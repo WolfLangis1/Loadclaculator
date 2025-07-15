@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   MapPin, 
   Camera, 
@@ -90,6 +90,15 @@ export const SimpleAerialViewMain: React.FC = () => {
   const { settings, updateProjectInfo } = useProjectSettings();
   
   const [measurementPoints, setMeasurementPoints] = useState<Array<{x: number, y: number}>>([]);
+
+  // Auto-fill address from project settings
+  useEffect(() => {
+    if (settings.projectInfo.propertyAddress && 
+        settings.projectInfo.propertyAddress !== state.address && 
+        !state.address.trim()) {
+      setAddress(settings.projectInfo.propertyAddress);
+    }
+  }, [settings.projectInfo.propertyAddress, state.address, setAddress]);
 
   // Handle address search
   const handleAddressSearch = useCallback(async () => {

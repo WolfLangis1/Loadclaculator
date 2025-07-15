@@ -5,7 +5,7 @@
  * Supports load calculator integration, NEC compliance, and professional export
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { 
   Zap, 
   RefreshCw, 
@@ -29,6 +29,19 @@ import {
 import { EnhancedComponentLibrary } from './EnhancedComponentLibrary';
 import { LayerManager, DEFAULT_LAYERS, type DrawingLayer } from './LayerManager';
 import { CanvasTools, type CanvasTool } from './CanvasTools';
+import { 
+  StandardTitleBlock, 
+  ProfessionalTitleBlock, 
+  DrawingBorder,
+  type TitleBlockData 
+} from './TitleBlockTemplates';
+import { 
+  generateTitleBlockFromProject, 
+  TITLE_BLOCK_TEMPLATES 
+} from '../../services/titleBlockService';
+import { DynamicWireRenderer } from './DynamicWireRenderer';
+import { RealTimeNECValidator, type RealTimeValidationResult } from '../../services/realTimeNECValidator';
+import { DraggableTitleBlock } from './DraggableTitleBlock';
 
 export const IntelligentSLDCanvas: React.FC = () => {
   const { state: sldState, updateDiagram, addComponent, updateComponent } = useSLDData();
@@ -53,6 +66,27 @@ export const IntelligentSLDCanvas: React.FC = () => {
   const [showGenerationPanel, setShowGenerationPanel] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [lastGenerated, setLastGenerated] = useState<Date | null>(null);
+  
+  // Title block state
+  const [showTitleBlock, setShowTitleBlock] = useState(true);
+  const [titleBlockTemplate, setTitleBlockTemplate] = useState('professional');
+  const [titleBlockData, setTitleBlockData] = useState<TitleBlockData>(() => 
+    generateTitleBlockFromProject(settings, loads, 'professional')
+  );
+  const [titleBlockPosition, setTitleBlockPosition] = useState({ x: 50, y: 50 });
+  const [titleBlockEditing, setTitleBlockEditing] = useState(false);
+  const [isDraggingTitleBlock, setIsDraggingTitleBlock] = useState(false);
+  
+  // Wire routing state
+  const [showWireRouting, setShowWireRouting] = useState(true);
+  const [showWireLabels, setShowWireLabels] = useState(true);
+  const [showCollisionHighlight, setShowCollisionHighlight] = useState(true);
+  const [selectedWire, setSelectedWire] = useState<string | null>(null);
+  
+  // NEC validation state
+  const [necValidator] = useState(() => new RealTimeNECValidator());
+  const [validationResult, setValidationResult] = useState<RealTimeValidationResult | null>(null);
+  const [showValidation, setShowValidation] = useState(true);
   
   // Layer management
   const [layers, setLayers] = useState<DrawingLayer[]>(() => 
@@ -97,6 +131,11 @@ export const IntelligentSLDCanvas: React.FC = () => {
       // Step 5: Finalize and organize layers (100%)
       setGenerationProgress(100);
       setLastGenerated(new Date());
+      
+      // Step 6: Validate NEC compliance
+      if (showValidation) {
+        necValidator.validateDiagramRealTime(diagram, loads, setValidationResult);
+      }
       
       await new Promise(resolve => setTimeout(resolve, 200));
       
@@ -149,6 +188,43 @@ export const IntelligentSLDCanvas: React.FC = () => {
       }
     }
   }, [loads, lastGenerated, generationOptions.includeLoadCalculations]);
+
+  /**
+   * Handle title block data changes
+   */
+  const handleTitleBlockDataChange = useCallback((field: keyof TitleBlockData, value: string) => {
+    setTitleBlockData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  /**
+   * Handle title block position changes
+   */
+  const handleTitleBlockPositionChange = useCallback((position: { x: number; y: number }) => {
+    setTitleBlockPosition(position);
+  }, []);
+
+  /**
+   * Get project data for auto-fill
+   */
+  const projectDataForAutoFill = useMemo(() => ({
+    projectName: settings.projectInfo?.projectName || settings.projectName,
+    propertyAddress: settings.projectInfo?.propertyAddress,
+    client: settings.projectInfo?.clientName,
+    engineerName: settings.projectInfo?.engineerName,
+    serviceSize: settings.mainBreaker?.toString(),
+    voltage: settings.voltage?.toString()
+  }), [
+    settings.projectInfo?.projectName,
+    settings.projectName,
+    settings.projectInfo?.propertyAddress,
+    settings.projectInfo?.clientName,
+    settings.projectInfo?.engineerName,
+    settings.mainBreaker,
+    settings.voltage
+  ]);
   
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -170,6 +246,47 @@ export const IntelligentSLDCanvas: React.FC = () => {
           
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowTitleBlock(!showTitleBlock)}
+              className={`px-3 py-2 rounded-md flex items-center gap-2 ${
+                showTitleBlock 
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="Toggle Title Block"
+            >
+              <FileText className="h-4 w-4" />
+              Title Block
+            </button>
+            
+            <button
+              onClick={() => setShowWireRouting(!showWireRouting)}
+              className={`px-3 py-2 rounded-md flex items-center gap-2 ${
+                showWireRouting 
+                  ? 'bg-green-100 text-green-700 border border-green-300' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="Toggle Wire Routing"
+            >
+              <Zap className="h-4 w-4" />
+              Smart Wiring
+            </button>
+            
+            <button
+              onClick={() => setShowValidation(!showValidation)}
+              className={`px-3 py-2 rounded-md flex items-center gap-2 ${
+                showValidation 
+                  ? validationResult?.overallCompliance 
+                    ? 'bg-green-100 text-green-700 border border-green-300'
+                    : 'bg-red-100 text-red-700 border border-red-300'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="Toggle NEC Validation"
+            >
+              <CheckCircle className="h-4 w-4" />
+              NEC Check
+            </button>
+            
+            <button
               onClick={() => setShowGenerationPanel(!showGenerationPanel)}
               className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
               title="Generation Settings"
@@ -178,23 +295,6 @@ export const IntelligentSLDCanvas: React.FC = () => {
               Settings
             </button>
             
-            <button
-              onClick={handleGenerateIntelligentSLD}
-              disabled={isGenerating}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-            >
-              {isGenerating ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Generate SLD
-                </>
-              )}
-            </button>
           </div>
         </div>
         
@@ -332,6 +432,107 @@ export const IntelligentSLDCanvas: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Title Block Configuration Panel */}
+      {showTitleBlock && (
+        <div className="bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-blue-600" />
+              Professional Title Block
+            </h3>
+            
+            <select
+              value={titleBlockTemplate}
+              onChange={(e) => {
+                setTitleBlockTemplate(e.target.value);
+                setTitleBlockData(generateTitleBlockFromProject(settings, loads, e.target.value));
+              }}
+              className="border border-gray-300 rounded px-3 py-1 text-sm"
+            >
+              <option value="professional">Professional</option>
+              <option value="standard">Standard</option>
+              <option value="engineering">Engineering</option>
+              <option value="permit">Permit Submission</option>
+            </select>
+          </div>
+
+          <div className="text-sm text-gray-600">
+            <p>✨ The title block is now draggable and editable directly on the canvas!</p>
+            <p>📝 Click on any field in the title block to edit it inline</p>
+            <p>🔄 Data automatically syncs from the Load Calculator project information</p>
+          </div>
+        </div>
+      )}
+
+      {/* Wire Routing Configuration Panel */}
+      {showWireRouting && (
+        <div className="bg-green-50 border-b border-green-200 p-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-gray-900 flex items-center gap-2 text-sm">
+              <Zap className="h-4 w-4 text-green-600" />
+              Smart Wire Routing
+            </h3>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowWireLabels(!showWireLabels)}
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  showWireLabels 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Labels
+              </button>
+              
+              <button
+                onClick={() => setShowCollisionHighlight(!showCollisionHighlight)}
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  showCollisionHighlight 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Collision
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEC Validation Panel */}
+      {showValidation && (
+        <div className={`border-b p-3 ${
+          validationResult?.overallCompliance 
+            ? 'bg-green-50 border-green-200' 
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-gray-900 flex items-center gap-2 text-sm">
+              <CheckCircle className={`h-4 w-4 ${
+                validationResult?.overallCompliance ? 'text-green-600' : 'text-red-600'
+              }`} />
+              NEC Compliance
+            </h3>
+            
+            {validationResult && (
+              <div className="flex items-center gap-3 text-xs">
+                <span className={`px-2 py-1 rounded font-medium ${
+                  validationResult.criticalViolations > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {validationResult.criticalViolations} Critical
+                </span>
+                <span className={`px-2 py-1 rounded font-medium ${
+                  validationResult.warningViolations > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {validationResult.warningViolations} Warnings
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       <div className="flex flex-1">
         {/* Layer Manager */}
@@ -368,7 +569,7 @@ export const IntelligentSLDCanvas: React.FC = () => {
         <EnhancedComponentLibrary />
         
         {/* Main Canvas Area */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative overflow-auto bg-gray-100">
           {/* Canvas Tools */}
           <div className="absolute top-4 right-4 z-10">
             <CanvasTools
@@ -389,15 +590,37 @@ export const IntelligentSLDCanvas: React.FC = () => {
             />
           </div>
           
-          {/* Canvas */}
-          <div
-            ref={canvasRef}
-            className="w-full h-full relative bg-white"
-            style={{
-              transform: `scale(${sldState.canvasState.zoom})`,
-              transformOrigin: 'top left'
-            }}
-          >
+          {/* Professional Drawing Border with Title Block */}
+          <div className="min-w-[1200px] min-h-[1200px] m-4">
+            <DrawingBorder
+              paperSize="tabloid"
+              orientation="landscape"
+              marginSize="standard"
+              showGrid={sldState.canvasState.gridEnabled}
+            >
+            {/* Draggable Title Block */}
+            {showTitleBlock && (
+              <DraggableTitleBlock
+                data={titleBlockData}
+                position={titleBlockPosition}
+                onPositionChange={handleTitleBlockPositionChange}
+                onDataChange={handleTitleBlockDataChange}
+                template={titleBlockTemplate as 'standard' | 'professional' | 'engineering' | 'permit'}
+                editable={true}
+                autoFillFromProject={true}
+                projectData={projectDataForAutoFill}
+              />
+            )}
+            
+            {/* SLD Canvas Content */}
+            <div
+              ref={canvasRef}
+              className="w-full h-full relative"
+              style={{
+                transform: `scale(${sldState.canvasState.zoom})`,
+                transformOrigin: 'top left'
+              }}
+            >
             {/* Grid */}
             {sldState.canvasState.gridEnabled && (
               <div
@@ -451,8 +674,34 @@ export const IntelligentSLDCanvas: React.FC = () => {
               </div>
             ))}
             
-            {/* Connection Lines */}
-            {sldState.diagram?.connections?.map(connection => (
+            {/* Dynamic Wire Routing */}
+            {showWireRouting && sldState.diagram?.connections && sldState.diagram?.components && (
+              <DynamicWireRenderer
+                connections={sldState.diagram.connections}
+                components={sldState.diagram.components}
+                showWireLabels={showWireLabels}
+                showCollisionHighlight={showCollisionHighlight}
+                interactive={true}
+                onWireClick={(route) => {
+                  console.log('Wire clicked:', route);
+                  setSelectedWire(route.connectionId);
+                }}
+                onWireHover={(route) => {
+                  // Handle wire hover for tooltips or highlighting
+                }}
+                selectedWires={selectedWire ? [selectedWire] : []}
+                constraints={{
+                  gridSnap: sldState.canvasState.gridEnabled,
+                  gridSize: sldState.canvasState.gridSize || 20,
+                  routingMethod: 'manhattan',
+                  avoidanceMargin: 25,
+                  wireSpacing: 18
+                }}
+              />
+            )}
+
+            {/* Fallback Connection Lines (when wire routing is disabled) */}
+            {!showWireRouting && sldState.diagram?.connections?.map(connection => (
               <svg
                 key={connection.id}
                 className="absolute inset-0 pointer-events-none"
@@ -476,22 +725,25 @@ export const IntelligentSLDCanvas: React.FC = () => {
                 <div className="text-center">
                   <Zap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Generate Your Professional SLD
+                    Professional SLD Canvas
                   </h3>
                   <p className="text-gray-500 mb-4">
-                    Click "Generate SLD" to automatically create a professional single line diagram
-                    from your load calculations.
+                    Create professional single line diagrams using the component library and drawing tools.
+                    Drag components from the library to build your electrical system.
                   </p>
-                  <button
-                    onClick={handleGenerateIntelligentSLD}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
-                  >
-                    <Play className="h-4 w-4" />
-                    Generate Now
-                  </button>
                 </div>
               </div>
             )}
+            </div>
+          </DrawingBorder>
+          
+          {/* Scroll indicator */}
+          <div className="flex justify-center py-8 text-gray-500 text-sm border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center gap-2">
+              <span>⬇️ Scroll down to explore the full canvas area</span>
+              <span className="text-xs text-gray-400">(Canvas: 1200px wide)</span>
+            </div>
+          </div>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { ProjectInformation } from './ProjectInformation';
 import { LoadInputTabs } from './LoadInputTabs';
 import { CalculationResults } from './CalculationResults';
-import { CalculationTransparency } from './CalculationTransparency';
+import { CalculationSummary } from './CalculationSummary';
 import { ValidationMessages } from './ValidationMessages';
 import { LoadCalculationGuide } from './LoadCalculationGuide';
 import { DefinitionsGlossary } from './DefinitionsGlossary';
@@ -92,7 +92,7 @@ export const LoadCalculatorMain: React.FC = () => {
           <div className="col-span-12 lg:col-span-5">
             <div className="lg:sticky lg:top-4 space-y-3">
               <CalculationResults />
-              <CalculationTransparency />
+              <CalculationSummary />
             </div>
           </div>
 

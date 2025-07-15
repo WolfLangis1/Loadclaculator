@@ -14,9 +14,8 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showAdvancedLoads, setShowAdvancedLoads] = useState(false);
   
-  // Split loads into basic (first 9) and advanced (rest)
-  const basicLoads = generalLoads.slice(0, 9);
-  const advancedLoads = generalLoads.slice(9);
+  // Show only first 10 rows, delete the rest
+  const displayLoads = generalLoads.slice(0, 10);
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -208,7 +207,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
           </button>
         </div>
 
-        {basicLoads.map((load) => (
+        {displayLoads.map((load) => (
           <div key={load.id} className="bg-white rounded-lg shadow border border-gray-200">
             <div 
               className="px-4 py-3 border-b border-gray-200 flex justify-between items-center cursor-pointer"
@@ -310,8 +309,8 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
           </div>
         ))}
 
-        {/* Advanced Loads Section for Mobile */}
-        {advancedLoads.length > 0 && (
+        {/* Advanced Loads Section for Mobile - REMOVED */}
+        {false && (
           <div className="mt-4">
             <button
               onClick={() => setShowAdvancedLoads(!showAdvancedLoads)}
@@ -480,13 +479,13 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {renderLoadRows(basicLoads)}
+            {renderLoadRows(displayLoads)}
           </tbody>
         </ResponsiveTable>
       </div>
 
-      {/* Advanced Loads Section for Desktop */}
-      {advancedLoads.length > 0 && (
+      {/* Advanced Loads Section for Desktop - REMOVED */}
+      {false && (
         <div className="mt-4">
           <button
             onClick={() => setShowAdvancedLoads(!showAdvancedLoads)}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Camera, Sun, Navigation, Plus, Check, X, FileImage, Download, Search, Ruler } from 'lucide-react';
 import { SecureAerialViewService } from '../../services/secureAerialViewService';
-import { GoogleSolarService, type SolarInsights } from '../../services/googleSolarService';
+import { GoogleSolarService } from '../../services/googleSolarService';
 import { AttachmentService } from '../../services/attachmentService';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
@@ -100,19 +100,13 @@ export const AerialViewMain: React.FC = () => {
         
       } else if (viewMode === 'solar') {
         // Get both satellite and solar data
-        const [imageUrl, solarInsights] = await Promise.all([
-          SecureAerialViewService.getSatelliteImage(
-            geocodeResult.coordinates.latitude,
-            geocodeResult.coordinates.longitude,
-            { width: 800, height: 600, zoom: zoom }
-          ),
-          GoogleSolarService.getSolarInsights(
-            geocodeResult.coordinates.latitude,
-            geocodeResult.coordinates.longitude
-          )
-        ]);
+        const imageUrl = await SecureAerialViewService.getSatelliteImage(
+          geocodeResult.coordinates.latitude,
+          geocodeResult.coordinates.longitude,
+          { width: 800, height: 600, zoom: zoom }
+        );
         setSatelliteUrl(imageUrl);
-        setSolarData(solarInsights);
+        setSolarData(null);
         
       } else if (viewMode === 'changes') {
         // Initialize change detection - the panel will handle the actual analysis

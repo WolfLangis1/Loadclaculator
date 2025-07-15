@@ -8,7 +8,7 @@ import { useCalculations } from '../context/CalculationContext';
  * This helps with gradual migration to the new context system
  */
 export const useLoadCalculatorCompat = () => {
-  const { settings, updateProjectInfo, updateCalculationSettings } = useProjectSettings();
+  const { settings, updateProjectInfo, updateCalculationSettings, updateLoadManagement, updatePanelDetails } = useProjectSettings();
   const { loads, updateLoad, addLoad, removeLoad, resetLoads } = useLoadData();
   const { calculations, validationMessages } = useCalculations();
 
@@ -53,10 +53,41 @@ export const useLoadCalculatorCompat = () => {
 
   // Legacy-style update functions
   const updateSettings = (updates: any) => {
-    if ('squareFootage' in updates || 'calculationMethod' in updates || 'mainBreaker' in updates) {
-      updateCalculationSettings(updates);
-    } else {
-      updateProjectInfo(updates);
+    // Split updates by category and call appropriate context methods
+    const loadManagementFields = ['loadManagementType', 'simpleSwitchMode', 'useEMS', 'emsMaxLoad', 'loadManagementMaxLoad', 'simpleSwitchLoadA', 'simpleSwitchLoadB'];
+    const calculationFields = ['squareFootage', 'calculationMethod', 'mainBreaker', 'codeYear'];
+    const panelFields = ['busRating', 'manufacturer', 'model', 'type', 'phases', 'voltage', 'interruptingRating', 'availableSpaces', 'usedSpaces'];
+    
+    // Extract load management updates
+    const loadManagementUpdates: any = {};
+    const calculationUpdates: any = {};
+    const panelUpdates: any = {};
+    const projectInfoUpdates: any = {};
+    
+    Object.keys(updates).forEach(key => {
+      if (loadManagementFields.includes(key)) {
+        loadManagementUpdates[key] = updates[key];
+      } else if (calculationFields.includes(key)) {
+        calculationUpdates[key] = updates[key];
+      } else if (panelFields.includes(key)) {
+        panelUpdates[key] = updates[key];
+      } else {
+        projectInfoUpdates[key] = updates[key];
+      }
+    });
+    
+    // Apply updates to appropriate contexts
+    if (Object.keys(loadManagementUpdates).length > 0) {
+      updateLoadManagement(loadManagementUpdates);
+    }
+    if (Object.keys(calculationUpdates).length > 0) {
+      updateCalculationSettings(calculationUpdates);
+    }
+    if (Object.keys(panelUpdates).length > 0) {
+      updatePanelDetails(panelUpdates);
+    }
+    if (Object.keys(projectInfoUpdates).length > 0) {
+      updateProjectInfo(projectInfoUpdates);
     }
   };
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Calculator, Info } from 'lucide-react';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 
-export const CalculationTransparency: React.FC = () => {
+export const CalculationSummary: React.FC = () => {
   const { state, calculations } = useLoadCalculator();
   
   // Calculate step-by-step breakdown

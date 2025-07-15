@@ -6,7 +6,7 @@ export const LOAD_TEMPLATES = {
     // laundry circuit (1500 VA), and bathroom circuit (1500 VA) are automatically 
     // calculated per NEC 220.52 and included in necCalculations.ts
     
-    // Basic loads - most common residential appliances (first 15)
+    // Only 10 most common residential appliances
     { id: 1, name: 'Electric Range/Oven', quantity: 0, amps: 40, volts: 240, va: 9600, total: 0, category: 'kitchen' as const, critical: false, circuit: '' },
     { id: 2, name: 'Refrigerator', quantity: 0, amps: 15, volts: 120, va: 1800, total: 0, category: 'kitchen' as const, critical: true, circuit: '' },
     { id: 3, name: 'Microwave Oven', quantity: 0, amps: 12, volts: 120, va: 1440, total: 0, category: 'kitchen' as const, critical: false, circuit: '' },
@@ -16,28 +16,7 @@ export const LOAD_TEMPLATES = {
     { id: 7, name: 'Electric Water Heater', quantity: 0, amps: 22, volts: 240, va: 5280, total: 0, category: 'other' as const, critical: false, circuit: '' },
     { id: 8, name: 'Pool Pump', quantity: 0, amps: 15, volts: 240, va: 3600, total: 0, category: 'other' as const, critical: false, circuit: '' },
     { id: 9, name: 'Hot Tub/Spa', quantity: 0, amps: 50, volts: 240, va: 12000, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 10, name: 'Garage Door Opener', quantity: 0, amps: 6, volts: 120, va: 720, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 11, name: 'Well Pump', quantity: 0, amps: 25, volts: 240, va: 6000, total: 0, category: 'other' as const, critical: true, circuit: '' },
-    { id: 12, name: 'Workshop/Garage Outlets', quantity: 0, amps: 20, volts: 120, va: 2400, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 13, name: 'Outdoor Receptacles', quantity: 0, amps: 20, volts: 120, va: 2400, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 14, name: 'Landscape Lighting', quantity: 0, amps: 5, volts: 120, va: 600, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 15, name: 'Washer (Electric)', quantity: 0, amps: 12, volts: 120, va: 1440, total: 0, category: 'laundry' as const, critical: false, circuit: '' },
-    // Advanced loads - specialized equipment (items 16-30)
-    { id: 16, name: 'Central Vacuum System', quantity: 0, amps: 12, volts: 120, va: 1440, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 17, name: 'Whole House Fan', quantity: 0, amps: 8, volts: 120, va: 960, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 18, name: 'Security System Panel', quantity: 0, amps: 2, volts: 120, va: 240, total: 0, category: 'other' as const, critical: true, circuit: '' },
-    { id: 19, name: 'Home Entertainment Center', quantity: 0, amps: 15, volts: 120, va: 1800, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 20, name: 'Wine Refrigerator/Cooler', quantity: 0, amps: 6, volts: 120, va: 720, total: 0, category: 'kitchen' as const, critical: false, circuit: '' },
-    { id: 21, name: 'Instant Hot Water Dispenser', quantity: 0, amps: 12, volts: 120, va: 1440, total: 0, category: 'kitchen' as const, critical: false, circuit: '' },
-    { id: 22, name: 'Under-Counter Ice Maker', quantity: 0, amps: 6, volts: 120, va: 720, total: 0, category: 'kitchen' as const, critical: false, circuit: '' },
-    { id: 23, name: 'Sump Pump', quantity: 0, amps: 8, volts: 120, va: 960, total: 0, category: 'other' as const, critical: true, circuit: '' },
-    { id: 24, name: 'Sewage Ejector Pump', quantity: 0, amps: 10, volts: 120, va: 1200, total: 0, category: 'other' as const, critical: true, circuit: '' },
-    { id: 25, name: 'Electric Sauna Heater', quantity: 0, amps: 30, volts: 240, va: 7200, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 26, name: 'Electric Fireplace Insert', quantity: 0, amps: 12, volts: 120, va: 1440, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 27, name: 'Electric Baseboard Heaters', quantity: 0, amps: 20, volts: 240, va: 4800, total: 0, category: 'other' as const, critical: false, circuit: '' },
-    { id: 28, name: 'Electric Towel Warmer', quantity: 0, amps: 5, volts: 120, va: 600, total: 0, category: 'bathroom' as const, critical: false, circuit: '' },
-    { id: 29, name: 'Bathroom Fan with Heater', quantity: 0, amps: 8, volts: 120, va: 960, total: 0, category: 'bathroom' as const, critical: false, circuit: '' },
-    { id: 30, name: 'Electric Floor Heating', quantity: 0, amps: 15, volts: 240, va: 3600, total: 0, category: 'other' as const, critical: false, circuit: '' }
+    { id: 10, name: 'Garage Door Opener', quantity: 0, amps: 6, volts: 120, va: 720, total: 0, category: 'other' as const, critical: false, circuit: '' }
   ] as GeneralLoad[],
   
   hvac: [
@@ -49,11 +28,8 @@ export const LOAD_TEMPLATES = {
   ] as HVACLoad[],
   
   evse: [
-    { id: 1, name: 'Level 2 EV Charger (48A)', quantity: 0, amps: 48, volts: 240, va: 11520, total: 0, continuous: true as const, circuit: '' },
-    { id: 2, name: 'Level 2 EV Charger (40A)', quantity: 0, amps: 40, volts: 240, va: 9600, total: 0, continuous: true as const, circuit: '' },
-    { id: 3, name: 'Level 2 EV Charger (32A)', quantity: 0, amps: 32, volts: 240, va: 7680, total: 0, continuous: true as const, circuit: '' },
-    { id: 4, name: 'Tesla Wall Connector', quantity: 0, amps: 48, volts: 240, va: 11520, total: 0, continuous: true as const, circuit: '' },
-    { id: 5, name: 'ChargePoint Home Flex', quantity: 0, amps: 50, volts: 240, va: 12000, total: 0, continuous: true as const, circuit: '' }
+    { id: 1, name: 'Level 2 EV Charger (40A)', quantity: 0, amps: 40, volts: 240, va: 9600, total: 0, continuous: true as const, circuit: '' },
+    { id: 2, name: 'Level 2 EV Charger (32A)', quantity: 0, amps: 32, volts: 240, va: 7680, total: 0, continuous: true as const, circuit: '' }
   ] as EVSELoad[],
   
   solar: [

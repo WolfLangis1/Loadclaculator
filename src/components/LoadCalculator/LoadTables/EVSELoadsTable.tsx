@@ -7,11 +7,9 @@ export const EVSELoadsTable: React.FC = () => {
   const { state, dispatch, updateSettings } = useLoadCalculator();
   const { evseLoads, generalLoads, hvacLoads } = state.loads;
   const [isLoadManagementExpanded, setIsLoadManagementExpanded] = useState(false);
-  const [showAdvancedLoads, setShowAdvancedLoads] = useState(false);
   
-  // Split loads into basic (first 4) and advanced (rest)
-  const basicLoads = evseLoads.slice(0, 4);
-  const advancedLoads = evseLoads.slice(4);
+  // All EVSE loads (now just 2 by default)
+  const basicLoads = evseLoads;
   
   const activeEvseCount = evseLoads.filter(load => load.quantity > 0).length;
   const totalEvseAmps = evseLoads.reduce((sum, load) => sum + (load.amps * load.quantity), 0);
@@ -663,133 +661,6 @@ export const EVSELoadsTable: React.FC = () => {
         </table>
       </div>
 
-      {/* Advanced EVSE Loads Section */}
-      {advancedLoads.length > 0 && (
-        <div className="mt-4">
-          <button
-            onClick={() => setShowAdvancedLoads(!showAdvancedLoads)}
-            className="w-full flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">
-                Additional EVSE Loads ({advancedLoads.length} items)
-              </span>
-            </div>
-            {showAdvancedLoads ? (
-              <ChevronUp className="h-4 w-4 text-gray-600" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-gray-600" />
-            )}
-          </button>
-
-          {showAdvancedLoads && (
-            <div className="mt-3 overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 table-fixed">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="w-2/5 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      EV Charging Equipment
-                    </th>
-                    <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Qty
-                    </th>
-                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amps
-                    </th>
-                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Volts
-                    </th>
-                    <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      VA
-                    </th>
-                    <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total VA
-                    </th>
-                    <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Continuous
-                    </th>
-                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sr-only">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {advancedLoads.map((load) => (
-                    <tr key={load.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={load.name || ''}
-                          onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
-                          className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                          placeholder="EVSE description"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={load.quantity || 0}
-                          onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                          min="0"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={load.amps || 0}
-                          onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                          min="0"
-                          step="1"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={load.volts || 240}
-                          onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                        >
-                          <option value={240}>240</option>
-                          <option value={120}>120</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-mono text-gray-700">
-                          {load.va.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-mono font-medium text-gray-900">
-                          {load.total?.toLocaleString() || '0'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={load.continuous || false}
-                          onChange={(e) => updateLoad(load.id, 'continuous', e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => removeLoad(load.id)}
-                          className="text-red-600 hover:text-red-900 focus:outline-none"
-                          aria-label="Remove EVSE load"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
       
       <div className="bg-green-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-green-800 mb-2">EVSE Load Requirements (NEC Article 625)</h4>

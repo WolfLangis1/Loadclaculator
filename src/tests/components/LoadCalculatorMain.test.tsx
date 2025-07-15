@@ -20,8 +20,8 @@ vi.mock('../../components/LoadCalculator/CalculationResults', () => ({
   CalculationResults: () => <div data-testid="calculation-results">Calculation Results</div>
 }));
 
-vi.mock('../../components/LoadCalculator/CalculationTransparency', () => ({
-  CalculationTransparency: () => <div data-testid="calculation-transparency">Calculation Transparency</div>
+vi.mock('../../components/LoadCalculator/CalculationSummary', () => ({
+  CalculationSummary: () => <div data-testid="calculation-summary">Calculation Summary</div>
 }));
 
 vi.mock('../../components/LoadCalculator/ValidationMessages', () => ({

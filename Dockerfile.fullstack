@@ -1,0 +1,58 @@
+# Fullstack Dockerfile - Runs both API server and frontend
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies for better compatibility
+RUN apk add --no-cache libc6-compat curl
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install all dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Create .env from example if it doesn't exist
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+# Accept build arguments for environment variables
+ARG GOOGLE_MAPS_API_KEY=""
+ARG VITE_USE_REAL_AERIAL_DATA=false
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ARG VITE_MAPBOX_API_KEY=""
+ARG VITE_AERIAL_PROVIDER=google
+
+# Set environment variables
+ENV GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+ENV VITE_USE_REAL_AERIAL_DATA=$VITE_USE_REAL_AERIAL_DATA
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_MAPBOX_API_KEY=$VITE_MAPBOX_API_KEY
+ENV VITE_AERIAL_PROVIDER=$VITE_AERIAL_PROVIDER
+
+# Set Vite API base URL to local backend
+ENV VITE_API_BASE_URL=http://localhost:3001
+
+# Expose ports (3000 for frontend, 3001 for backend)
+EXPOSE 3000 3001
+
+# Set development environment
+ENV NODE_ENV=development
+
+# Enable polling for file watching in containers
+ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=1000
+
+# Vite specific environment variables for Docker
+ENV VITE_HOST=0.0.0.0
+ENV VITE_PORT=3000
+
+# Health check for both services
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/ && curl -f http://localhost:3001/api/health || exit 1
+
+# Start both backend and frontend servers
+CMD ["npm", "run", "dev:full"]

@@ -1,17 +1,16 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { Calculator, FolderOpen, Zap, MapPin, Cable } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
+import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 
 // Lazy load heavy components  
-const SimpleSLDMain = lazy(() => import('../SLD/SimpleSLDMain').then(module => ({ default: module.SimpleSLDMain })));
 const IntelligentSLDCanvas = lazy(() => import('../SLD/IntelligentSLDCanvas').then(module => ({ default: module.IntelligentSLDCanvas })));
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
-const WireSizingChart = lazy(() => import('../LoadCalculator/WireSizingChart').then(module => ({ default: module.WireSizingChart })));
 const ProjectManager = lazy(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })));
 
-type TabType = 'calculator' | 'sld' | 'sld-intelligent' | 'aerial' | 'wire-sizing';
+type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing';
 
 interface Tab {
   id: TabType;
@@ -38,14 +37,8 @@ export const TabbedInterface: React.FC = () => {
       component: WireSizingChart
     },
     {
-      id: 'sld',
-      label: 'Manual SLD',
-      icon: Zap,
-      component: SimpleSLDMain
-    },
-    {
       id: 'sld-intelligent',
-      label: 'Intelligent SLD',
+      label: 'SLD',
       icon: Zap,
       component: IntelligentSLDCanvas
     },
@@ -67,8 +60,8 @@ export const TabbedInterface: React.FC = () => {
 
   // Render component with appropriate wrapper
   const renderActiveComponent = () => {
-    // Load Calculator doesn't need lazy loading as it's the main feature
-    if (activeTab === 'calculator') {
+    // Load Calculator and Wire Sizing don't need lazy loading
+    if (activeTab === 'calculator' || activeTab === 'wire-sizing') {
       return <ActiveComponent />;
     }
 
@@ -168,12 +161,17 @@ export const TabbedInterface: React.FC = () => {
         id={`tabpanel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
         className={`${
-          activeTab === 'sld' || activeTab === 'aerial' 
-            ? 'h-[calc(100vh-80px)]' 
+          activeTab === 'sld-intelligent' || activeTab === 'aerial' 
+            ? 'h-[calc(100vh-80px)] overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' 
             : activeTab === 'wire-sizing'
             ? 'max-w-7xl mx-auto py-6'
             : 'max-w-7xl mx-auto'
         }`}
+        style={activeTab === 'sld-intelligent' || activeTab === 'aerial' ? { 
+          scrollBehavior: 'smooth',
+          overflowY: 'auto',
+          overflowX: 'auto'
+        } : {}}
       >
         {renderActiveComponent()}
       </div>
