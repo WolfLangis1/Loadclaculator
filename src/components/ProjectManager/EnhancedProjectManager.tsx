@@ -23,6 +23,7 @@ import { ProjectCard } from './ProjectCard';
 import { ProjectListItem } from './ProjectListItem';
 import { CreateProjectModal } from './CreateProjectModal';
 import { CreateTemplateModal } from './CreateTemplateModal';
+import { EditProjectModal } from './EditProjectModal';
 import { TemplateCard } from './TemplateCard';
 import { StatisticsView } from './StatisticsView';
 
@@ -41,8 +42,8 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   onClose,
   onProjectLoad
 }) => {
-  const { settings, resetSettings } = useProjectSettings();
-  const { loads, clearSessionData } = useLoadData();
+  const { settings } = useProjectSettings();
+  const { loads } = useLoadData();
   const { state: sldState } = useSLDData();
 
   // State
@@ -53,10 +54,12 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   const [activeTab, setActiveTab] = useState<'projects' | 'templates' | 'statistics'>('projects');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [editingProject, setEditingProject] = useState<ProjectData | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -134,17 +137,53 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
     }
   }, [refreshData, onProjectLoad]);
 
-  const handleLoadProject = useCallback((project: ProjectData) => {
-    // Load project data into current session contexts
-    // The project service should handle saving project data to localStorage with proper keys
-    
-    // For now, directly load the project data into contexts
-    // This would need to be enhanced to properly save/load from the project service
-    
-    if (onProjectLoad) {
-      onProjectLoad(project);
+  const handleEditProject = useCallback((project: ProjectData) => {
+    setEditingProject(project);
+    setShowEditModal(true);
+  }, []);
+
+  const handleSaveProjectEdit = useCallback((projectId: string, updates: {
+    name: string;
+    description: string;
+    author: string;
+    tags: string[];
+  }) => {
+    const project = projectService.getProject(projectId);
+    if (project) {
+      const updatedProject = {
+        ...project,
+        metadata: {
+          ...project.metadata,
+          ...updates,
+          modified: new Date().toISOString()
+        }
+      };
+      projectService.updateProject(projectId, updatedProject);
+      refreshData();
     }
-    onClose();
+  }, [refreshData]);
+
+  const handleLoadProject = useCallback((project: ProjectData) => {
+    try {
+      // Load project data into current session contexts
+      if (onProjectLoad) {
+        // Call the parent's project load handler which should:
+        // 1. Load project settings into ProjectSettingsContext
+        // 2. Load loads into LoadDataContext  
+        // 3. Load SLD diagram into SLDDataContext
+        // 4. Load aerial view data into AerialViewContext
+        onProjectLoad(project);
+      }
+      
+      // Close the project manager
+      onClose();
+      
+      // Show success message
+      alert(`Project "${project.metadata.name}" loaded successfully!`);
+    } catch (error) {
+      console.error('Failed to load project:', error);
+      alert('Failed to load project. Please try again.');
+    }
   }, [onProjectLoad, onClose]);
 
   const handleDuplicateProject = useCallback((projectId: string) => {
@@ -223,27 +262,112 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
     }
   }, [refreshData]);
 
-  // Save current project state
+  // Save current project state - auto-grabs info from ProjectInformation component
   const handleSaveCurrentProject = useCallback(() => {
     const currentProjectId = `project-${Date.now()}`;
+    
+    // Auto-generate project name from available information
+    const projectName = (() => {
+      if (settings.projectInfo.projectName?.trim()) {
+        return settings.projectInfo.projectName.trim();
+      }
+      if (settings.projectInfo.customerName?.trim()) {
+        return `${settings.projectInfo.customerName.trim()} - Load Calculation`;
+      }
+      if (settings.projectInfo.propertyAddress?.trim()) {
+        return `Load Calc - ${settings.projectInfo.propertyAddress.trim()}`;
+      }
+      return 'Untitled Project';
+    })();
+
+    // Auto-generate description from project details
+    const description = (() => {
+      const parts = [];
+      if (settings.projectInfo.propertyAddress) {
+        parts.push(`Property: ${settings.projectInfo.propertyAddress}`);
+      }
+      if (settings.squareFootage > 0) {
+        parts.push(`${settings.squareFootage} sq ft`);
+      }
+      if (settings.mainBreaker > 0) {
+        parts.push(`${settings.mainBreaker}A service`);
+      }
+      
+      const activeCounts = {
+        general: loads.generalLoads?.filter((l: any) => l.quantity > 0).length || 0,
+        hvac: loads.hvacLoads?.filter((l: any) => l.quantity > 0).length || 0,
+        evse: loads.evseLoads?.filter((l: any) => l.quantity > 0).length || 0,
+        solar: loads.solarBatteryLoads?.filter((l: any) => l.quantity > 0).length || 0
+      };
+      
+      const totalLoads = Object.values(activeCounts).reduce((sum, count) => sum + count, 0);
+      if (totalLoads > 0) {
+        parts.push(`${totalLoads} active loads`);
+      }
+      
+      return parts.join(' | ') || 'Electrical load calculation project';
+    })();
+
+    // Auto-determine author from available information
+    const author = (() => {
+      if (settings.projectInfo.calculatedBy?.trim()) {
+        return settings.projectInfo.calculatedBy.trim();
+      }
+      if (settings.projectInfo.engineerName?.trim()) {
+        return settings.projectInfo.engineerName.trim();
+      }
+      if (settings.projectInfo.contractorName?.trim()) {
+        return settings.projectInfo.contractorName.trim();
+      }
+      return 'Load Calculator User';
+    })();
+
+    // Auto-tag based on project characteristics
+    const autoTags = [];
+    if (settings.calculationMethod) {
+      autoTags.push(settings.calculationMethod);
+    }
+    if (loads.hvacLoads?.some((l: any) => l.quantity > 0)) {
+      autoTags.push('hvac');
+    }
+    if (loads.evseLoads?.some((l: any) => l.quantity > 0)) {
+      autoTags.push('evse');
+    }
+    if (loads.solarBatteryLoads?.some((l: any) => l.quantity > 0)) {
+      autoTags.push('solar');
+    }
+    if (settings.useEMS || settings.loadManagementType !== 'none') {
+      autoTags.push('load-management');
+    }
+    if (settings.squareFootage > 3000) {
+      autoTags.push('large-residential');
+    }
     
     const projectData: ProjectData = {
       metadata: {
         id: currentProjectId,
-        name: settings.projectInfo.customerName || 'Untitled Project',
-        description: '',
+        name: projectName,
+        description,
         created: new Date().toISOString(),
         modified: new Date().toISOString(),
         version: '1.0.0',
-        author: 'Load Calculator User',
+        author,
         isTemplate: false,
-        tags: []
+        tags: autoTags,
+        // Include project info data for future reference
+        companyInfo: settings.projectInfo.contractorName ? {
+          name: settings.projectInfo.contractorName,
+          address: settings.projectInfo.propertyAddress || '',
+          phone: '',
+          email: '',
+          license: settings.projectInfo.contractorLicense || ''
+        } : undefined
       },
       settings,
       loads,
       sldDiagram: sldState.diagram,
       aerialView: null,
-      calculations: {},
+      calculations: {}, // Would include current calculations if available
       reports: {},
       assets: {
         logos: {},
@@ -252,15 +376,16 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
       }
     };
 
-    if (projectService.getProject(currentProjectId)) {
-      projectService.updateProject(currentProjectId, projectData);
-    } else {
-      projectService.createProject(projectData.metadata.name);
-      projectService.updateProject(currentProjectId, projectData);
-    }
+    // Create the project (projectService handles unique ID generation)
+    const newProject = projectService.createProject(projectData.metadata.name);
+    // Update with our full data structure
+    projectService.updateProject(newProject.metadata.id, projectData);
 
     refreshData();
-  }, [settings, loads, sldState.diagram]);
+    
+    // Show success message with project name
+    alert(`Project "${projectName}" saved successfully!`);
+  }, [settings, loads, sldState.diagram, refreshData]);
 
   if (!isOpen) return null;
 
@@ -404,6 +529,7 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                         key={project.metadata.id}
                         project={project}
                         onLoad={handleLoadProject}
+                        onEdit={handleEditProject}
                         onDuplicate={handleDuplicateProject}
                         onDelete={handleDeleteProject}
                         onToggleFavorite={handleToggleFavorite}
@@ -514,6 +640,19 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
           onClose={() => setShowTemplateModal(false)}
           projects={projects}
           onCreate={handleCreateTemplate}
+        />
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditModal && (
+        <EditProjectModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingProject(null);
+          }}
+          onSave={handleSaveProjectEdit}
+          project={editingProject}
         />
       )}
     </div>

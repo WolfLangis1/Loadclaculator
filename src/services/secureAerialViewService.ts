@@ -235,16 +235,42 @@ export class SecureAerialViewService {
           `${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
       })();
       
-      // Call the new streetview endpoint
-      const streetViewResponse = await fetch(
-        `${API_BASE}/streetview?lat=${latitude}&lon=${longitude}&width=${width}&height=${height}`
-      );
+      // Define multiple headings for comprehensive street view coverage
+      const headings = [
+        { heading: 0, label: 'North View' },
+        { heading: 90, label: 'East View' },
+        { heading: 180, label: 'South View' },
+        { heading: 270, label: 'West View' }
+      ];
       
-      if (!streetViewResponse.ok) {
-        throw new Error(`Street View API failed: ${streetViewResponse.statusText}`);
-      }
+      // Get street view for each heading
+      const streetViewPromises = headings.map(async ({ heading, label }) => {
+        try {
+          const response = await fetch(
+            `${API_BASE}/streetview?lat=${latitude}&lon=${longitude}&heading=${heading}&width=${width}&height=${height}`
+          );
+          
+          if (!response.ok) {
+            throw new Error(`Street View API failed for ${label}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          return {
+            heading,
+            imageUrl: data.url,
+            label
+          };
+        } catch (error) {
+          console.warn(`Failed to get ${label}:`, error);
+          return {
+            heading,
+            imageUrl: `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Unavailable')}`,
+            label
+          };
+        }
+      });
       
-      return await streetViewResponse.json();
+      return await Promise.all(streetViewPromises);
     } catch (error) {
       console.error('Street view error:', error);
       throw error;

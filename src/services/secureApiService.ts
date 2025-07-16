@@ -170,6 +170,57 @@ export class SecureApiService {
     }
   }
 
+  // Street View API
+  static async getStreetView(
+    lat: number,
+    lon: number,
+    heading: number = 0,
+    pitch: number = 0,
+    fov: number = 90,
+    width: number = 640,
+    height: number = 640
+  ): Promise<any> {
+    try {
+      const response = await fetch(
+        `${this.API_BASE}/streetview?lat=${lat}&lon=${lon}&heading=${heading}&pitch=${pitch}&fov=${fov}&width=${width}&height=${height}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Street View API failed: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Street View API error:', error);
+      throw error;
+    }
+  }
+
+  // Street View by address
+  static async getStreetViewByAddress(
+    address: string,
+    heading: number = 0,
+    pitch: number = 0,
+    fov: number = 90,
+    width: number = 640,
+    height: number = 640
+  ): Promise<any> {
+    try {
+      const response = await fetch(
+        `${this.API_BASE}/streetview?address=${encodeURIComponent(address)}&heading=${heading}&pitch=${pitch}&fov=${fov}&width=${width}&height=${height}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Street View API failed: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Street View API error:', error);
+      throw error;
+    }
+  }
+
   // AI Roof Analysis
   static async getAIRoofAnalysis(
     lat: number,

@@ -99,30 +99,156 @@ export class GoogleSolarService {
       return this.getFallbackBuildingInsights(0, 0);
     }
 
+    const solarPotential = solarData.solarPotential;
+    const wholeRoofStats = solarPotential.wholeRoofStats;
+
     return {
-      roofSegmentCount: solarData.solarPotential?.roofSegmentCount || 1,
-      groundSegmentCount: solarData.solarPotential?.groundSegmentCount || 0,
-      maxArrayPanelsCount: solarData.solarPotential?.maxArrayPanelsCount || 20,
-      yearlyEnergyDcKwh: solarData.solarPotential?.yearlyEnergyDcKwh || 5000,
-      roofSegmentStats: solarData.solarPotential?.roofSegmentStats || [],
-      groundSegmentStats: solarData.solarPotential?.groundSegmentStats || []
+      // Basic metrics
+      roofSegmentCount: solarPotential.roofSegmentCount || 1,
+      groundSegmentCount: solarPotential.groundSegmentCount || 0,
+      maxArrayPanelsCount: solarPotential.maxArrayPanelsCount || 20,
+      yearlyEnergyDcKwh: solarPotential.yearlyEnergyDcKwh || 5000,
+      
+      // Enhanced roof analysis
+      roofSegmentStats: solarPotential.roofSegmentStats || [],
+      groundSegmentStats: solarPotential.groundSegmentStats || [],
+      
+      // Whole roof statistics (comprehensive analysis)
+      wholeRoofStats: wholeRoofStats ? {
+        areaMeters2: wholeRoofStats.areaMeters2,
+        sunshineQuantiles: wholeRoofStats.sunshineQuantiles,
+        groundAreaCoveredMeters2: wholeRoofStats.groundAreaCoveredMeters2
+      } : null,
+      
+      // Solar potential configurations (different panel counts)
+      solarPanelConfigs: solarPotential.solarPanelConfigs?.map((config: any) => ({
+        panelsCount: config.panelsCount,
+        yearlyEnergyDcKwh: config.yearlyEnergyDcKwh,
+        roofSegmentSummaries: config.roofSegmentSummaries?.map((summary: any) => ({
+          pitchDegrees: summary.pitchDegrees,
+          azimuthDegrees: summary.azimuthDegrees,
+          panelsCount: summary.panelsCount,
+          yearlyEnergyDcKwh: summary.yearlyEnergyDcKwh,
+          segmentIndex: summary.segmentIndex
+        }))
+      })) || [],
+      
+      // Building information
+      name: solarData.name,
+      center: solarData.center,
+      boundingBox: solarData.boundingBox,
+      imageryDate: solarData.imageryDate,
+      imageryProcessedDate: solarData.imageryProcessedDate,
+      imageryQuality: solarData.imageryQuality,
+      
+      // Financial analysis (if available)
+      financialAnalyses: solarPotential.financialAnalyses?.map((analysis: any) => ({
+        monthlyBill: analysis.monthlyBill,
+        defaultBill: analysis.defaultBill,
+        averageKwhPerMonth: analysis.averageKwhPerMonth,
+        panelConfigIndex: analysis.panelConfigIndex,
+        financialDetails: analysis.financialDetails ? {
+          initialAcKwhPerYear: analysis.financialDetails.initialAcKwhPerYear,
+          remainingLifetimeUtilityBill: analysis.financialDetails.remainingLifetimeUtilityBill,
+          federalIncentive: analysis.financialDetails.federalIncentive,
+          stateIncentive: analysis.financialDetails.stateIncentive,
+          utilityIncentive: analysis.financialDetails.utilityIncentive,
+          lifetimeSrecTotal: analysis.financialDetails.lifetimeSrecTotal,
+          costOfElectricityWithoutSolar: analysis.financialDetails.costOfElectricityWithoutSolar,
+          netMeteringAllowed: analysis.financialDetails.netMeteringAllowed,
+          solarPercentage: analysis.financialDetails.solarPercentage,
+          percentageExportedToGrid: analysis.financialDetails.percentageExportedToGrid
+        } : null,
+        leasingSavings: analysis.leasingSavings,
+        cashPurchaseSavings: analysis.cashPurchaseSavings,
+        financedPurchaseSavings: analysis.financedPurchaseSavings
+      })) || []
     };
   }
 
   private static generatePanelRecommendations(solarData: any, latitude: number, longitude: number): any {
     const buildingInsights = this.extractBuildingInsights(solarData);
     
+    // Find optimal configuration from solar panel configs
+    const optimalConfig = buildingInsights.solarPanelConfigs?.length > 0 
+      ? buildingInsights.solarPanelConfigs.reduce((best: any, current: any) => {
+          const currentEfficiency = current.yearlyEnergyDcKwh / current.panelsCount;
+          const bestEfficiency = best.yearlyEnergyDcKwh / best.panelsCount;
+          return currentEfficiency > bestEfficiency ? current : best;
+        })
+      : null;
+
+    // Get best roof segment orientation
+    const bestSegment = buildingInsights.roofSegmentStats?.length > 0
+      ? buildingInsights.roofSegmentStats.reduce((best: any, current: any) => {
+          return (current.yearlyEnergyDcKwh || 0) > (best.yearlyEnergyDcKwh || 0) ? current : best;
+        })
+      : null;
+
+    // Use financial analysis if available
+    const financialAnalysis = buildingInsights.financialAnalyses?.length > 0 
+      ? buildingInsights.financialAnalyses[0] 
+      : null;
+
+    const recommendedPanels = optimalConfig?.panelsCount || Math.min(buildingInsights.maxArrayPanelsCount, 20);
+    const annualOutput = optimalConfig?.yearlyEnergyDcKwh || buildingInsights.yearlyEnergyDcKwh;
+
     return {
-      recommendedPanels: Math.min(buildingInsights.maxArrayPanelsCount, 20),
+      // Basic recommendations
+      recommendedPanels,
       panelType: 'High-efficiency monocrystalline',
-      orientation: 'South-facing',
-      tilt: Math.abs(latitude),
-      estimatedAnnualOutput: buildingInsights.yearlyEnergyDcKwh,
-      costEstimate: buildingInsights.yearlyEnergyDcKwh * 0.12 * 25, // 25-year lifetime
-      paybackPeriod: 8, // years
+      orientation: bestSegment ? `${bestSegment.azimuthDegrees}° azimuth` : 'South-facing',
+      tilt: bestSegment?.pitchDegrees || Math.abs(latitude),
+      estimatedAnnualOutput: annualOutput,
+      
+      // Enhanced recommendations with Google data
+      roofAnalysis: {
+        totalRoofArea: buildingInsights.wholeRoofStats?.areaMeters2 || 0,
+        usableRoofArea: buildingInsights.wholeRoofStats?.groundAreaCoveredMeters2 || 0,
+        roofSegments: buildingInsights.roofSegmentStats?.length || 1,
+        sunshineQuantiles: buildingInsights.wholeRoofStats?.sunshineQuantiles || [],
+        imageryQuality: buildingInsights.imageryQuality || 'HIGH'
+      },
+      
+      // Configuration options
+      configurations: buildingInsights.solarPanelConfigs?.slice(0, 5).map((config: any) => ({
+        panelCount: config.panelsCount,
+        annualOutput: config.yearlyEnergyDcKwh,
+        efficiency: (config.yearlyEnergyDcKwh / config.panelsCount).toFixed(1),
+        roofUtilization: config.roofSegmentSummaries?.length || 1
+      })) || [],
+      
+      // Financial analysis (if available from Google)
+      financialAnalysis: financialAnalysis ? {
+        monthlyBill: financialAnalysis.monthlyBill,
+        averageKwhPerMonth: financialAnalysis.averageKwhPerMonth,
+        solarPercentage: financialAnalysis.financialDetails?.solarPercentage,
+        federalIncentive: financialAnalysis.financialDetails?.federalIncentive,
+        stateIncentive: financialAnalysis.financialDetails?.stateIncentive,
+        utilityIncentive: financialAnalysis.financialDetails?.utilityIncentive,
+        netMeteringAllowed: financialAnalysis.financialDetails?.netMeteringAllowed,
+        paybackOptions: {
+          cashPurchase: financialAnalysis.cashPurchaseSavings,
+          financing: financialAnalysis.financedPurchaseSavings,
+          leasing: financialAnalysis.leasingSavings
+        }
+      } : null,
+      
+      // Fallback calculations
+      costEstimate: annualOutput * 0.12 * 25, // 25-year lifetime
+      paybackPeriod: 8, // years (fallback)
       environmentalImpact: {
-        co2Reduction: buildingInsights.yearlyEnergyDcKwh * 0.85, // kg CO2/year
-        treesEquivalent: Math.round(buildingInsights.yearlyEnergyDcKwh * 0.85 / 22) // trees
+        co2Reduction: annualOutput * 0.85, // kg CO2/year
+        treesEquivalent: Math.round(annualOutput * 0.85 / 22) // trees
+      },
+      
+      // Building metadata
+      buildingInfo: {
+        name: buildingInsights.name,
+        center: buildingInsights.center,
+        boundingBox: buildingInsights.boundingBox,
+        imageryDate: buildingInsights.imageryDate,
+        imageryProcessedDate: buildingInsights.imageryProcessedDate
       }
     };
   }

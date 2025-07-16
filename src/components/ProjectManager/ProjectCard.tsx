@@ -15,13 +15,15 @@ import {
   MoreVertical,
   Tag,
   FileText,
-  Settings
+  Settings,
+  Edit3
 } from 'lucide-react';
 import type { ProjectData } from '../../services/projectService';
 
 interface ProjectCardProps {
   project: ProjectData;
   onLoad: (project: ProjectData) => void;
+  onEdit: (project: ProjectData) => void;
   onDuplicate: (projectId: string) => void;
   onDelete: (projectId: string) => void;
   onToggleFavorite: (projectId: string) => void;
@@ -32,6 +34,7 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   onLoad,
+  onEdit,
   onDuplicate,
   onDelete,
   onToggleFavorite,
@@ -40,16 +43,68 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   const isFavorite = project.metadata.tags.includes('favorite');
   const isTemplate = project.metadata.isTemplate;
   const modifiedDate = new Date(project.metadata.modified);
   const createdDate = new Date(project.metadata.created);
 
+  // Calculate project stats
+  const getProjectStats = () => {
+    const loads = project.loads || {};
+    const settings = project.settings || {};
+    const calculations = project.calculations || {};
+    
+    const generalCount = loads.generalLoads?.filter((l: any) => l.quantity > 0).length || 0;
+    const hvacCount = loads.hvacLoads?.filter((l: any) => l.quantity > 0).length || 0;
+    const evseCount = loads.evseLoads?.filter((l: any) => l.quantity > 0).length || 0;
+    const solarCount = loads.solarBatteryLoads?.filter((l: any) => l.quantity > 0).length || 0;
+    
+    const totalLoads = generalCount + hvacCount + evseCount + solarCount;
+    const mainBreaker = settings.mainBreaker || 0;
+    const totalAmps = calculations.totalAmps || 0;
+    const utilization = mainBreaker > 0 ? (totalAmps / mainBreaker) * 100 : 0;
+    const isCompliant = utilization <= 100;
+    
+    return {
+      totalLoads,
+      loadBreakdown: { generalCount, hvacCount, evseCount, solarCount },
+      mainBreaker,
+      totalAmps,
+      utilization,
+      isCompliant,
+      totalVA: calculations.totalVA || 0
+    };
+  };
+
+  const stats = getProjectStats();
+
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showMenu]);
+
   const handleQuickAction = (action: () => void, event: React.MouseEvent) => {
     event.stopPropagation();
     action();
     setShowMenu(false);
+  };
+
+  const handleMenuToggle = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setShowMenu(prev => !prev);
   };
 
   return (
@@ -87,9 +142,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           </button>
 
           {/* Menu */}
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
-              onClick={(e) => handleQuickAction(() => setShowMenu(!showMenu), e)}
+              onClick={handleMenuToggle}
               className="p-1 text-gray-400 hover:text-gray-600 rounded"
             >
               <MoreVertical className="h-4 w-4" />
@@ -98,6 +153,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             {showMenu && (
               <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-36">
                 <div className="py-1">
+                  <button
+                    onClick={(e) => handleQuickAction(() => onEdit(project), e)}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit Details
+                  </button>
                   <button
                     onClick={(e) => handleQuickAction(() => onDuplicate(project.metadata.id), e)}
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -188,21 +250,75 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         )}
       </div>
 
-      {/* Project Stats */}
-      <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600">
-        <div>
-          <div className="font-medium">Loads</div>
+      {/* Enhanced Project Stats with Calc Results */}
+      <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-2">
+        <div className="grid grid-cols-2 gap-3 text-xs">
           <div>
-            {(project.loads?.generalLoads?.length || 0) + 
-             (project.loads?.hvacLoads?.length || 0) + 
-             (project.loads?.evseLoads?.length || 0) + 
-             (project.loads?.solarBatteryLoads?.length || 0)} items
+            <div className="font-medium text-gray-700">Active Loads</div>
+            <div className="text-gray-600">{stats.totalLoads} items</div>
+          </div>
+          <div>
+            <div className="font-medium text-gray-700">Service Size</div>
+            <div className="text-gray-600">{stats.mainBreaker || '—'}A</div>
           </div>
         </div>
-        <div>
-          <div className="font-medium">Service</div>
-          <div>{project.settings?.mainBreaker || '—'}A</div>
-        </div>
+        
+        {stats.totalAmps > 0 && (
+          <>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <div className="font-medium text-gray-700">Calculated Load</div>
+                <div className="text-gray-600">{stats.totalAmps.toFixed(1)}A</div>
+              </div>
+              <div>
+                <div className="font-medium text-gray-700">Utilization</div>
+                <div className={`font-medium ${
+                  stats.isCompliant ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {stats.utilization.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+            
+            {/* Compliance Indicator */}
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+              stats.isCompliant 
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-700'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                stats.isCompliant ? 'bg-green-500' : 'bg-red-500'
+              }`}></span>
+              {stats.isCompliant ? 'NEC Compliant' : 'Service Upgrade Needed'}
+            </div>
+            
+            {/* Load Breakdown */}
+            {stats.totalLoads > 0 && (
+              <div className="flex gap-1 text-xs">
+                {stats.loadBreakdown.generalCount > 0 && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                    General: {stats.loadBreakdown.generalCount}
+                  </span>
+                )}
+                {stats.loadBreakdown.hvacCount > 0 && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                    HVAC: {stats.loadBreakdown.hvacCount}
+                  </span>
+                )}
+                {stats.loadBreakdown.evseCount > 0 && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+                    EVSE: {stats.loadBreakdown.evseCount}
+                  </span>
+                )}
+                {stats.loadBreakdown.solarCount > 0 && (
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
+                    Solar: {stats.loadBreakdown.solarCount}
+                  </span>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Footer */}
@@ -226,6 +342,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           >
             <Eye className="h-3 w-3" />
             Open
+          </button>
+          <button
+            onClick={(e) => handleQuickAction(() => onEdit(project), e)}
+            className="px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 flex items-center justify-center"
+            title="Edit Details"
+          >
+            <Edit3 className="h-3 w-3" />
           </button>
           <button
             onClick={(e) => handleQuickAction(() => onDuplicate(project.metadata.id), e)}
