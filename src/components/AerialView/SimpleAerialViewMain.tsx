@@ -9,13 +9,18 @@ import {
   RotateCcw,
   ZoomIn,
   ZoomOut,
-  Satellite
+  Satellite,
+  AlertCircle,
+  RefreshCw,
+  Save,
+  Archive
 } from 'lucide-react';
 import { useAerialView } from '../../context/AerialViewContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
 
 import { SecureAerialViewService } from '../../services/secureAerialViewService';
+import { AttachmentService } from '../../services/attachmentService';
 
 export const SimpleAerialViewMain: React.FC = () => {
   const {
@@ -178,6 +183,105 @@ export const SimpleAerialViewMain: React.FC = () => {
     link.download = `aerial-view-${state.address.replace(/\s+/g, '-')}.jpg`;
     link.click();
   }, [state.satelliteImage, state.address]);
+
+  // Save satellite image to project assets
+  const saveSatelliteToProject = useCallback(async () => {
+    if (!state.satelliteImage || !state.coordinates || !state.address) {
+      alert('No satellite image available to save');
+      return;
+    }
+
+    try {
+      // Generate a project ID (for now using timestamp, in real implementation this would come from project context)
+      const projectId = `project-${Date.now()}`;
+      
+      const attachment = await AttachmentService.createAttachment(
+        projectId,
+        'satellite_image',
+        'aerial_view',
+        {
+          url: state.satelliteImage,
+          coordinates: state.coordinates,
+          address: state.address,
+          zoom: state.zoom,
+          captureDate: new Date(),
+          dimensions: { width: 800, height: 600 }
+        }
+      );
+
+      alert(`Satellite image saved to project assets: ${attachment.name}`);
+    } catch (error) {
+      console.error('Failed to save satellite image:', error);
+      alert('Failed to save satellite image to project');
+    }
+  }, [state.satelliteImage, state.coordinates, state.address, state.zoom]);
+
+  // Save street view images to project assets
+  const saveStreetViewsToProject = useCallback(async () => {
+    if (!state.streetViewImages || state.streetViewImages.length === 0) {
+      alert('No street view images available to save');
+      return;
+    }
+
+    try {
+      // Generate a project ID (for now using timestamp, in real implementation this would come from project context)
+      const projectId = `project-${Date.now()}`;
+      
+      const savedAttachments = [];
+      
+      for (const streetView of state.streetViewImages) {
+        const attachment = await AttachmentService.createAttachment(
+          projectId,
+          'street_view',
+          'aerial_view',
+          {
+            url: streetView.imageUrl,
+            coordinates: state.coordinates,
+            address: state.address,
+            heading: streetView.heading,
+            captureDate: new Date(),
+            label: streetView.label,
+            dimensions: { width: 640, height: 640 }
+          }
+        );
+        savedAttachments.push(attachment);
+      }
+
+      alert(`${savedAttachments.length} street view images saved to project assets`);
+    } catch (error) {
+      console.error('Failed to save street view images:', error);
+      alert('Failed to save street view images to project');
+    }
+  }, [state.streetViewImages, state.coordinates, state.address]);
+
+  // Save all captured images to project assets
+  const saveAllToProject = useCallback(async () => {
+    if (!state.satelliteImage && (!state.streetViewImages || state.streetViewImages.length === 0)) {
+      alert('No images available to save');
+      return;
+    }
+
+    try {
+      let savedCount = 0;
+
+      // Save satellite image if available
+      if (state.satelliteImage) {
+        await saveSatelliteToProject();
+        savedCount++;
+      }
+
+      // Save street view images if available
+      if (state.streetViewImages && state.streetViewImages.length > 0) {
+        await saveStreetViewsToProject();
+        savedCount += state.streetViewImages.length;
+      }
+
+      alert(`All captured images (${savedCount} total) saved to project assets`);
+    } catch (error) {
+      console.error('Failed to save all images:', error);
+      alert('Failed to save some images to project');
+    }
+  }, [state.satelliteImage, state.streetViewImages, saveSatelliteToProject, saveStreetViewsToProject]);
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -371,6 +475,35 @@ export const SimpleAerialViewMain: React.FC = () => {
               <Download className="h-4 w-4" />
               Download Image
             </button>
+            
+            <button
+              onClick={saveAllToProject}
+              disabled={!state.satelliteImage && (!state.streetViewImages || state.streetViewImages.length === 0)}
+              className="w-full p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Archive className="h-4 w-4" />
+              Save All to Project
+            </button>
+            
+            {state.satelliteImage && (
+              <button
+                onClick={saveSatelliteToProject}
+                className="w-full p-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Save Satellite View
+              </button>
+            )}
+            
+            {state.streetViewImages && state.streetViewImages.length > 0 && (
+              <button
+                onClick={saveStreetViewsToProject}
+                className="w-full p-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center gap-2"
+              >
+                <Camera className="h-4 w-4" />
+                Save Street Views ({state.streetViewImages.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -431,18 +564,34 @@ export const SimpleAerialViewMain: React.FC = () => {
           )}
 
           {/* Street View */}
-          {state.ui.viewMode === 'streetview' && state.streetViewImages.length > 0 && (
+          {state.ui.viewMode === 'streetview' && (
             <div className="grid grid-cols-2 gap-4">
-              {state.streetViewImages.map((image, index) => (
-                <div key={index} className="text-center">
-                  <img
-                    src={image.imageUrl}
-                    alt={image.label}
-                    className="w-full h-auto border border-gray-200 rounded-lg"
+              {state.streetViewImages.length > 0 ? (
+                state.streetViewImages.map((image, index) => (
+                  <StreetViewImage 
+                    key={index} 
+                    image={image} 
+                    onFallback={() => {
+                      console.log(`Street view failed for ${image.label}, suggesting satellite fallback`);
+                    }}
                   />
-                  <p className="mt-2 text-sm text-gray-600">{image.label}</p>
+                ))
+              ) : (
+                <div className="col-span-2 text-center py-12">
+                  <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Street View Available</h3>
+                  <p className="text-gray-500 mb-4">
+                    Street view imagery is not available for this location.
+                  </p>
+                  <button
+                    onClick={() => updateUIState({ viewMode: 'satellite' })}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                  >
+                    <Satellite className="h-4 w-4" />
+                    View Satellite Imagery
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           )}
 
@@ -476,6 +625,103 @@ export const SimpleAerialViewMain: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// Street View Image Component with Error Handling
+interface StreetViewImageProps {
+  image: {
+    imageUrl: string;
+    label: string;
+    heading: number;
+  };
+  onFallback: () => void;
+}
+
+const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback }) => {
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [retryCount, setRetryCount] = useState(0);
+  const [showCopyright, setShowCopyright] = useState(false);
+
+  const handleImageLoad = useCallback(() => {
+    setImageStatus('loaded');
+    setShowCopyright(true);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    console.warn(`Street view image failed to load: ${image.label}`, image.imageUrl);
+    setImageStatus('error');
+    onFallback();
+  }, [image.label, image.imageUrl, onFallback]);
+
+  const handleRetry = useCallback(() => {
+    if (retryCount < 2) {
+      setRetryCount(prev => prev + 1);
+      setImageStatus('loading');
+      // Force image reload by adding timestamp
+      const img = new Image();
+      img.onload = handleImageLoad;
+      img.onerror = handleImageError;
+      img.src = `${image.imageUrl}&retry=${Date.now()}`;
+    }
+  }, [retryCount, image.imageUrl, handleImageLoad, handleImageError]);
+
+  const renderErrorFallback = () => (
+    <div className="w-full h-48 bg-gray-100 border border-gray-200 rounded-lg flex flex-col items-center justify-center">
+      <AlertCircle className="h-8 w-8 text-gray-400 mb-2" />
+      <p className="text-sm text-gray-600 mb-2">Street view unavailable</p>
+      <p className="text-xs text-gray-500 text-center mb-3">
+        No street view imagery available for {image.label.toLowerCase()}
+      </p>
+      {retryCount < 2 && (
+        <button
+          onClick={handleRetry}
+          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Retry
+        </button>
+      )}
+    </div>
+  );
+
+  const renderLoadingState = () => (
+    <div className="w-full h-48 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+        <p className="text-sm text-gray-600">Loading {image.label.toLowerCase()}...</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="text-center">
+      {imageStatus === 'loading' && renderLoadingState()}
+      {imageStatus === 'error' && renderErrorFallback()}
+      {imageStatus !== 'error' && (
+        <div className="relative">
+          <img
+            src={image.imageUrl}
+            alt={image.label}
+            className={`w-full h-auto border border-gray-200 rounded-lg ${
+              imageStatus === 'loading' ? 'opacity-0 absolute' : 'opacity-100'
+            }`}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            style={{ minHeight: imageStatus === 'loading' ? '0' : 'auto' }}
+          />
+          {showCopyright && imageStatus === 'loaded' && (
+            <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+              © Google
+            </div>
+          )}
+        </div>
+      )}
+      <p className="mt-2 text-sm text-gray-600">{image.label}</p>
+      {imageStatus === 'loaded' && (
+        <p className="text-xs text-gray-500">Heading: {image.heading}°</p>
+      )}
     </div>
   );
 };
