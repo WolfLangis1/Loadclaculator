@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3002:3000"
+      - "3005:3000"
     volumes:
       - ./src:/app/src:ro
       - ./public:/app/public:ro
@@ -89,7 +89,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3001:3001"
+      - "3004:3001"
     volumes:
       - ./api:/app/api:ro
       - ./server.js:/app/server.js:ro

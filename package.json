@@ -10,6 +10,7 @@
     "setup:dev": "node setup-dev-env.js",
     "server:dev": "node server-dev.js",
     "test:api": "node test-api-keys.js",
+    "test:solar": "node test-solar-api.js",
     "build": "vite build",
     "build:production": "vite build --mode production",
     "build:vite": "vite build",

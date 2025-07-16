@@ -163,9 +163,12 @@ export class DataStorageService {
    * Delete project
    */
   async deleteProject(projectId: string): Promise<boolean> {
+    console.log('Attempting to delete project:', projectId);
+    
     if (this.isIndexedDBSupported && this.db) {
       try {
         await this.deleteProjectFromIndexedDB(projectId);
+        console.log('Successfully deleted project from IndexedDB:', projectId);
         return true;
       } catch (error) {
         console.warn('Failed to delete from IndexedDB, trying localStorage:', error);
@@ -173,7 +176,9 @@ export class DataStorageService {
     }
 
     // Fallback to localStorage
-    return this.deleteProjectFromLocalStorage(projectId);
+    const result = this.deleteProjectFromLocalStorage(projectId);
+    console.log('localStorage deletion result for project', projectId, ':', result);
+    return result;
   }
 
   /**
@@ -304,13 +309,19 @@ export class DataStorageService {
 
   private deleteProjectFromLocalStorage(projectId: string): boolean {
     const projects = this.getAllProjectsFromLocalStorage();
+    console.log('Found projects in localStorage:', projects.length, 'projects');
+    console.log('Looking for project to delete:', projectId);
+    
     const filteredProjects = projects.filter(p => p.id !== projectId);
+    console.log('After filtering:', filteredProjects.length, 'projects remain');
     
     if (filteredProjects.length < projects.length) {
       localStorage.setItem('loadCalculatorProjects', JSON.stringify(filteredProjects));
+      console.log('Project deleted successfully from localStorage');
       return true;
     }
     
+    console.log('Project not found in localStorage');
     return false;
   }
 

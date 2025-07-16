@@ -67,7 +67,15 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
 
   const handleDeleteProject = async (projectId: string) => {
     if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      await deleteProject(projectId);
+      try {
+        const success = await deleteProject(projectId);
+        if (!success) {
+          throw new Error('Delete operation returned false');
+        }
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Failed to delete project. Please try again.');
+      }
     }
   };
 

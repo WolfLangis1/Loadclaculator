@@ -113,10 +113,68 @@ app.get('/api/solar', async (req, res) => {
     return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
   }
 
-  // Solar API requires special access - return error for now
-  return res.status(501).json({
-    error: 'Google Solar API not yet implemented - requires special API access'
-  });
+  try {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    
+    console.log(`🌞 Solar API request: lat=${lat}, lon=${lon}, radius=${radiusMeters}`);
+    
+    // Make request to Google Solar API (radiusMeters is not supported by this endpoint)
+    const response = await fetch(
+      `https://solar.googleapis.com/v1/buildingInsights:findClosest?location.latitude=${lat}&location.longitude=${lon}&key=${apiKey}`
+    );
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+      }
+      
+      console.error('Solar API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: errorData,
+        location: { lat, lon }
+      });
+      
+      // Enhanced error handling with debugging info
+      if (response.status === 403) {
+        return res.status(503).json({ 
+          error: 'Google Solar API access not enabled',
+          message: 'The Solar API requires special access from Google Cloud. It is currently in limited preview.',
+          fallbackAvailable: true,
+          debugInfo: {
+            status: response.status,
+            apiEndpoint: 'solar.googleapis.com/v1/buildingInsights',
+            solution: 'Enable Solar API in Google Cloud Console or request access from Google',
+            documentation: 'https://developers.google.com/maps/documentation/solar',
+            environment: 'Docker/Express server'
+          },
+          details: errorData
+        });
+      }
+      
+      return res.status(response.status).json({ 
+        error: 'Solar API request failed',
+        message: `Google Solar API returned ${response.status}: ${response.statusText}`,
+        fallbackAvailable: true,
+        debugInfo: {
+          status: response.status,
+          statusText: response.statusText,
+          timestamp: new Date().toISOString(),
+          environment: 'Docker/Express server'
+        },
+        details: errorData
+      });
+    }
+
+    const data = await response.json();
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error('Solar API error:', error);
+    return res.status(500).json({ error: 'Failed to get solar data' });
+  }
 });
 
 // Weather endpoint  
