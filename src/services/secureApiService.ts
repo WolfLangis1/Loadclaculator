@@ -1,21 +1,14 @@
-// Secure API Service - Uses backend proxy instead of direct API calls
+// Secure API Service - Uses backend proxy or direct API calls depending on environment
 export class SecureApiService {
-  private static readonly API_BASE = '/api';
-  private static mockMode = false;
-
-  // Check if API is available and enable mock mode if not
-  private static async checkApiAvailability(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.API_BASE}/health`, { 
-        method: 'GET',
-        timeout: 2000 
-      } as any);
-      return response.ok;
-    } catch {
-      this.mockMode = true;
-      return false;
+  private static readonly API_BASE = (() => {
+    // If VITE_API_BASE_URL is empty string, use proxy
+    if (import.meta.env.VITE_API_BASE_URL === '') {
+      return '/api';
     }
-  }
+    // If VITE_API_BASE_URL is set, use direct API calls
+    return import.meta.env.VITE_API_BASE_URL ? 
+      `${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
+  })();
 
   // Geocoding API
   static async geocodeAddress(address: string): Promise<any> {
@@ -35,65 +28,19 @@ export class SecureApiService {
 
   // Places Autocomplete API
   static async getPlaceSuggestions(input: string, sessionToken?: string): Promise<any> {
-    // Check if we should use mock mode
-    if (this.mockMode || !(await this.checkApiAvailability())) {
-      return this.getMockPlaceSuggestions(input);
+    let url = `${this.API_BASE}/places?input=${encodeURIComponent(input)}`;
+    
+    if (sessionToken) {
+      url += `&sessiontoken=${sessionToken}`;
     }
-
-    try {
-      let url = `${this.API_BASE}/places?input=${encodeURIComponent(input)}`;
-      
-      if (sessionToken) {
-        url += `&sessiontoken=${sessionToken}`;
-      }
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        console.warn('Places API failed, falling back to mock data');
-        return this.getMockPlaceSuggestions(input);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.warn('Places API error, falling back to mock data:', error);
-      return this.getMockPlaceSuggestions(input);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Places API failed: ${response.statusText}`);
     }
-  }
-
-  // Mock place suggestions for development
-  private static getMockPlaceSuggestions(input: string): any {
-    const mockSuggestions = [
-      {
-        description: `${input} Street, Anytown, CA 12345`,
-        place_id: 'mock_place_1',
-        structured_formatting: {
-          main_text: `${input} Street`,
-          secondary_text: 'Anytown, CA 12345'
-        }
-      },
-      {
-        description: `${input} Avenue, Springfield, IL 62701`,
-        place_id: 'mock_place_2', 
-        structured_formatting: {
-          main_text: `${input} Avenue`,
-          secondary_text: 'Springfield, IL 62701'
-        }
-      },
-      {
-        description: `${input} Boulevard, Austin, TX 78701`,
-        place_id: 'mock_place_3',
-        structured_formatting: {
-          main_text: `${input} Boulevard`, 
-          secondary_text: 'Austin, TX 78701'
-        }
-      }
-    ];
-
-    return {
-      status: 'OK',
-      predictions: mockSuggestions
-    };
+    
+    return await response.json();
   }
 
   // Weather API

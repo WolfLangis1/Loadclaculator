@@ -9,31 +9,22 @@ import {
   X, 
   Plus, 
   Search, 
-  Filter, 
-  Download, 
   Upload, 
-  Copy, 
-  Trash2, 
-  Star, 
-  Calendar,
-  Tag,
   FolderOpen,
   Save,
-  Settings,
-  Image as ImageIcon,
   FileText as TemplateIcon,
-  BarChart3,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  Edit3,
-  Share2
+  BarChart3
 } from 'lucide-react';
 import { projectService, type ProjectData, type ProjectTemplate } from '../../services/projectService';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { useLoadData } from '../../context/LoadDataContext';
 import { useSLDData } from '../../context/SLDDataContext';
+import { ProjectCard } from './ProjectCard';
+import { ProjectListItem } from './ProjectListItem';
+import { CreateProjectModal } from './CreateProjectModal';
+import { CreateTemplateModal } from './CreateTemplateModal';
+import { TemplateCard } from './TemplateCard';
+import { StatisticsView } from './StatisticsView';
 
 interface EnhancedProjectManagerProps {
   isOpen: boolean;
@@ -50,16 +41,15 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   onClose,
   onProjectLoad
 }) => {
-  const { settings, updateSettings } = useProjectSettings();
-  const { loads, updateLoads } = useLoadData();
-  const { state: sldState, updateDiagram } = useSLDData();
+  const { settings, resetSettings } = useProjectSettings();
+  const { loads, clearSessionData } = useLoadData();
+  const { state: sldState } = useSLDData();
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortBy, setSortBy] = useState<SortBy>('modified');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'projects' | 'templates' | 'statistics'>('projects');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -145,6 +135,12 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   }, [refreshData, onProjectLoad]);
 
   const handleLoadProject = useCallback((project: ProjectData) => {
+    // Load project data into current session contexts
+    // The project service should handle saving project data to localStorage with proper keys
+    
+    // For now, directly load the project data into contexts
+    // This would need to be enhanced to properly save/load from the project service
+    
     if (onProjectLoad) {
       onProjectLoad(project);
     }
@@ -160,9 +156,15 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   }, [refreshData]);
 
   const handleDeleteProject = useCallback((projectId: string) => {
-    if (confirm('Are you sure you want to delete this project?')) {
-      projectService.deleteProject(projectId);
-      refreshData();
+    const project = projectService.getProject(projectId);
+    const projectName = project?.metadata.name || 'this project';
+    
+    if (confirm(`Are you sure you want to delete "${projectName}"?\n\nThis action cannot be undone and all project data will be permanently lost.`)) {
+      if (projectService.deleteProject(projectId)) {
+        refreshData();
+      } else {
+        alert('Failed to delete project. Please try again.');
+      }
     }
   }, [refreshData]);
 
@@ -223,12 +225,12 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
 
   // Save current project state
   const handleSaveCurrentProject = useCallback(() => {
-    const currentProjectId = settings.currentProjectId || `project-${Date.now()}`;
+    const currentProjectId = `project-${Date.now()}`;
     
     const projectData: ProjectData = {
       metadata: {
         id: currentProjectId,
-        name: settings.projectName || 'Untitled Project',
+        name: settings.projectInfo.customerName || 'Untitled Project',
         description: '',
         created: new Date().toISOString(),
         modified: new Date().toISOString(),
@@ -466,7 +468,11 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                         <TemplateCard
                           key={template.id}
                           template={template}
-                          onUse={(templateId) => {
+                          onSelect={(templateId) => {
+                            // Handle template details view
+                            console.log('Template selected:', templateId);
+                          }}
+                          onCreateProject={(templateId) => {
                             setSelectedTemplate(templateId);
                             setShowCreateModal(true);
                           }}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Zap, Car, Battery, Cable, ChevronDown, ChevronUp } from 'lucide-react';
+import { Home, Zap, Car, Battery, ChevronDown, ChevronUp } from 'lucide-react';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { OptimizedGeneralLoadsTable } from './LoadTables/OptimizedGeneralLoadsTable';
 import { HVACLoadsTable } from './LoadTables/HVACLoadsTable';

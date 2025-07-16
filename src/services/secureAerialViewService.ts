@@ -63,13 +63,7 @@ export class SecureAerialViewService {
           source: 'secure-backend'
         };
       } else {
-        // Fallback to mock data
-        return {
-          success: false,
-          data: null,
-          error: 'Secure API not available, using mock data',
-          source: 'mock'
-        };
+        throw new Error('Secure API service is required - no fallback available');
       }
     } catch (error) {
       console.error('Secure satellite imagery error:', error);
@@ -95,13 +89,7 @@ export class SecureAerialViewService {
           source: 'secure-backend'
         };
       } else {
-        // Fallback to mock data
-        return {
-          success: false,
-          data: [],
-          error: 'Secure API not available, using mock data',
-          source: 'mock'
-        };
+        throw new Error('Secure API service is required - no fallback available');
       }
     } catch (error) {
       console.error('Secure address suggestions error:', error);
@@ -127,13 +115,7 @@ export class SecureAerialViewService {
           source: 'secure-backend'
         };
       } else {
-        // Fallback to mock data
-        return {
-          success: false,
-          data: null,
-          error: 'Secure API not available, using mock data',
-          source: 'mock'
-        };
+        throw new Error('Secure API service is required - no fallback available');
       }
     } catch (error) {
       console.error('Secure weather data error:', error);
@@ -192,19 +174,7 @@ export class SecureAerialViewService {
         
         return null;
       } else {
-        // Fallback to mock data
-        return {
-          address: address,
-          coordinates: { latitude: 40.7128, longitude: -74.0060 },
-          components: {
-            streetNumber: '123',
-            streetName: 'Main St',
-            city: 'New York',
-            state: 'NY',
-            zipCode: '10001',
-            country: 'US'
-          }
-        };
+        throw new Error('Secure API service is required - no fallback available');
       }
     } catch (error) {
       console.error('Secure geocoding error:', error);
@@ -237,8 +207,7 @@ export class SecureAerialViewService {
         
         return result.url || '';
       } else {
-        // Fallback to mock image URL
-        return `https://via.placeholder.com/${options.width || 640}x${options.height || 640}/cccccc/666666?text=Mock+Satellite+Image`;
+        throw new Error('Secure API service is required - no fallback available');
       }
     } catch (error) {
       console.error('Secure satellite image error:', error);
@@ -246,20 +215,40 @@ export class SecureAerialViewService {
     }
   }
 
-  // Get multi-angle street view (mock implementation for now)
+  // Get multi-angle street view (requires backend implementation)
   static async getMultiAngleStreetView(
     latitude: number,
     longitude: number,
     options: { width?: number; height?: number } = {}
   ): Promise<{heading: number; imageUrl: string; label: string}[]> {
-    // This would need a separate API endpoint for street view
-    // For now, return mock street view URLs with proper interface
-    const angles = [0, 90, 180, 270];
-    return angles.map(angle => ({
-      heading: angle,
-      imageUrl: `https://via.placeholder.com/${options.width || 400}x${options.height || 300}/cccccc/666666?text=Street+View+${angle}°`,
-      label: `Street View ${angle}°`
-    }));
+    try {
+      const { width = 640, height = 640 } = options;
+      
+      // Determine API base using same logic as SecureApiService
+      const API_BASE = (() => {
+        // If VITE_API_BASE_URL is empty string, use proxy
+        if (import.meta.env.VITE_API_BASE_URL === '') {
+          return '/api';
+        }
+        // If VITE_API_BASE_URL is set, use direct API calls
+        return import.meta.env.VITE_API_BASE_URL ? 
+          `${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
+      })();
+      
+      // Call the new streetview endpoint
+      const streetViewResponse = await fetch(
+        `${API_BASE}/streetview?lat=${latitude}&lon=${longitude}&width=${width}&height=${height}`
+      );
+      
+      if (!streetViewResponse.ok) {
+        throw new Error(`Street View API failed: ${streetViewResponse.statusText}`);
+      }
+      
+      return await streetViewResponse.json();
+    } catch (error) {
+      console.error('Street view error:', error);
+      throw error;
+    }
   }
 
   // Create aerial view with all data

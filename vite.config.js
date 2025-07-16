@@ -78,7 +78,7 @@ export default defineConfig(({ mode }) => ({
     // Proxy API calls to backend server
     proxy: {
       '/api': {
-        target: process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001',
+        target: process.env.VITE_API_BASE_URL || 'http://api-server:3001',
         changeOrigin: true,
         secure: false,
         timeout: 5000,

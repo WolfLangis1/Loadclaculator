@@ -55,7 +55,7 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const generalLoadCalculations = useMemo(() => {
     const startTime = performance.now();
     
-    const totalVA = loads.generalLoads.reduce((sum, load) => sum + (load.total || 0), 0);
+    const totalVA = (loads.generalLoads || []).reduce((sum, load) => sum + (load.total || 0), 0);
     const demandVA = totalVA; // Simplified for demo
     const demandAmps = demandVA / 240;
     
@@ -72,8 +72,8 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const hvacLoadCalculations = useMemo(() => {
     const startTime = performance.now();
     
-    const totalVA = loads.hvacLoads.reduce((sum, load) => sum + (load.total || 0), 0);
-    const largestMotorAmps = Math.max(...loads.hvacLoads.map(load => load.amps || 0), 0);
+    const totalVA = (loads.hvacLoads || []).reduce((sum, load) => sum + (load.total || 0), 0);
+    const largestMotorAmps = Math.max(...(loads.hvacLoads || []).map(load => load.amps || 0), 0);
     const demandVA = totalVA + (largestMotorAmps * 240 * 0.25); // 125% factor for largest motor
     const demandAmps = demandVA / 240;
     
@@ -91,7 +91,7 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const evseLoadCalculations = useMemo(() => {
     const startTime = performance.now();
     
-    const totalVA = loads.evseLoads.reduce((sum, load) => sum + (load.total || 0), 0);
+    const totalVA = (loads.evseLoads || []).reduce((sum, load) => sum + (load.total || 0), 0);
     const continuousLoadFactor = 1.25; // 125% continuous load factor
     const demandVA = totalVA * continuousLoadFactor;
     const demandAmps = demandVA / 240;
@@ -161,7 +161,7 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const messages: ValidationMessage[] = [];
     
     // Validate general loads
-    loads.generalLoads.forEach(load => {
+    (loads.generalLoads || []).forEach(load => {
       const loadMessages = ValidationService.validateLoad(load, ValidationService.generalLoadValidationRules);
       messages.push(...loadMessages);
     });

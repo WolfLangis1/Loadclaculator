@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Info, Zap, ChevronDown, ChevronUp, Plus, Settings, Trash2 } from 'lucide-react';
+import { AlertCircle, Info, Zap, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useLoadCalculator } from '../../../hooks/useLoadCalculator';
 import { TooltipWrapper } from '../../UI/TooltipWrapper';
 
@@ -9,10 +9,10 @@ export const EVSELoadsTable: React.FC = () => {
   const [isLoadManagementExpanded, setIsLoadManagementExpanded] = useState(false);
   
   // All EVSE loads (now just 2 by default)
-  const basicLoads = evseLoads;
+  const basicLoads = evseLoads || [];
   
-  const activeEvseCount = evseLoads.filter(load => load.quantity > 0).length;
-  const totalEvseAmps = evseLoads.reduce((sum, load) => sum + (load.amps * load.quantity), 0);
+  const activeEvseCount = (evseLoads || []).filter(load => load.quantity > 0).length;
+  const totalEvseAmps = (evseLoads || []).reduce((sum, load) => sum + (load.amps * load.quantity), 0);
 
   // Auto-expand when load management is enabled
   useEffect(() => {
@@ -25,7 +25,8 @@ export const EVSELoadsTable: React.FC = () => {
     let processedValue = value;
     
     if (['quantity', 'amps', 'volts', 'va'].includes(field)) {
-      processedValue = parseFloat(value) || 0;
+      // Only parse non-empty strings, keep empty strings as 0
+      processedValue = value === '' || value === null || value === undefined ? 0 : parseFloat(value) || 0;
     }
     
     const updatedLoad = { [field]: processedValue };
@@ -277,23 +278,23 @@ export const EVSELoadsTable: React.FC = () => {
                       >
                         <option value="">Select Load A</option>
                         <optgroup label="General Loads">
-                          {generalLoads.map(load => (
+                          {generalLoads.filter(load => load.quantity === 1).map(load => (
                             <option key={`general-${load.id}`} value={`general-${load.id}`}>
-                              {load.name} ({load.amps}A)
+                              {load.name} ({load.amps}A, Qty: {load.quantity})
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="HVAC Loads">
-                          {hvacLoads.map(load => (
+                          {hvacLoads.filter(load => load.quantity === 1).map(load => (
                             <option key={`hvac-${load.id}`} value={`hvac-${load.id}`}>
-                              {load.name} ({load.amps}A)
+                              {load.name} ({load.amps}A, Qty: {load.quantity})
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="EVSE Loads">
-                          {evseLoads.map(load => (
+                          {evseLoads.filter(load => load.quantity === 1).map(load => (
                             <option key={`evse-${load.id}`} value={`evse-${load.id}`}>
-                              {load.name} ({load.amps}A)
+                              {load.name} ({load.amps}A, Qty: {load.quantity})
                             </option>
                           ))}
                         </optgroup>
@@ -337,23 +338,23 @@ export const EVSELoadsTable: React.FC = () => {
                       >
                         <option value="">Select Load B</option>
                         <optgroup label="General Loads">
-                          {generalLoads.map(load => (
+                          {generalLoads.filter(load => load.quantity === 1).map(load => (
                             <option key={`general-${load.id}`} value={`general-${load.id}`}>
-                              {load.name} ({load.amps}A)
+                              {load.name} ({load.amps}A, Qty: {load.quantity})
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="HVAC Loads">
-                          {hvacLoads.map(load => (
+                          {hvacLoads.filter(load => load.quantity === 1).map(load => (
                             <option key={`hvac-${load.id}`} value={`hvac-${load.id}`}>
-                              {load.name} ({load.amps}A)
+                              {load.name} ({load.amps}A, Qty: {load.quantity})
                             </option>
                           ))}
                         </optgroup>
                         <optgroup label="EVSE Loads">
-                          {evseLoads.map(load => (
+                          {evseLoads.filter(load => load.quantity === 1).map(load => (
                             <option key={`evse-${load.id}`} value={`evse-${load.id}`}>
-                              {load.name} ({load.amps}A)
+                              {load.name} ({load.amps}A, Qty: {load.quantity})
                             </option>
                           ))}
                         </optgroup>
@@ -403,7 +404,7 @@ export const EVSELoadsTable: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      value={state.loadManagementMaxLoad || 0}
+                      value={state.loadManagementMaxLoad || ''}
                       onChange={(e) => updateSettings({ loadManagementMaxLoad: parseFloat(e.target.value) || 0 })}
                       className="w-32 text-center border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500 text-sm"
                       min="0"
@@ -447,7 +448,7 @@ export const EVSELoadsTable: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  value={state.loadManagementType === 'ems' ? (state.emsMaxLoad || 0) : (state.loadManagementMaxLoad || 0)}
+                  value={state.loadManagementType === 'ems' ? (state.emsMaxLoad || '') : (state.loadManagementMaxLoad || '')}
                   onChange={(e) => {
                     const value = parseFloat(e.target.value) || 0;
                     
@@ -602,7 +603,7 @@ export const EVSELoadsTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={load.quantity || 0}
+                    value={load.quantity || ''}
                     onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     min="0"
@@ -611,7 +612,7 @@ export const EVSELoadsTable: React.FC = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={load.amps || 0}
+                    value={load.amps || ''}
                     onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                     className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     min="0"

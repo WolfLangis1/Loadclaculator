@@ -9,67 +9,13 @@ import {
   RotateCcw,
   ZoomIn,
   ZoomOut,
-  Satellite,
-  Map
+  Satellite
 } from 'lucide-react';
 import { useAerialView } from '../../context/AerialViewContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
 
-// Mock Google Maps service for development
-const mockGoogleMapsService = {
-  async searchAddress(address: string) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock coordinates for common addresses
-    const mockCoordinates = {
-      latitude: 37.7749 + (Math.random() - 0.5) * 0.1,
-      longitude: -122.4194 + (Math.random() - 0.5) * 0.1
-    };
-    
-    return {
-      address,
-      coordinates: mockCoordinates,
-      formattedAddress: address
-    };
-  },
-  
-  async getSatelliteImage(coordinates: any, options: any) {
-    // Return a placeholder satellite image URL
-    const { latitude, longitude } = coordinates;
-    const { width, height, zoom } = options;
-    
-    // Using a placeholder service that generates satellite-like images
-    return `https://picsum.photos/${width}/${height}?random=${latitude}${longitude}${zoom}`;
-  },
-  
-  async getStreetViewImages(coordinates: any) {
-    // Return mock street view images
-    return [
-      {
-        heading: 0,
-        imageUrl: `https://picsum.photos/400/300?random=street1`,
-        label: 'North View'
-      },
-      {
-        heading: 90,
-        imageUrl: `https://picsum.photos/400/300?random=street2`,
-        label: 'East View'
-      },
-      {
-        heading: 180,
-        imageUrl: `https://picsum.photos/400/300?random=street3`,
-        label: 'South View'
-      },
-      {
-        heading: 270,
-        imageUrl: `https://picsum.photos/400/300?random=street4`,
-        label: 'West View'
-      }
-    ];
-  }
-};
+import { SecureAerialViewService } from '../../services/secureAerialViewService';
 
 export const SimpleAerialViewMain: React.FC = () => {
   const {
@@ -108,27 +54,41 @@ export const SimpleAerialViewMain: React.FC = () => {
     setError(null);
 
     try {
-      const result = await mockGoogleMapsService.searchAddress(state.address);
+      const geocodeResult = await SecureAerialViewService.geocodeAddress(state.address);
       
-      setCoordinates(result.coordinates);
+      if (!geocodeResult) {
+        throw new Error('Geocoding failed');
+      }
+      
+      setCoordinates(geocodeResult.coordinates);
       
       // Update project info with new address
-      updateProjectInfo({ propertyAddress: result.formattedAddress });
+      updateProjectInfo({ propertyAddress: geocodeResult.address });
       
       // Get satellite image
-      const satelliteImageUrl = await mockGoogleMapsService.getSatelliteImage(
-        result.coordinates,
+      const satelliteResult = await SecureAerialViewService.getSatelliteImagery(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude,
         { width: 800, height: 600, zoom: state.zoom }
       );
-      setSatelliteImage(satelliteImageUrl);
+      
+      if (satelliteResult.success) {
+        setSatelliteImage(satelliteResult.data.imageUrl);
+      }
       
       // Get street view images
-      const streetViewImages = await mockGoogleMapsService.getStreetViewImages(result.coordinates);
-      setStreetViewImages(streetViewImages);
+      const streetViewResult = await SecureAerialViewService.getMultiAngleStreetView(
+        geocodeResult.coordinates.latitude,
+        geocodeResult.coordinates.longitude
+      );
+      
+      if (streetViewResult && streetViewResult.length > 0) {
+        setStreetViewImages(streetViewResult);
+      }
       
     } catch (error) {
       console.error('Address search failed:', error);
-      setError('Failed to search address. Please try again.');
+      setError(`Failed to search address: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

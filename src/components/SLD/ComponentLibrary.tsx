@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+/**
+ * Consolidated Component Library for SLD - Production Ready
+ * 
+ * Professional electrical component library with search, filtering, and IEEE symbols
+ * Combines features from ComponentLibrary and EnhancedComponentLibrary
+ */
+
+import React, { useState, useMemo, memo } from 'react';
 import { 
   Search, 
+  Filter, 
+  Plus,
   ChevronDown, 
   ChevronUp,
   Zap,
@@ -22,9 +31,12 @@ import {
   Monitor,
   Wifi,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-// import type { SLDComponent } from '../../types/sld';
+import { IEEE_SYMBOLS, getSymbolCategories, IEEESymbolRenderer, type IEEESymbol } from './IEEESymbolsSimple';
+import { useSLDData } from '../../context/SLDDataContext';
 
 interface ComponentTemplate {
   id: string;
@@ -37,16 +49,71 @@ interface ComponentTemplate {
   description: string;
   manufacturer?: string;
   model?: string;
+  necReference?: string;
+  rating?: string;
+  voltage?: number;
+  ieeeSymbolId?: string;
   specifications: Record<string, any>;
+  properties: Record<string, any>;
 }
 
 interface ComponentLibraryProps {
-  onComponentSelect: (template: ComponentTemplate) => void;
+  onComponentSelect?: (template: ComponentTemplate) => void;
   onComponentDragStart?: (template: ComponentTemplate, event: React.DragEvent) => void;
 }
 
 const COMPONENT_TEMPLATES: ComponentTemplate[] = [
-  // Solar Components - General
+  // Distribution Components
+  {
+    id: 'main_panel_200a',
+    name: '200A Main Service Panel',
+    category: 'Distribution',
+    type: 'service_panel',
+    icon: Zap,
+    color: '#1f2937',
+    defaultSize: { width: 120, height: 80 },
+    description: 'Main electrical service panel with 200A rating',
+    necReference: 'NEC 408.3',
+    rating: '200A',
+    voltage: 240,
+    ieeeSymbolId: 'main_breaker',
+    specifications: {
+      rating: 200,
+      volts: 240,
+      phase: 1,
+      poles: 2
+    },
+    properties: {
+      rating: '200A',
+      voltage: 240,
+      necReference: 'NEC 408.3'
+    }
+  },
+  {
+    id: 'breaker_20a',
+    name: '20A Circuit Breaker',
+    category: 'Protection',
+    type: 'circuit_breaker',
+    icon: Shield,
+    color: '#374151',
+    defaultSize: { width: 60, height: 40 },
+    description: 'Single-pole 20A circuit breaker for branch circuits',
+    necReference: 'NEC 240.6',
+    rating: '20A',
+    voltage: 240,
+    ieeeSymbolId: 'circuit_breaker',
+    specifications: {
+      rating: 20,
+      volts: 240,
+      poles: 1
+    },
+    properties: {
+      rating: '20A',
+      poles: 1,
+      necReference: 'NEC 240.6'
+    }
+  },
+  // Solar Components
   {
     id: 'pv_array_template',
     name: 'PV Array',
@@ -56,6 +123,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     color: '#f59e0b',
     defaultSize: { width: 120, height: 80 },
     description: 'Solar photovoltaic array',
+    necReference: 'NEC 690',
     specifications: {
       numStrings: 2,
       modulesPerString: 12,
@@ -63,6 +131,11 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
       moduleVoltage: 40,
       arrayVoltage: 480,
       arrayCurrent: 20
+    },
+    properties: {
+      kw: 9.6,
+      voltage: 480,
+      current: 20
     }
   },
 
@@ -276,9 +349,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
       backupSwitchCompatible: true,
       pvInputs: 6,
       backupSwitch: true,
-      integratedInverter: true,
-      operatingTemp: '-20°C to 50°C',
-      warranty: '10 years'
+      integratedInverter: true
     }
   },
   {
@@ -2526,21 +2597,24 @@ const MANUFACTURERS = [
   { id: 'honeywell', name: 'Honeywell', category: ['Utility'] }
 ];
 
-export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
+export const ComponentLibrary: React.FC<ComponentLibraryProps> = memo(({
   onComponentSelect,
   onComponentDragStart
 }) => {
+  const { addComponent } = useSLDData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedManufacturer, setSelectedManufacturer] = useState('all');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    Distribution: true,
+    Protection: true,
     Solar: true,
     Battery: true,
     EVSE: true,
-    Distribution: true,
     Utility: true
   });
   const [groupByManufacturer, setGroupByManufacturer] = useState(false);
+  const [showIEEESymbols, setShowIEEESymbols] = useState(false);
 
   // Filter components based on search, category, and manufacturer
   const filteredComponents = COMPONENT_TEMPLATES.filter(template => {
@@ -2589,7 +2663,25 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
   };
 
   const handleComponentClick = (template: ComponentTemplate) => {
-    onComponentSelect(template);
+    // Create SLD component from template
+    const component = {
+      id: `${template.type}-${Date.now()}`,
+      name: template.name,
+      type: template.type,
+      position: { x: 200, y: 200 },
+      width: template.defaultSize.width,
+      height: template.defaultSize.height,
+      symbol: template.ieeeSymbolId || template.name.charAt(0),
+      properties: template.properties
+    };
+
+    // Add to SLD if context available
+    if (addComponent) {
+      addComponent(component);
+    }
+
+    // Call external handler if provided
+    onComponentSelect?.(template);
   };
 
   return (
@@ -2747,4 +2839,4 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
       </div>
     </div>
   );
-}; 
+}); 

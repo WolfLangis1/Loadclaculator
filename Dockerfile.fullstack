@@ -33,7 +33,7 @@ ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 ENV VITE_MAPBOX_API_KEY=$VITE_MAPBOX_API_KEY
 ENV VITE_AERIAL_PROVIDER=$VITE_AERIAL_PROVIDER
 
-# Set Vite API base URL to local backend
+# Set Vite API base URL to local backend (no proxy needed in same container)
 ENV VITE_API_BASE_URL=http://localhost:3001
 
 # Expose ports (3000 for frontend, 3001 for backend)
@@ -54,5 +54,5 @@ ENV VITE_PORT=3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/ && curl -f http://localhost:3001/api/health || exit 1
 
-# Start both backend and frontend servers
-CMD ["npm", "run", "dev:full"]
+# Start both backend and frontend servers with fullstack config
+CMD ["sh", "-c", "npx concurrently \"npm run server\" \"npx vite --config vite.config.fullstack.js\""]

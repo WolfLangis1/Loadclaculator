@@ -19,6 +19,7 @@ export const useLoadCalculatorCompat = () => {
     calculations,
     validationMessages
   };
+  
 
   // Legacy-style dispatch function
   const dispatch = (action: any) => {

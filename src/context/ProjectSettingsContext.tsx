@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import type { 
   ProjectInformation, 
   CalculationMethod, 
@@ -48,6 +48,8 @@ interface ProjectSettingsContextType {
   >>) => void;
   updateActualDemandData: (updates: Partial<ActualDemandData>) => void;
   resetSettings: () => void;
+  saveToLocalStorage: (projectId: string) => void;
+  loadFromLocalStorage: (projectId: string) => boolean;
 }
 
 const initialProjectInfo: ProjectInformation = {
@@ -106,8 +108,34 @@ const initialSettings: ProjectSettingsState = {
 
 const ProjectSettingsContext = createContext<ProjectSettingsContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'loadCalculator_projectSettings';
+const SESSION_KEY = 'loadCalculator_sessionSettings';
+
 export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<ProjectSettingsState>(initialSettings);
+  const [settings, setSettings] = useState<ProjectSettingsState>(() => {
+    // First try to load from sessionStorage (temporary working data)
+    try {
+      const sessionData = sessionStorage.getItem(SESSION_KEY);
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        return { ...initialSettings, ...parsed };
+      }
+    } catch (error) {
+      console.warn('Failed to load session settings:', error);
+    }
+
+    // If no session data, start with clean initial settings
+    return initialSettings;
+  });
+
+  // Auto-save to sessionStorage for temporary working data
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(settings));
+    } catch (error) {
+      console.warn('Failed to save session settings:', error);
+    }
+  }, [settings]);
   
   const updateProjectInfo = React.useCallback((updates: Partial<ProjectInformation>) => {
     setSettings(prev => ({
@@ -145,6 +173,39 @@ export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   
   const resetSettings = React.useCallback(() => {
     setSettings(initialSettings);
+    // Clear session storage when resetting
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch (error) {
+      console.warn('Failed to clear session storage:', error);
+    }
+  }, []);
+
+  const saveToLocalStorage = React.useCallback((projectId: string) => {
+    try {
+      const projectKey = `${STORAGE_KEY}_${projectId}`;
+      localStorage.setItem(projectKey, JSON.stringify(settings));
+      return true;
+    } catch (error) {
+      console.warn('Failed to save project settings to localStorage:', error);
+      return false;
+    }
+  }, [settings]);
+
+  const loadFromLocalStorage = React.useCallback((projectId: string) => {
+    try {
+      const projectKey = `${STORAGE_KEY}_${projectId}`;
+      const saved = localStorage.getItem(projectKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setSettings({ ...initialSettings, ...parsed });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.warn('Failed to load project settings from localStorage:', error);
+      return false;
+    }
   }, []);
   
   const contextValue = useMemo(() => ({
@@ -154,7 +215,9 @@ export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = 
     updatePanelDetails,
     updateLoadManagement,
     updateActualDemandData,
-    resetSettings
+    resetSettings,
+    saveToLocalStorage,
+    loadFromLocalStorage
   }), [
     settings,
     updateProjectInfo,
@@ -162,7 +225,9 @@ export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = 
     updatePanelDetails,
     updateLoadManagement,
     updateActualDemandData,
-    resetSettings
+    resetSettings,
+    saveToLocalStorage,
+    loadFromLocalStorage
   ]);
   
   return (

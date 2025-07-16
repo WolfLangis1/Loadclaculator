@@ -1,9 +1,11 @@
-import React, { useState, Suspense, lazy } from 'react';
-import { Calculator, FolderOpen, Zap, MapPin, Cable } from 'lucide-react';
+import React, { useState, Suspense, lazy, memo, useCallback } from 'react';
+import { Calculator, FolderOpen, Zap, MapPin, Cable, Plus } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
 import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
+import { useProjectSettings } from '../../context/ProjectSettingsContext';
+import { useLoadData } from '../../context/LoadDataContext';
 
 // Lazy load heavy components with Vercel-compatible fallback
 const WorkingIntelligentSLDCanvas = lazy(() => 
@@ -22,11 +24,22 @@ interface Tab {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   component: React.ComponentType;
+  disabled?: boolean;
+  comingSoon?: boolean;
 }
 
-export const TabbedInterface: React.FC = () => {
+export const TabbedInterface: React.FC = memo(() => {
   const [activeTab, setActiveTab] = useState<TabType>('calculator');
   const [showProjectManager, setShowProjectManager] = useState(false);
+  
+  // Context hooks for clearing data
+  const { resetSettings } = useProjectSettings();
+  const { clearSessionData } = useLoadData();
+
+  // Feature flags
+  const FEATURE_FLAGS = {
+    SLD_ENABLED: false, // Set to false to disable SLD feature
+  };
 
   const tabs: Tab[] = [
     {
@@ -45,7 +58,9 @@ export const TabbedInterface: React.FC = () => {
       id: 'sld-intelligent',
       label: 'SLD',
       icon: Zap,
-      component: WorkingIntelligentSLDCanvas
+      component: WorkingIntelligentSLDCanvas,
+      disabled: !FEATURE_FLAGS.SLD_ENABLED,
+      comingSoon: !FEATURE_FLAGS.SLD_ENABLED
     },
     {
       id: 'aerial',
@@ -54,6 +69,17 @@ export const TabbedInterface: React.FC = () => {
       component: SimpleAerialViewMain
     }
   ];
+
+  // If current active tab is disabled, switch to first enabled tab
+  React.useEffect(() => {
+    const activeTabData = tabs.find(tab => tab.id === activeTab);
+    if (activeTabData?.disabled) {
+      const firstEnabledTab = tabs.find(tab => !tab.disabled);
+      if (firstEnabledTab) {
+        setActiveTab(firstEnabledTab.id);
+      }
+    }
+  }, [activeTab, tabs]);
 
   const activeTabData = tabs.find(tab => tab.id === activeTab);
   const ActiveComponent = activeTabData?.component || LoadCalculatorMain;
@@ -80,26 +106,36 @@ export const TabbedInterface: React.FC = () => {
     );
   };
 
-  const handleTabClick = (tabId: TabType) => {
+  const handleTabClick = useCallback((tabId: TabType) => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab?.disabled) {
+      return; // Don't switch to disabled tabs
+    }
     setActiveTab(tabId);
-  };
+  }, [tabs]);
 
-  const handleKeyDown = (event: React.KeyboardEvent, tabId: TabType) => {
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, tabId: TabType) => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab?.disabled) {
+      return; // Don't handle keyboard events for disabled tabs
+    }
+
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       handleTabClick(tabId);
     } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
-      const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+      const enabledTabs = tabs.filter(t => !t.disabled);
+      const currentIndex = enabledTabs.findIndex(tab => tab.id === activeTab);
       let nextIndex;
       
       if (event.key === 'ArrowLeft') {
-        nextIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+        nextIndex = currentIndex > 0 ? currentIndex - 1 : enabledTabs.length - 1;
       } else {
-        nextIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+        nextIndex = currentIndex < enabledTabs.length - 1 ? currentIndex + 1 : 0;
       }
       
-      const nextTab = tabs[nextIndex];
+      const nextTab = enabledTabs[nextIndex];
       handleTabClick(nextTab.id);
       
       // Focus the next tab after state update
@@ -110,7 +146,15 @@ export const TabbedInterface: React.FC = () => {
         }
       }, 0);
     }
-  };
+  }, [handleTabClick, tabs, activeTab]);
+
+  const handleNewProject = useCallback(() => {
+    // Clear all temporary session data
+    resetSettings();
+    clearSessionData();
+    // Switch to calculator tab
+    setActiveTab('calculator');
+  }, [resetSettings, clearSessionData]);
 
 
 
@@ -119,10 +163,11 @@ export const TabbedInterface: React.FC = () => {
       {/* Tab Navigation */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between px-4">
-            <div role="tablist" aria-label="Main application navigation" className="flex space-x-8">
+          <div className="flex items-center justify-between px-2 sm:px-4">
+            <div role="tablist" aria-label="Main application navigation" className="flex space-x-2 sm:space-x-8 overflow-x-auto scrollbar-hide">{/* Mobile: reduce spacing and allow horizontal scroll */}
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              const isDisabled = tab.disabled;
               return (
                 <button
                   key={tab.id}
@@ -132,30 +177,50 @@ export const TabbedInterface: React.FC = () => {
                   aria-selected={isActive}
                   aria-controls={`tabpanel-${tab.id}`}
                   tabIndex={isActive ? 0 : -1}
+                  disabled={isDisabled}
                   onClick={() => handleTabClick(tab.id)}
                   onKeyDown={(e) => handleKeyDown(e, tab.id)}
                   className={`${
-                    isActive
+                    isDisabled
+                      ? 'border-transparent text-gray-400 cursor-not-allowed opacity-60'
+                      : isActive
                       ? 'border-blue-500 text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
-                  aria-label={`${tab.label} tab${isActive ? ', currently selected' : ''}`}
+                  } whitespace-nowrap py-3 sm:py-4 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2 transition-colors min-w-0`}
+                  aria-label={`${tab.label} tab${isActive ? ', currently selected' : ''}${isDisabled ? ', disabled' : ''}`}
                 >
                   <tab.icon className="h-4 w-4" aria-hidden="true" />
-                  {tab.label}
+                  <div className="flex flex-col items-start">
+                    <span>{tab.label}</span>
+                    {tab.comingSoon && (
+                      <span className="text-xs text-gray-400 -mt-0.5">Coming Soon</span>
+                    )}
+                  </div>
                 </button>
               );
             })}
             </div>
             
-            <button
-              onClick={() => setShowProjectManager(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              aria-label="Open project manager"
-            >
-              <FolderOpen className="h-4 w-4" aria-hidden="true" />
-              Projects
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleNewProject}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors text-xs sm:text-sm"
+                aria-label="Start new project"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">New</span>
+              </button>
+              
+              <button
+                onClick={() => setShowProjectManager(true)}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-xs sm:text-sm"
+                aria-label="Open project manager"
+              >
+                <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Projects</span>
+                <span className="sm:hidden">Files</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -169,8 +234,8 @@ export const TabbedInterface: React.FC = () => {
           activeTab === 'sld-intelligent' || activeTab === 'aerial' 
             ? 'h-[calc(100vh-80px)] overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' 
             : activeTab === 'wire-sizing'
-            ? 'max-w-7xl mx-auto py-6'
-            : 'max-w-7xl mx-auto'
+            ? 'max-w-7xl mx-auto py-3 sm:py-6 px-2 sm:px-0'
+            : 'max-w-7xl mx-auto px-2 sm:px-0'
         }`}
         style={activeTab === 'sld-intelligent' || activeTab === 'aerial' ? { 
           scrollBehavior: 'smooth',
@@ -194,4 +259,4 @@ export const TabbedInterface: React.FC = () => {
       )}
     </div>
   );
-};
+});

@@ -8,14 +8,12 @@ import React, { useState, useMemo } from 'react';
 import { 
   Cable, 
   Search, 
-  Filter, 
   Download, 
   Calculator,
   AlertTriangle,
   Info,
   CheckCircle,
   Thermometer,
-  Settings,
   Shield,
   BookOpen,
   CheckSquare
@@ -23,9 +21,7 @@ import {
 import { 
   getComplianceWireSize, 
   analyzeCircuit, 
-  generateComplianceReport,
-  type CircuitAnalysis,
-  type ComplianceAnalysis 
+  generateComplianceReport
 } from '../../services/necComplianceEngine';
 
 interface WireData {
@@ -222,9 +218,9 @@ export const WireSizingChart: React.FC = () => {
   const [requiredAmps, setRequiredAmps] = useState<number>(0);
   const [ambientTemp, setAmbientTemp] = useState<number>(30);
   const [conduitFill, setConduitFill] = useState<number>(40);
-  const [conductorCount, setConductorCount] = useState<number>(3);
+  const [conductorCount] = useState<number>(3);
   const [wireLength, setWireLength] = useState<number>(100);
-  const [maxVoltageDrop, setMaxVoltageDrop] = useState<number>(3);
+  const [maxVoltageDrop] = useState<number>(3);
   const [isContinuous, setIsContinuous] = useState<boolean>(false);
   const [isMotorLoad, setIsMotorLoad] = useState<boolean>(false);
   const [isEVSE, setIsEVSE] = useState<boolean>(false);

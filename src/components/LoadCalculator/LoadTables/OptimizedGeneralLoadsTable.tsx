@@ -208,6 +208,7 @@ export const OptimizedGeneralLoadsTable: React.FC = React.memo(() => {
   const { loads, updateLoad, addLoad, removeLoad } = useLoadData();
   const { generalLoadCalculations } = useCalculations();
   
+  
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 

@@ -8,14 +8,15 @@ export const HVACLoadsTable: React.FC = () => {
   const [showAdvancedLoads, setShowAdvancedLoads] = useState(false);
   
   // Split loads into basic (first 4) and advanced (rest)
-  const basicLoads = hvacLoads.slice(0, 4);
-  const advancedLoads = hvacLoads.slice(4);
+  const basicLoads = (hvacLoads || []).slice(0, 4);
+  const advancedLoads = (hvacLoads || []).slice(4);
 
   const updateLoad = (id: number, field: string, value: any) => {
     let processedValue = value;
     
     if (['quantity', 'amps', 'volts', 'va', 'hp'].includes(field)) {
-      processedValue = parseFloat(value) || 0;
+      // Only parse non-empty strings, keep empty strings as 0
+      processedValue = value === '' || value === null || value === undefined ? 0 : parseFloat(value) || 0;
     }
     
     const updatedLoad = { [field]: processedValue };
@@ -131,7 +132,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="number"
-                  value={load.quantity || 0}
+                  value={load.quantity || ''}
                   onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   min="0"
@@ -140,7 +141,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="number"
-                  value={load.amps || 0}
+                  value={load.amps || ''}
                   onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   min="0"
@@ -182,7 +183,7 @@ export const HVACLoadsTable: React.FC = () => {
               <td className="px-4 py-3">
                 <input
                   type="number"
-                  value={load.hp || 0}
+                  value={load.hp || ''}
                   onChange={(e) => updateLoad(load.id, 'hp', e.target.value)}
                   className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   min="0"
@@ -274,7 +275,7 @@ export const HVACLoadsTable: React.FC = () => {
                       <td className="px-4 py-3">
                         <input
                           type="number"
-                          value={load.quantity || 0}
+                          value={load.quantity || ''}
                           onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                           className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                           min="0"
@@ -283,7 +284,7 @@ export const HVACLoadsTable: React.FC = () => {
                       <td className="px-4 py-3">
                         <input
                           type="number"
-                          value={load.amps || 0}
+                          value={load.amps || ''}
                           onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                           className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                           min="0"
@@ -325,7 +326,7 @@ export const HVACLoadsTable: React.FC = () => {
                       <td className="px-4 py-3">
                         <input
                           type="number"
-                          value={load.hp || 0}
+                          value={load.hp || ''}
                           onChange={(e) => updateLoad(load.id, 'hp', e.target.value)}
                           className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                           min="0"

@@ -8,14 +8,30 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
   const { state, dispatch } = useLoadCalculator();
   const { generalLoads } = state.loads;
   
+  // Debug logging
+  console.log('GeneralLoadsTable render:', {
+    generalLoads: generalLoads,
+    length: generalLoads?.length,
+    state: state,
+    stateLoads: state.loads,
+    fullState: state
+  });
+  
+  // Additional debugging
+  console.log('useLoadCalculator hook result:', { state, dispatch });
+  console.log('state.loads structure:', state?.loads);
+  console.log('generalLoads array:', generalLoads);
+  
   // const { updateLoadField } = useLoadUpdater('general');
   // const { getValidationError } = useLoadValidation();
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showAdvancedLoads, setShowAdvancedLoads] = useState(false);
   
-  // Show only first 10 rows, delete the rest
+  // Show only first 10 rows for basic display
   const displayLoads = generalLoads.slice(0, 10);
+  // Advanced loads would be additional loads beyond the basic 10
+  const advancedLoads = generalLoads.slice(10);
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -28,7 +44,8 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
     
     // Handle numeric fields
     if (['quantity', 'amps', 'volts', 'va'].includes(field)) {
-      processedValue = parseFloat(value) || 0;
+      // Only parse non-empty strings, keep empty strings as 0
+      processedValue = value === '' || value === null || value === undefined ? 0 : parseFloat(value) || 0;
     }
     
     // Auto-calculate dependent fields
@@ -130,7 +147,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
         <TableCell>
           <ValidatedInput
             type="number"
-            value={load.quantity || 0}
+            value={load.quantity || ''}
             onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
             min="0"
             className="w-16 text-center border-gray-300 text-sm"
@@ -140,7 +157,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
         <TableCell>
           <ValidatedInput
             type="number"
-            value={load.amps || 0}
+            value={load.amps || ''}
             onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
             min="0"
             step="0.1"
@@ -239,7 +256,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
                   <ValidatedInput
                     label="Quantity"
                     type="number"
-                    value={load.quantity || 0}
+                    value={load.quantity || ''}
                     onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                     min="0"
                     className="w-16 text-center"
@@ -249,7 +266,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
                   <ValidatedInput
                     label="Amps"
                     type="number"
-                    value={load.amps || 0}
+                    value={load.amps || ''}
                     onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                     min="0"
                     step="0.1"
@@ -363,7 +380,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
                           <ValidatedInput
                             label="Quantity"
                             type="number"
-                            value={load.quantity || 0}
+                            value={load.quantity || ''}
                             onChange={(e) => updateLoad(load.id, 'quantity', e.target.value)}
                             min="0"
                             className="w-16 text-center"
@@ -373,7 +390,7 @@ export const GeneralLoadsTable: React.FC = React.memo(() => {
                           <ValidatedInput
                             label="Amps"
                             type="number"
-                            value={load.amps || 0}
+                            value={load.amps || ''}
                             onChange={(e) => updateLoad(load.id, 'amps', e.target.value)}
                             min="0"
                             step="0.1"

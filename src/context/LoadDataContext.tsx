@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useMemo } from 'react';
+import React, { createContext, useContext, useReducer, useMemo, useEffect } from 'react';
 import type { 
   LoadState, 
   GeneralLoad, 
@@ -8,6 +8,7 @@ import type {
   LoadCategory 
 } from '../types';
 import { LOAD_TEMPLATES } from '../constants';
+
 
 // Load-specific actions
 type LoadDataAction = 
@@ -30,6 +31,11 @@ interface LoadDataContextType {
   removeLoad: (category: LoadCategory, id: number) => void;
   resetLoads: (newLoads: LoadState) => void;
   
+  // Project persistence
+  saveToLocalStorage: (projectId: string) => boolean;
+  loadFromLocalStorage: (projectId: string) => boolean;
+  clearSessionData: () => void;
+  
   // Load statistics
   totalLoads: number;
   loadCounts: { [K in LoadCategory]: number };
@@ -41,6 +47,7 @@ const initialLoadState: LoadState = {
   evseLoads: LOAD_TEMPLATES.evse.map(template => ({ ...template })),
   solarBatteryLoads: LOAD_TEMPLATES.solar.map(template => ({ ...template }))
 };
+
 
 function loadDataReducer(state: LoadState, action: LoadDataAction): LoadState {
   switch (action.type) {
@@ -149,8 +156,41 @@ function loadDataReducer(state: LoadState, action: LoadDataAction): LoadState {
 
 const LoadDataContext = createContext<LoadDataContextType | undefined>(undefined);
 
+const LOAD_STORAGE_KEY = 'loadCalculator_loadData';
+const LOAD_SESSION_KEY = 'loadCalculator_sessionLoads';
+
 export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [loads, dispatch] = useReducer(loadDataReducer, initialLoadState);
+  const [loads, dispatch] = useReducer(loadDataReducer, null, () => {
+    // First try to load from sessionStorage (temporary working data)
+    try {
+      const sessionData = sessionStorage.getItem(LOAD_SESSION_KEY);
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        // Ensure all required arrays exist
+        if (parsed && 
+            Array.isArray(parsed.generalLoads) && 
+            Array.isArray(parsed.hvacLoads) && 
+            Array.isArray(parsed.evseLoads) && 
+            Array.isArray(parsed.solarBatteryLoads)) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load session data:', error);
+    }
+    
+    // If no session data, start with initial state
+    return initialLoadState;
+  });
+
+  // Auto-save to sessionStorage for temporary working data
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(LOAD_SESSION_KEY, JSON.stringify(loads));
+    } catch (error) {
+      console.warn('Failed to save session data:', error);
+    }
+  }, [loads]);
   
   // Memoized convenience methods
   const updateLoad = React.useCallback((
@@ -187,12 +227,65 @@ export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatch({ type: 'RESET_LOADS', payload: newLoads });
   }, []);
   
+  const resetToDefaults = React.useCallback(() => {
+    // Clear session storage
+    try {
+      sessionStorage.removeItem(LOAD_SESSION_KEY);
+    } catch (error) {
+      console.warn('Failed to clear session storage:', error);
+    }
+    // Reset to initial templates
+    dispatch({ type: 'RESET_LOADS', payload: initialLoadState });
+  }, []);
+
+  const saveToLocalStorage = React.useCallback((projectId: string) => {
+    try {
+      const projectKey = `${LOAD_STORAGE_KEY}_${projectId}`;
+      localStorage.setItem(projectKey, JSON.stringify(loads));
+      return true;
+    } catch (error) {
+      console.warn('Failed to save load data to localStorage:', error);
+      return false;
+    }
+  }, [loads]);
+
+  const loadFromLocalStorage = React.useCallback((projectId: string) => {
+    try {
+      const projectKey = `${LOAD_STORAGE_KEY}_${projectId}`;
+      const saved = localStorage.getItem(projectKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && 
+            Array.isArray(parsed.generalLoads) && 
+            Array.isArray(parsed.hvacLoads) && 
+            Array.isArray(parsed.evseLoads) && 
+            Array.isArray(parsed.solarBatteryLoads)) {
+          dispatch({ type: 'RESET_LOADS', payload: parsed });
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.warn('Failed to load load data from localStorage:', error);
+      return false;
+    }
+  }, []);
+
+  const clearSessionData = React.useCallback(() => {
+    try {
+      sessionStorage.removeItem(LOAD_SESSION_KEY);
+      dispatch({ type: 'RESET_LOADS', payload: initialLoadState });
+    } catch (error) {
+      console.warn('Failed to clear session data:', error);
+    }
+  }, []);
+  
   // Memoized statistics
   const loadCounts = useMemo(() => ({
-    general: loads.generalLoads.length,
-    hvac: loads.hvacLoads.length,
-    evse: loads.evseLoads.length,
-    solar: loads.solarBatteryLoads.length
+    general: loads.generalLoads?.length || 0,
+    hvac: loads.hvacLoads?.length || 0,
+    evse: loads.evseLoads?.length || 0,
+    solar: loads.solarBatteryLoads?.length || 0
   }), [loads]);
   
   const totalLoads = useMemo(() => 
@@ -207,9 +300,13 @@ export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addLoad,
     removeLoad,
     resetLoads,
+    resetToDefaults,
+    saveToLocalStorage,
+    loadFromLocalStorage,
+    clearSessionData,
     totalLoads,
     loadCounts
-  }), [loads, updateLoad, addLoad, removeLoad, resetLoads, totalLoads, loadCounts]);
+  }), [loads, updateLoad, addLoad, removeLoad, resetLoads, resetToDefaults, saveToLocalStorage, loadFromLocalStorage, clearSessionData, totalLoads, loadCounts]);
   
   return (
     <LoadDataContext.Provider value={contextValue}>

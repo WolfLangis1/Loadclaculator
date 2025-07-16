@@ -1,5 +1,5 @@
 services:
-  # Development service with hot reload
+  # Development service with hot reload (frontend only)
   load-calculator-dev:
     build:
       context: .
@@ -27,8 +27,9 @@ services:
       - VITE_PORT=3000
       - WATCHPACK_POLLING=true
       - FAST_REFRESH=false
+      - VITE_API_BASE_URL=http://api-server:3001
     env_file:
-      - .env  # Load environment variables from .env file
+      - .env
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
@@ -36,6 +37,78 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      - api-server
+    profiles:
+      - dev
+
+  # Fullstack development service (frontend + backend in one container)
+  load-calculator-fullstack:
+    build:
+      context: .
+      dockerfile: Dockerfile.fullstack
+      args:
+        - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+        - VITE_USE_REAL_AERIAL_DATA=${VITE_USE_REAL_AERIAL_DATA:-true}
+        - VITE_AERIAL_PROVIDER=${VITE_AERIAL_PROVIDER:-google}
+    ports:
+      - "3002:3000"  # Frontend
+      - "3001:3001"  # Backend API
+    volumes:
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./api:/app/api:ro
+      - ./server.js:/app/server.js:ro
+      - ./server-dev.js:/app/server-dev.js:ro
+      - ./.env.local:/app/.env.local:ro
+      - /app/node_modules
+      - /app/dist
+      - /app/.vite
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=2000
+      - VITE_HOST=0.0.0.0
+      - VITE_PORT=3000
+      - VITE_API_BASE_URL=http://localhost:3001
+    env_file:
+      - .env.local
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/", "&&", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - fullstack
+
+  # Backend API server (separate container)
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app/api:ro
+      - ./server.js:/app/server.js:ro
+      - ./server-dev.js:/app/server-dev.js:ro
+      - ./.env.local:/app/.env.local:ro
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    env_file:
+      - .env.local
+    command: ["npm", "run", "server:dev"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     profiles:
       - dev
 

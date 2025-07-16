@@ -109,7 +109,7 @@ export const exportToPDF = async (
   let sectionY = currentY;
   
   // Section header with background
-  pdf.setFillColor(34, 197, 94); // Professional green
+  pdf.setFillColor(75, 85, 99); // Professional gray
   pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(10);
@@ -189,7 +189,7 @@ export const exportToPDF = async (
 
   // Demand calculation section
   sectionY += 3;
-  pdf.setFillColor(59, 130, 246); // Professional blue
+  pdf.setFillColor(75, 85, 99); // Professional gray
   pdf.rect(margin, sectionY - 2, sectionWidth, 6, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
@@ -242,7 +242,7 @@ export const exportToPDF = async (
   }
   
   sectionY += 3;
-  pdf.setFillColor(34, 197, 94);
+  pdf.setFillColor(75, 85, 99);
   pdf.rect(margin, sectionY - 1, sectionWidth, 6, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
@@ -349,7 +349,7 @@ export const exportToPDF = async (
   sectionY += 10;
 
   // CALCULATION SUMMARY - Full width below Part B
-  pdf.setFillColor(99, 102, 241); // Professional indigo
+  pdf.setFillColor(75, 85, 99); // Professional gray
   pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(10);
@@ -460,7 +460,7 @@ export const exportToPDF = async (
 
   // ADD LOAD MANAGEMENT DETAILS SECTION
   if (loadManagementType !== 'none') {
-    pdf.setFillColor(147, 51, 234); // Professional purple
+    pdf.setFillColor(75, 85, 99); // Professional gray
     pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(10);
@@ -535,59 +535,10 @@ export const exportToPDF = async (
     sectionY += 8;
   }
 
-  // WIRE SIZING RECOMMENDATIONS
-  pdf.setFillColor(16, 185, 129); // Professional teal
-  pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('WIRE SIZING RECOMMENDATIONS', margin + 2, sectionY + 1);
-  
-  pdf.setTextColor(0, 0, 0);
-  sectionY += 10;
-
-  // Wire sizing table
-  pdf.setFillColor(243, 244, 246);
-  pdf.rect(margin, sectionY, sectionWidth, 6, 'F');
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Application', col1X + 1, sectionY + 3);
-  pdf.text('Wire Size (Copper THWN)', col2X + 1, sectionY + 3);
-  pdf.text('Conduit Size', col3X + 1, sectionY + 3);
-  pdf.text('Protection', col4X + 1, sectionY + 3);
-  
-  sectionY += 6;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7);
-
-  const wiringSizes = [
-    [`Service Entrance (${mainBreaker}A)`, 
-     mainBreaker <= 100 ? '#4 AWG' : mainBreaker <= 200 ? '4/0 AWG' : '350 MCM',
-     mainBreaker <= 100 ? '1.25"' : mainBreaker <= 200 ? '2"' : '2.5"',
-     `${mainBreaker}A Main Breaker`],
-    ['EV Charger (48A)', '#6 AWG', '1"', '60A Breaker'],
-    ['EV Charger (32A)', '#10 AWG', '3/4"', '40A Breaker'],
-    ['Electric Range (40A)', '#8 AWG', '1"', '50A Breaker'],
-    ['Electric Dryer (24A)', '#10 AWG', '3/4"', '30A Breaker'],
-    ['HVAC Equipment', 'Per nameplate + 25%', 'Per wire size', 'Per equipment specs']
-  ];
-
-  wiringSizes.forEach(([application, wireSize, conduitSize, protection], index) => {
-    if (index % 2 === 0) {
-      pdf.setFillColor(249, 250, 251);
-      pdf.rect(margin, sectionY - 1, sectionWidth, 4, 'F');
-    }
-    pdf.text(application, col1X + 1, sectionY + 2);
-    pdf.text(wireSize, col2X + 1, sectionY + 2);
-    pdf.text(conduitSize, col3X + 1, sectionY + 2);
-    pdf.text(protection, col4X + 1, sectionY + 2);
-    sectionY += 4;
-  });
-
   // Solar/Battery section (if present)
   if (calculations.solarCapacityKW > 0 || calculations.batteryCapacityKW > 0) {
     sectionY += 5;
-    pdf.setFillColor(245, 158, 11); // Professional amber
+    pdf.setFillColor(75, 85, 99); // Professional gray
     pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(10);
@@ -667,7 +618,7 @@ export const exportToPDF = async (
         
         // Section header
         sectionY += 10;
-        pdf.setFillColor(59, 130, 246);
+        pdf.setFillColor(75, 85, 99); // Professional gray
         pdf.rect(margin, sectionY - 6, contentWidth, 12, 'F');
         
         pdf.setTextColor(255, 255, 255);

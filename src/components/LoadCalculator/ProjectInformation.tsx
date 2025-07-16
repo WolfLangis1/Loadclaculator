@@ -36,6 +36,9 @@ export const ProjectInformation: React.FC = () => {
         </div>
 
         <div>
+          <label htmlFor="property-address" className="block text-sm font-medium text-white/90 mb-2">
+            Property Address *
+          </label>
           <AddressAutocomplete
             value={projectInfo.propertyAddress || ''}
             onChange={(address) => updateProjectInfo({ propertyAddress: address })}
@@ -49,11 +52,7 @@ export const ProjectInformation: React.FC = () => {
                 ...(place.components?.zipCode && { zipCode: place.components.zipCode })
               });
             }}
-            label="Property Address *"
             placeholder="Start typing property address..."
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            labelClassName="block text-sm font-medium text-white/90 mb-2"
-            helperClassName="mt-1 text-xs text-white/70"
             required
           />
         </div>
@@ -107,8 +106,8 @@ export const ProjectInformation: React.FC = () => {
           <input
             id="square-footage"
             type="number"
-            value={state.squareFootage || 0}
-            onChange={(e) => updateSettings({ squareFootage: parseInt(e.target.value) || 0 })}
+            value={state.squareFootage || ''}
+            onChange={(e) => updateSettings({ squareFootage: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
             className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
             placeholder="Enter square footage"
             min="0"

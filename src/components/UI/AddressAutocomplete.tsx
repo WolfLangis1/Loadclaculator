@@ -53,54 +53,10 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [apiAvailable, setApiAvailable] = useState(true);
-  
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
 
-  // Mock suggestions for development/fallback
-  const mockSuggestions = [
-    {
-      place_id: 'mock_1',
-      description: '123 Main St, Anytown, CA, USA',
-      structured_formatting: {
-        main_text: '123 Main St',
-        secondary_text: 'Anytown, CA, USA'
-      }
-    },
-    {
-      place_id: 'mock_2', 
-      description: '456 Oak Ave, Springfield, IL, USA',
-      structured_formatting: {
-        main_text: '456 Oak Ave',
-        secondary_text: 'Springfield, IL, USA'
-      }
-    },
-    {
-      place_id: 'mock_3',
-      description: '789 Pine Rd, Austin, TX, USA',
-      structured_formatting: {
-        main_text: '789 Pine Rd',
-        secondary_text: 'Austin, TX, USA'
-      }
-    }
-  ];
-
-  // Check API availability on component mount
-  useEffect(() => {
-    const checkApiHealth = async () => {
-      try {
-        const isHealthy = await SecureApiService.healthCheck();
-        setApiAvailable(isHealthy);
-      } catch (error) {
-        console.warn('API health check failed, using fallback mode');
-        setApiAvailable(false);
-      }
-    };
-    
-    checkApiHealth();
-  }, []);
 
   const searchPlaces = async (query: string) => {
     if (query.length < 3) {
@@ -111,58 +67,30 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     setIsLoading(true);
 
     try {
-      if (apiAvailable) {
-        // Use secure backend API
-        const result = await SecureApiService.getPlaceSuggestions(query);
-        
-        if (result.predictions) {
-          setSuggestions(result.predictions);
-        } else {
-          console.warn('No predictions returned from secure API, using mock data');
-          setSuggestions(mockSuggestions.filter(place => 
-            place.description.toLowerCase().includes(query.toLowerCase())
-          ));
-        }
+      const result = await SecureApiService.getPlaceSuggestions(query);
+      
+      if (result.predictions) {
+        setSuggestions(result.predictions);
       } else {
-        // Use mock data for development/fallback
-        await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API delay
-        setSuggestions(mockSuggestions.filter(place => 
-          place.description.toLowerCase().includes(query.toLowerCase())
-        ));
+        console.error('No predictions returned from Google API');
+        setSuggestions([]);
       }
     } catch (error) {
       console.error('Places search failed:', error);
-      setSuggestions(mockSuggestions.filter(place => 
-        place.description.toLowerCase().includes(query.toLowerCase())
-      ));
+      setSuggestions([]);
+      throw error; // Re-throw to surface the real error
     } finally {
       setIsLoading(false);
     }
   };
 
   const getPlaceDetails = async (placeId: string) => {
-    if (!apiAvailable || placeId.startsWith('mock_')) {
-      // Return mock place details for fallback
-      return {
-        address: value,
-        coordinates: { latitude: 40.7128, longitude: -74.0060 },
-        components: {
-          streetNumber: '123',
-          streetName: 'Main St',
-          city: 'New York',
-          state: 'NY',
-          zipCode: '10001',
-          country: 'US'
-        }
-      };
-    }
-
     try {
-      // Use secure backend for place details
-      const result = await SecureApiService.getPlaceSuggestions(value, 'session-token');
+      // Use geocoding API to get place details
+      const result = await SecureApiService.geocodeAddress(value);
       
-      if (result.result) {
-        const placeResult = result.result;
+      if (result.results && result.results.length > 0) {
+        const placeResult = result.results[0];
         
         // Parse address components
         const components: any = {};
@@ -195,12 +123,13 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           },
           components
         };
+      } else {
+        throw new Error('No geocoding results found');
       }
     } catch (error) {
       console.error('Place details failed:', error);
+      throw error; // Re-throw to surface the real error
     }
-
-    return null;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,7 +241,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           onFocus={handleFocus}
           placeholder={placeholder}
           disabled={disabled}
-          className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed bg-white text-gray-900 placeholder-gray-500"
         />
         
         {isLoading && (
@@ -352,11 +281,6 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       {helperText && (
         <p className={helperClassName}>
           {helperText}
-          {!apiAvailable && (
-            <span className="text-yellow-600 ml-2">
-              ⚠️ Using mock address suggestions - Secure API not available
-            </span>
-          )}
         </p>
       )}
     </div>

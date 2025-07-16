@@ -33,7 +33,12 @@ export const calculateLoadDemand = (
     amps: number;
   } | null = null
 ): CalculationResults => {
-  const { generalLoads, hvacLoads, evseLoads, solarBatteryLoads } = loadState;
+  const { 
+    generalLoads = [], 
+    hvacLoads = [], 
+    evseLoads = [], 
+    solarBatteryLoads = [] 
+  } = loadState || {};
   
   // Initialize calculation object
   const calc: Partial<CalculationResults> = {

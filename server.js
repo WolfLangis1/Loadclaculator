@@ -15,22 +15,19 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Mock mode for when API keys aren't available
-const MOCK_MODE = !process.env.GOOGLE_MAPS_API_KEY;
-
-if (MOCK_MODE) {
-  console.log('🚨 Running in MOCK MODE - Google Maps API key not found');
-} else {
-  console.log('✅ Google Maps API key found - using real APIs');
+// Require API keys - no mock mode
+if (!process.env.GOOGLE_MAPS_API_KEY) {
+  console.error('❌ GOOGLE_MAPS_API_KEY environment variable is required');
+  process.exit(1);
 }
+console.log('✅ Google Maps API key found - using real APIs');
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    mockMode: MOCK_MODE,
-    message: MOCK_MODE ? 'API running in mock mode' : 'API connected to Google services'
+    message: 'API connected to Google services'
   });
 });
 
@@ -42,38 +39,6 @@ app.get('/api/places', async (req, res) => {
     return res.status(400).json({ error: 'Input parameter is required' });
   }
 
-  // Return mock data if no API key
-  if (MOCK_MODE) {
-    return res.json({
-      status: 'OK',
-      predictions: [
-        {
-          description: `${input} Street, Anytown, CA 12345`,
-          place_id: 'mock_place_1',
-          structured_formatting: {
-            main_text: `${input} Street`,
-            secondary_text: 'Anytown, CA 12345'
-          }
-        },
-        {
-          description: `${input} Avenue, Springfield, IL 62701`,
-          place_id: 'mock_place_2',
-          structured_formatting: {
-            main_text: `${input} Avenue`,
-            secondary_text: 'Springfield, IL 62701'
-          }
-        },
-        {
-          description: `${input} Boulevard, Austin, TX 78701`,
-          place_id: 'mock_place_3',
-          structured_formatting: {
-            main_text: `${input} Boulevard`,
-            secondary_text: 'Austin, TX 78701'
-          }
-        }
-      ]
-    });
-  }
 
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -100,22 +65,6 @@ app.get('/api/geocode', async (req, res) => {
     return res.status(400).json({ error: 'Address parameter is required' });
   }
 
-  // Return mock data if no API key
-  if (MOCK_MODE) {
-    return res.json({
-      status: 'OK',
-      results: [{
-        formatted_address: address,
-        geometry: {
-          location: {
-            lat: 37.7749,
-            lng: -122.4194
-          }
-        },
-        place_id: 'mock_geocode_1'
-      }]
-    });
-  }
 
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -138,16 +87,6 @@ app.get('/api/satellite', async (req, res) => {
     return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
   }
 
-  // Return mock data if no API key
-  if (MOCK_MODE) {
-    return res.json({
-      status: 'OK',
-      imageUrl: `https://via.placeholder.com/${width}x${height}/87CEEB/000080?text=Mock+Satellite+Image`,
-      coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) },
-      zoom: parseInt(zoom),
-      provider: 'mock'
-    });
-  }
 
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -174,21 +113,9 @@ app.get('/api/solar', async (req, res) => {
     return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
   }
 
-  // Always return mock data for now as Google Solar API requires special access
-  return res.json({
-    status: 'OK',
-    solarPotential: {
-      maxArrayPanelsCount: 50,
-      maxArrayAreaMeters2: 200,
-      maxSunshineHoursPerYear: 2500,
-      carbonOffsetFactorKgPerMwh: 400,
-      wholeRoofStats: {
-        areaMeters2: 250,
-        sunshineQuantiles: [1800, 2000, 2200, 2400, 2600],
-        groundAreaCoveredMeters2: 200
-      }
-    },
-    coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) }
+  // Solar API requires special access - return error for now
+  return res.status(501).json({
+    error: 'Google Solar API not yet implemented - requires special API access'
   });
 });
 
@@ -200,18 +127,9 @@ app.get('/api/weather', async (req, res) => {
     return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
   }
 
-  // Return mock weather data
-  return res.json({
-    status: 'OK',
-    weather: {
-      temperature: 72,
-      humidity: 65,
-      windSpeed: 8,
-      conditions: 'Partly Cloudy',
-      visibility: 10,
-      pressure: 30.15
-    },
-    coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) }
+  // Weather API not implemented yet
+  return res.status(501).json({
+    error: 'Weather API not yet implemented'
   });
 });
 
@@ -223,26 +141,9 @@ app.post('/api/roof-analysis', async (req, res) => {
     return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
   }
 
-  // Return mock roof analysis data
-  return res.json({
-    status: 'OK',
-    roofAnalysis: {
-      totalRoofArea: 2500,
-      usableArea: 2000,
-      tiltAngle: 30,
-      azimuthAngle: 180,
-      shadingFactors: {
-        trees: 0.1,
-        buildings: 0.05,
-        other: 0.02
-      },
-      solarPanelFit: {
-        maxPanels: 48,
-        recommendedPanels: 40,
-        panelSize: '320W'
-      }
-    },
-    coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) }
+  // Roof analysis not implemented yet
+  return res.status(501).json({
+    error: 'Roof analysis API not yet implemented'
   });
 });
 
@@ -254,24 +155,49 @@ app.get('/api/shading', async (req, res) => {
     return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
   }
 
-  // Return mock shading data
-  return res.json({
-    status: 'OK',
-    shadingAnalysis: {
-      timestamp: timestamp || Date.now(),
-      shadowCoverage: 15,
-      sunAngle: 45,
-      dayLength: 12.5,
-      hourlyShading: [
-        { hour: 6, coverage: 80 },
-        { hour: 9, coverage: 30 },
-        { hour: 12, coverage: 10 },
-        { hour: 15, coverage: 20 },
-        { hour: 18, coverage: 60 }
-      ]
-    },
-    coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) }
+  // Shading analysis not implemented yet
+  return res.status(501).json({
+    error: 'Shading analysis API not yet implemented'
   });
+});
+
+// Street View API endpoint
+app.get('/api/streetview', async (req, res) => {
+  const { lat, lon, width = 640, height = 640 } = req.query;
+
+  if (!lat || !lon) {
+    return res.status(400).json({ error: 'Latitude and longitude parameters are required' });
+  }
+
+  try {
+    const results = [];
+    const headings = [0, 90, 180, 270]; // North, East, South, West views
+    const labels = ['North View', 'East View', 'South View', 'West View'];
+
+    for (let i = 0; i < headings.length; i++) {
+      const heading = headings[i];
+      const label = labels[i];
+      
+      // Construct Google Street View Static API URL
+      const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?` +
+        `size=${width}x${height}&` +
+        `location=${lat},${lon}&` +
+        `heading=${heading}&` +
+        `pitch=0&` +
+        `key=${process.env.GOOGLE_MAPS_API_KEY}`;
+
+      results.push({
+        heading,
+        imageUrl: streetViewUrl,
+        label
+      });
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Street View API error:', error);
+    res.status(500).json({ error: 'Failed to get street view imagery' });
+  }
 });
 
 // Error handling middleware
@@ -289,5 +215,5 @@ app.use((req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 API Server running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🔑 Mock mode: ${MOCK_MODE ? 'ON' : 'OFF'}`);
+  console.log('🔑 Real API mode: ON');
 });

@@ -27,9 +27,8 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = React.memo(({
   const hasWarning = Boolean(warning);
   
   // Ensure controlled inputs always have defined values
-  const safeValue = value === undefined || value === null ? 
-    (type === 'number' ? 0 : '') : 
-    value;
+  // For number inputs, use empty string instead of 0 to avoid leading zeros
+  const safeValue = value === undefined || value === null ? '' : value;
   
   const inputClasses = `
     block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset

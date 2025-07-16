@@ -5,7 +5,7 @@
  * All features work with existing, verified components
  */
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { 
   Zap, 
   RefreshCw, 
@@ -23,7 +23,7 @@ import {
 import { useSLDData } from '../../context/SLDDataContext';
 import { useLoadData } from '../../context/LoadDataContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
-import { EnhancedComponentLibrary } from './EnhancedComponentLibrary';
+import { ComponentLibrary } from './ComponentLibrary';
 import { DraggableTitleBlock } from './DraggableTitleBlock';
 
 // Simple interfaces for production
@@ -53,7 +53,7 @@ interface RubberbandState {
   currentPoint: { x: number; y: number } | null;
 }
 
-export const WorkingIntelligentSLDCanvas: React.FC = () => {
+export const WorkingIntelligentSLDCanvas: React.FC = memo(() => {
   const { state: sldState, updateComponent, selectComponents, addComponent } = useSLDData();
   const { loads } = useLoadData();
   const { settings } = useProjectSettings();
@@ -393,7 +393,7 @@ export const WorkingIntelligentSLDCanvas: React.FC = () => {
       </div>
       
       <div className="flex flex-1">
-        <EnhancedComponentLibrary />
+        <ComponentLibrary />
         
         <div className="flex-1 relative overflow-auto bg-gray-100">
           <div
@@ -518,6 +518,6 @@ export const WorkingIntelligentSLDCanvas: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
 export default WorkingIntelligentSLDCanvas;

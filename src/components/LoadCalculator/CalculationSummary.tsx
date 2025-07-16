@@ -72,10 +72,10 @@ export const CalculationSummary: React.FC = () => {
   const demandCalc = getDemandFactorCalculation();
   
   // Active loads summary
-  const activeGeneralLoads = state.loads.generalLoads.filter(load => load.quantity > 0);
-  const activeHvacLoads = state.loads.hvacLoads.filter(load => load.quantity > 0);
-  const activeEvseLoads = state.loads.evseLoads.filter(load => load.quantity > 0);
-  const activeSolarLoads = state.loads.solarBatteryLoads.filter(load => load.kw > 0);
+  const activeGeneralLoads = (state.loads.generalLoads || []).filter(load => load.quantity > 0);
+  const activeHvacLoads = (state.loads.hvacLoads || []).filter(load => load.quantity > 0);
+  const activeEvseLoads = (state.loads.evseLoads || []).filter(load => load.quantity > 0);
+  const activeSolarLoads = (state.loads.solarBatteryLoads || []).filter(load => load.kw > 0);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
