@@ -13,10 +13,9 @@ interface ValidationResult {
 // Simple in-memory rate limiter (for production, use Redis)
 class SimpleRateLimiter {
   private requests = new Map<string, number[]>();
-  private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    this.cleanupInterval = setInterval(() => this.cleanup(), 60000); // Cleanup every minute
+    setInterval(() => this.cleanup(), 60000); // Cleanup every minute
   }
   
   isAllowed(key: string, limit = 100, windowMs = 60000) {
@@ -134,10 +133,11 @@ export class SecureApiService {
         return data;
         
       } catch (error) {
-        logger.error(`❌ API Error [${requestId}] (attempt ${attempt + 1}/${retries + 1}):`, error);
+        logger.error(`❌ API Error [${requestId}] (attempt ${attempt + 1}/${retries + 1}):`, error instanceof Error ? error : new Error(String(error)));
         
         // Don't retry on client errors (4xx)
-        if (error.message.includes('4')) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('4')) {
           throw error;
         }
         
@@ -181,7 +181,7 @@ export class SecureApiService {
 
   // Weather API
   static async getWeatherData(lat: number, lon: number, provider: 'openweather' | 'noaa' = 'openweather'): Promise<any> {
-    const validation = this.validateCoordinates(lat, lon);
+    const validation = this.validateCoordinatesExternal(lat, lon);
     if (!validation.isValid) {
       throw new Error(`Invalid coordinates: ${validation.errors.join(', ')}`);
     }
@@ -199,7 +199,7 @@ export class SecureApiService {
     height: number = 640,
     provider: 'google' | 'mapbox' | 'bing' | 'esri' | 'maxar' = 'google'
   ): Promise<any> {
-    const validation = this.validateCoordinates(lat, lon);
+    const validation = this.validateCoordinatesExternal(lat, lon);
     if (!validation.isValid) {
       throw new Error(`Invalid coordinates: ${validation.errors.join(', ')}`);
     }
@@ -217,26 +217,6 @@ export class SecureApiService {
     return this.makeRequest(url);
   }
   
-  // Coordinate validation helper
-  private static validateCoordinates(lat: number, lon: number): void {
-    if (lat < -90 || lat > 90) {
-      throw ErrorHandlingService.handleValidationError(
-        'latitude',
-        lat,
-        'must be between -90 and 90',
-        'SecureApiService.validateCoordinates'
-      );
-    }
-    
-    if (lon < -180 || lon > 180) {
-      throw ErrorHandlingService.handleValidationError(
-        'longitude',
-        lon,
-        'must be between -180 and 180',
-        'SecureApiService.validateCoordinates'
-      );
-    }
-  }
 
   // Get satellite image URL (for direct image display)
   static getSatelliteImageUrl(
@@ -267,7 +247,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('Solar API error', error, { lat, lon, radiusMeters });
+      logger.error('Solar API error', error instanceof Error ? error : new Error(String(error)), { lat, lon, radiusMeters });
       throw error;
     }
   }
@@ -292,7 +272,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('Multi-source imagery error', error, { lat, lon, zoom, preferredProvider });
+      logger.error('Multi-source imagery error', error instanceof Error ? error : new Error(String(error)), { lat, lon, zoom, preferredProvider });
       throw error;
     }
   }
@@ -317,7 +297,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('Shading analysis error', error, { lat, lon, timestamp });
+      logger.error('Shading analysis error', error instanceof Error ? error : new Error(String(error)), { lat, lon, timestamp });
       throw error;
     }
   }
@@ -343,7 +323,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('Street View API error', error, { lat, lon, heading, pitch, fov });
+      logger.error('Street View API error', error instanceof Error ? error : new Error(String(error)), { lat, lon, heading, pitch, fov });
       throw error;
     }
   }
@@ -368,7 +348,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('Street View API error', error, { address, heading, pitch, fov });
+      logger.error('Street View API error', error instanceof Error ? error : new Error(String(error)), { address, heading, pitch, fov });
       throw error;
     }
   }
@@ -398,7 +378,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('AI roof analysis error', error, { lat, lon, roofData });
+      logger.error('AI roof analysis error', error instanceof Error ? error : new Error(String(error)), { lat, lon, roofData });
       throw error;
     }
   }
@@ -572,7 +552,7 @@ export class SecureApiService {
       
       return response.status < 500;
     } catch (error) {
-      logger.warn(`Service ${serviceName} health check failed`, error, { serviceName });
+      logger.warn(`Service ${serviceName} health check failed`, error instanceof Error ? error : new Error(String(error)));
       return false;
     }
   }
@@ -604,8 +584,8 @@ export class SecureApiService {
 
   // ================== VALIDATION METHODS ==================
 
-  // Coordinate validation
-  static validateCoordinates(lat: any, lon: any): ValidationResult {
+  // Public coordinate validation for external use
+  static validateCoordinatesExternal(lat: any, lon: any): ValidationResult {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lon);
     
@@ -748,7 +728,7 @@ export class SecureApiService {
     additionalParams: Record<string, { min?: number; max?: number; integer?: boolean; required?: boolean }> = {}
   ): ValidationResult {
     const { lat, lon, ...otherParams } = params;
-    const coordValidation = this.validateCoordinates(lat, lon);
+    const coordValidation = this.validateCoordinatesExternal(lat, lon);
     
     const errors = [...coordValidation.errors];
     const data: any = coordValidation.data ? { ...coordValidation.data } : {};
