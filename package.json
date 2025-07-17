@@ -48,7 +48,11 @@
     "dev:docker": "docker-compose --profile fullstack up -d",
     "docker:stop": "docker-compose down",
     "docker:rebuild": "docker-compose down && docker-compose --profile fullstack up -d --build",
-    "docker:health": "curl -f http://localhost:3001/api/health || echo 'Backend not responding'"
+    "docker:health": "curl -f http://localhost:3001/api/health || echo 'Backend not responding'",
+    "vercel:test": "NODE_ENV=production npm ci && npm run build",
+    "vercel:dev": "vercel dev",
+    "vercel:build": "vercel build",
+    "vercel:build:prod": "vercel build --prod"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.51.0",
@@ -106,6 +110,7 @@
     "rollup": "^4.45.1",
     "terser": "^5.43.1",
     "typescript": "^5.2.2",
+    "vercel": "^44.4.3",
     "vitest": "^1.0.0"
   }
 }

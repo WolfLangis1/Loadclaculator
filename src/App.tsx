@@ -9,8 +9,7 @@ function App() {
     <ErrorBoundary>
       <UnifiedAppProvider>
         <TabbedInterface />
-        {/* Only load Analytics on Vercel platform */}
-        {import.meta.env.VERCEL_ENV && <Analytics />}
+        <Analytics />
       </UnifiedAppProvider>
     </ErrorBoundary>
   );

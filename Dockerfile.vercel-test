@@ -1,0 +1,27 @@
+# Simulate Vercel's build environment
+FROM node:18-alpine
+
+# Set production environment
+ENV NODE_ENV=production
+ENV VITE_NODE_ENV=production
+
+# Create app directory
+WORKDIR /vercel/path0
+
+# Copy package files
+COPY package*.json ./
+
+# Clean install dependencies (like Vercel)
+RUN npm ci
+
+# Copy source files
+COPY . .
+
+# Build the app with Vercel's exact command
+RUN npx vite build --mode production
+
+# Expose port for preview
+EXPOSE 4173
+
+# Run preview server
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]

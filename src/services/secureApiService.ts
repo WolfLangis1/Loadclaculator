@@ -1,4 +1,3 @@
-import { ErrorHandlingService } from './errorHandlingService';
 import { createComponentLogger } from './loggingService';
 
 const logger = createComponentLogger('SecureApiService');
@@ -297,7 +296,7 @@ export class SecureApiService {
       
       return await response.json();
     } catch (error) {
-      logger.error('Shading analysis error', error instanceof Error ? error : new Error(String(error)), { lat, lon, timestamp });
+      logger.error('Shading analysis error', error instanceof Error ? error : new Error(String(error)), { lat, lon, timestamp: timestamp?.toString() });
       throw error;
     }
   }
@@ -552,7 +551,7 @@ export class SecureApiService {
       
       return response.status < 500;
     } catch (error) {
-      logger.warn(`Service ${serviceName} health check failed`, error instanceof Error ? error : new Error(String(error)));
+      logger.warn(`Service ${serviceName} health check failed: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }

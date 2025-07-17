@@ -86,8 +86,7 @@ function AppWithAuth() {
               }
             />
           </Routes>
-          {/* Only load Analytics on Vercel platform */}
-          {import.meta.env.VERCEL_ENV && <Analytics />}
+          <Analytics />
         </SupabaseAuthProvider>
       </Router>
     </ErrorBoundary>
