@@ -21,7 +21,6 @@ import { useLoadData } from '../../context/LoadDataContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { DraggableTitleBlock } from './DraggableTitleBlock';
 import { SLDGenerator } from './SLDGenerator';
-import { MeasurementTools } from './MeasurementTools';
 import { MeasurementRenderer } from './MeasurementRenderer';
 import { SLDMeasurementService } from '../../services/sldMeasurementService';
 
@@ -369,16 +368,12 @@ export const WorkingIntelligentSLDCanvas: React.FC = memo(() => {
         
         {/* Canvas Area */}
         <div className="flex-1 relative overflow-hidden">
-          {/* Measurement Tools Panel */}
+          {/* Measurement Tools Panel - Temporarily disabled for Vercel compatibility */}
           {showMeasurements && (
-            <div className="absolute top-4 right-4 z-30 w-80">
-              <MeasurementTools
-                measurementService={measurementService}
-                onMeasurementChange={() => setMeasurementsUpdated(prev => prev + 1)}
-                canvasRef={svgRef}
-                transform={{ x: 0, y: 0, zoom: 1 }}
-                className="shadow-lg"
-              />
+            <div className="absolute top-4 right-4 z-30 w-80 p-4 bg-white rounded-lg shadow-lg">
+              <div className="text-sm text-gray-600">
+                Measurement tools available in development mode
+              </div>
             </div>
           )}
           <div
