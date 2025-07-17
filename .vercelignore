@@ -47,7 +47,6 @@ src/components/SLD/IEEESymbolLibrary.tsx
 src/components/SLD/ProfessionalSymbolRenderer.tsx
 src/components/SLD/LayerPanel.tsx
 src/components/SLD/MeasurementTools.tsx
-src/components/SLD/MeasurementRenderer.tsx
 src/components/SLD/ComponentSearch.tsx
 src/components/SLD/CategoryFilter.tsx
 src/components/SLD/ComponentCard.tsx
