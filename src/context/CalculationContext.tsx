@@ -7,6 +7,7 @@ import type {
   PanelDetails,
   ActualDemandData
 } from '../types';
+import { calculateGeneralLoadDemand, calculateHVACLoadDemand, calculateEVSELoadDemand } from '../utils/loadCalculations';
 import { calculateLoadDemand } from '../services/necCalculations';
 import { ValidationService } from '../services/validationService';
 import { useLoadData } from './LoadDataContext';
@@ -51,93 +52,70 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [calculationTime, setCalculationTime] = React.useState(0);
   const [lastUpdated, setLastUpdated] = React.useState(new Date());
   
-  // Memoized individual load type calculations for better performance
-  const generalLoadCalculations = useMemo(() => {
-    const startTime = performance.now();
-    
-    const totalVA = (loads.generalLoads || []).reduce((sum, load) => sum + (load.total || 0), 0);
-    const demandVA = totalVA; // Simplified for demo
-    const demandAmps = demandVA / 240;
-    
-    const endTime = performance.now();
-    console.log(`General load calculation took ${endTime - startTime}ms`);
-    
-    return {
-      totalVA,
-      demandVA,
-      demandAmps
-    };
-  }, [loads.generalLoads]);
-  
-  const hvacLoadCalculations = useMemo(() => {
-    const startTime = performance.now();
-    
-    const totalVA = (loads.hvacLoads || []).reduce((sum, load) => sum + (load.total || 0), 0);
-    const largestMotorAmps = Math.max(...(loads.hvacLoads || []).map(load => load.amps || 0), 0);
-    const demandVA = totalVA + (largestMotorAmps * 240 * 0.25); // 125% factor for largest motor
-    const demandAmps = demandVA / 240;
-    
-    const endTime = performance.now();
-    console.log(`HVAC load calculation took ${endTime - startTime}ms`);
-    
-    return {
-      totalVA,
-      demandVA,
-      demandAmps,
-      largestMotorAmps
-    };
-  }, [loads.hvacLoads]);
-  
-  const evseLoadCalculations = useMemo(() => {
-    const startTime = performance.now();
-    
-    const totalVA = (loads.evseLoads || []).reduce((sum, load) => sum + (load.total || 0), 0);
-    const continuousLoadFactor = 1.25; // 125% continuous load factor
-    const demandVA = totalVA * continuousLoadFactor;
-    const demandAmps = demandVA / 240;
-    
-    const endTime = performance.now();
-    console.log(`EVSE load calculation took ${endTime - startTime}ms`);
-    
-    return {
-      totalVA,
-      demandVA,
-      demandAmps,
-      continuousLoadFactor
-    };
-  }, [loads.evseLoads]);
+  const generalLoadCalculations = useMemo(() => calculateGeneralLoadDemand(loads.generalLoads), [loads.generalLoads]);
+  const hvacLoadCalculations = useMemo(() => calculateHVACLoadDemand(loads.hvacLoads), [loads.hvacLoads]);
+  const evseLoadCalculations = useMemo(() => calculateEVSELoadDemand(loads.evseLoads), [loads.evseLoads]);
   
   // Main calculation with performance tracking
   const calculations = useMemo(() => {
     setIsCalculating(true);
     const startTime = performance.now();
     
-    const result = calculateLoadDemand(
-      loads,
-      settings.calculationMethod,
-      settings.squareFootage,
-      settings.mainBreaker,
-      settings.panelDetails,
-      settings.actualDemandData,
-      settings.useEMS,
-      settings.emsMaxLoad,
-      settings.loadManagementType,
-      settings.loadManagementMaxLoad,
-      settings.simpleSwitchMode,
-      settings.simpleSwitchLoadA,
-      settings.simpleSwitchLoadB
-    );
-    
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    
-    setCalculationTime(duration);
-    setLastUpdated(new Date());
-    setIsCalculating(false);
-    
-    console.log(`Total calculation took ${duration}ms`);
-    
-    return result;
+    try {
+      const result = calculateLoadDemand(
+        loads,
+        settings.calculationMethod,
+        settings.squareFootage,
+        settings.mainBreaker,
+        settings.panelDetails,
+        settings.actualDemandData,
+        settings.useEMS,
+        settings.emsMaxLoad,
+        settings.loadManagementType,
+        settings.loadManagementMaxLoad,
+        settings.simpleSwitchMode,
+        settings.simpleSwitchLoadA,
+        settings.simpleSwitchLoadB
+      );
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      setCalculationTime(duration);
+      setLastUpdated(new Date());
+      setIsCalculating(false);
+      
+      // Only log if calculation takes significant time (>5ms) or in development
+      if (duration > 5 || import.meta.env.DEV) {
+        console.debug(`Calculation completed in ${duration.toFixed(2)}ms`);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Calculation failed:', error);
+      setIsCalculating(false);
+      
+      // Return default calculation result to prevent UI crashes
+      return {
+        totalDemand: 0,
+        serviceDemand: 0,
+        generalDemand: 0,
+        hvacDemand: 0,
+        evseDemand: 0,
+        solarDemand: 0,
+        batteryDemand: 0,
+        percentCapacity: 0,
+        isCompliant: false,
+        violations: [],
+        calculations: {
+          general: { totalVA: 0, demandVA: 0, demandAmps: 0 },
+          hvac: { totalVA: 0, demandVA: 0, demandAmps: 0, largestMotorAmps: 0 },
+          evse: { totalVA: 0, demandVA: 0, demandAmps: 0, continuousLoadFactor: 1.25 },
+          solar: { totalVA: 0, demandVA: 0, demandAmps: 0 },
+          battery: { totalVA: 0, demandVA: 0, demandAmps: 0 }
+        }
+      };
+    }
   }, [
     loads,
     settings.calculationMethod,
@@ -176,7 +154,12 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     messages.push(...systemMessages);
     
     const endTime = performance.now();
-    console.log(`Validation took ${endTime - startTime}ms`);
+    const duration = endTime - startTime;
+    
+    // Only log validation time if it takes significant time (>10ms) or has many messages
+    if (duration > 10 || messages.length > 10) {
+      console.debug(`Validation completed in ${duration.toFixed(2)}ms with ${messages.length} messages`);
+    }
     
     return messages;
   }, [loads, settings.calculationMethod, settings.mainBreaker, calculations.totalDemand]);

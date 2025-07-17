@@ -12,10 +12,10 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = React.memo(({
   caption
 }) => {
   return (
-    <div className="overflow-x-auto -mx-4 sm:mx-0">
+    <div className="load-table-container -mx-4 sm:mx-0">
       <div className="inline-block min-w-full align-middle">
         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-          <table className={`min-w-full divide-y divide-gray-300 table-auto ${className}`} style={{ height: 'auto' }}>
+          <table className={`load-table ${className}`}>
             {caption && (
               <caption className="sr-only">
                 {caption}
@@ -67,7 +67,7 @@ export const TableCell: React.FC<TableCellProps> = React.memo(({
 }) => {
   return (
     <td
-      className={`px-3 py-4 text-sm text-gray-900 whitespace-nowrap ${className}`}
+      className={`px-3 py-4 text-sm text-gray-900 ${className}`}
       colSpan={colSpan}
     >
       {children}

@@ -3,10 +3,8 @@ import {
   Save, 
   FolderOpen, 
   Plus, 
-  Trash2, 
   Download, 
   Upload, 
-  Clock,
   X,
   AlertCircle,
   Check,
@@ -15,7 +13,9 @@ import {
 import { useProjectManager } from '../../hooks/useProjectManager';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { TemplateSelector } from './TemplateSelector';
-import { type ProjectTemplate } from '../../services/projectTemplateService';
+import { SaveProjectDialog } from './SaveProjectDialog';
+import { ProjectListItem } from './ProjectListItem';
+import { type DetailedProjectTemplate } from '../../services/projectService';
 
 interface ProjectManagerProps {
   isOpen: boolean;
@@ -43,18 +43,14 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
-  const [projectName, setProjectName] = useState('');
   const [importData, setImportData] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSaveProject = async () => {
-    const name = projectName || generateDefaultProjectName();
+  const handleSaveProject = async (name: string) => {
     const projectId = await saveProject(name);
-    
     if (projectId) {
       setSaveDialogOpen(false);
-      setProjectName('');
     }
   };
 
@@ -96,7 +92,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
     }
   };
 
-  const handleTemplateSelect = async (template: ProjectTemplate) => {
+  const handleTemplateSelect = async (template: DetailedProjectTemplate) => {
     const projectId = await createProjectFromTemplate(template);
     if (projectId) {
       onClose(); // Close the project manager
@@ -264,64 +260,14 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
               ) : (
                 <div className="space-y-3">
                   {projects.map((project) => (
-                    <div
+                    <ProjectListItem
                       key={project.id}
-                      className={`p-4 border rounded-lg transition-colors ${
-                        project.id === currentProject?.id
-                          ? 'border-blue-300 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{project.name}</h4>
-                          <div className="text-sm text-gray-600 mt-1">
-                            Customer: {project.state.projectInfo.customerName || 'Unknown'}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Address: {project.state.projectInfo.propertyAddress || 'Not specified'}
-                          </div>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDate(project.updatedAt)}
-                            </span>
-                            <span>
-                              Method: {project.state.calculationMethod}
-                            </span>
-                            <span>
-                              {project.state.squareFootage} sq ft
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 ml-4">
-                          <button
-                            onClick={() => handleLoadProject(project.id)}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                            title="Load project"
-                          >
-                            <FolderOpen className="h-4 w-4" />
-                          </button>
-                          
-                          <button
-                            onClick={() => handleExportProject(project.id)}
-                            className="p-2 text-green-600 hover:bg-green-100 rounded transition-colors"
-                            title="Export project"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                          
-                          <button
-                            onClick={() => handleDeleteProject(project.id)}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
-                            title="Delete project"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      project={project}
+                      currentProjectId={currentProject?.id}
+                      onLoadProject={handleLoadProject}
+                      onExportProject={handleExportProject}
+                      onDeleteProject={handleDeleteProject}
+                    />
                   ))}
                 </div>
               )}
@@ -331,42 +277,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
       </div>
 
       {/* Save Project Dialog */}
-      {saveDialogOpen && (
-        <div className="fixed inset-0 z-60 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Save Project</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Project Name
-              </label>
-              <input
-                type="text"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder={generateDefaultProjectName()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setSaveDialogOpen(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProject}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {isLoading ? 'Saving...' : 'Save Project'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaveProjectDialog
+        isOpen={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        onSave={handleSaveProject}
+        isLoading={isLoading}
+      />
 
       {/* Template Selector Modal */}
       <TemplateSelector

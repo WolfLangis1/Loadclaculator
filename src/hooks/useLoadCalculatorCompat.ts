@@ -2,13 +2,14 @@ import React from 'react';
 import { useProjectSettings } from '../context/ProjectSettingsContext';
 import { useLoadData } from '../context/LoadDataContext';
 import { useCalculations } from '../context/CalculationContext';
+import { updateSettingsHelper } from '../utils/updateSettingsHelper';
 
 /**
  * Compatibility hook that provides the old useLoadCalculator interface
  * This helps with gradual migration to the new context system
  */
 export const useLoadCalculatorCompat = () => {
-  const { settings, updateProjectInfo, updateCalculationSettings, updateLoadManagement, updatePanelDetails } = useProjectSettings();
+  const { settings, updateProjectInfo, updateCalculationSettings, updateLoadManagement, updatePanelDetails, updateActualDemandData } = useProjectSettings();
   const { loads, updateLoad, addLoad, removeLoad, resetLoads } = useLoadData();
   const { calculations, validationMessages } = useCalculations();
 
@@ -54,42 +55,13 @@ export const useLoadCalculatorCompat = () => {
 
   // Legacy-style update functions
   const updateSettings = (updates: any) => {
-    // Split updates by category and call appropriate context methods
-    const loadManagementFields = ['loadManagementType', 'simpleSwitchMode', 'useEMS', 'emsMaxLoad', 'loadManagementMaxLoad', 'simpleSwitchLoadA', 'simpleSwitchLoadB'];
-    const calculationFields = ['squareFootage', 'calculationMethod', 'mainBreaker', 'codeYear'];
-    const panelFields = ['busRating', 'manufacturer', 'model', 'type', 'phases', 'voltage', 'interruptingRating', 'availableSpaces', 'usedSpaces'];
-    
-    // Extract load management updates
-    const loadManagementUpdates: any = {};
-    const calculationUpdates: any = {};
-    const panelUpdates: any = {};
-    const projectInfoUpdates: any = {};
-    
-    Object.keys(updates).forEach(key => {
-      if (loadManagementFields.includes(key)) {
-        loadManagementUpdates[key] = updates[key];
-      } else if (calculationFields.includes(key)) {
-        calculationUpdates[key] = updates[key];
-      } else if (panelFields.includes(key)) {
-        panelUpdates[key] = updates[key];
-      } else {
-        projectInfoUpdates[key] = updates[key];
-      }
+    updateSettingsHelper(updates, {
+      updateProjectInfo,
+      updateCalculationSettings,
+      updatePanelDetails,
+      updateLoadManagement,
+      updateActualDemandData
     });
-    
-    // Apply updates to appropriate contexts
-    if (Object.keys(loadManagementUpdates).length > 0) {
-      updateLoadManagement(loadManagementUpdates);
-    }
-    if (Object.keys(calculationUpdates).length > 0) {
-      updateCalculationSettings(calculationUpdates);
-    }
-    if (Object.keys(panelUpdates).length > 0) {
-      updatePanelDetails(panelUpdates);
-    }
-    if (Object.keys(projectInfoUpdates).length > 0) {
-      updateProjectInfo(projectInfoUpdates);
-    }
   };
 
   // Attachment methods - stub implementations for now

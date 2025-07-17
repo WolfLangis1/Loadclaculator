@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useReducer, useMemo } from 'react';
 import type { SLDDiagram, SLDComponent, SLDConnection, SLDPosition } from '../types/sld';
+import { 
+  setDiagram as setDiagramReducer,
+  addComponent as addComponentReducer,
+  updateComponent as updateComponentReducer,
+  removeComponent as removeComponentReducer,
+  addConnection as addConnectionReducer,
+  removeConnection as removeConnectionReducer,
+  selectComponents as selectComponentsReducer,
+  updateCanvasState as updateCanvasStateReducer,
+  updateUIState as updateUIStateReducer,
+  resetDiagram as resetDiagramReducer
+} from '../utils/sldReducers';
 
 // Simplified SLD state without problematic services
 interface SLDState {
@@ -80,132 +92,25 @@ const initialState: SLDState = {
 function sldDataReducer(state: SLDState, action: SLDAction): SLDState {
   switch (action.type) {
     case 'SET_DIAGRAM':
-      return {
-        ...state,
-        diagram: action.payload
-      };
-      
-    case 'ADD_COMPONENT': {
-      if (!state.diagram) return state;
-      return {
-        ...state,
-        diagram: {
-          ...state.diagram,
-          components: [...state.diagram.components, action.payload],
-          metadata: {
-            ...state.diagram.metadata,
-            modified: new Date().toISOString()
-          }
-        }
-      };
-    }
-    
-    case 'UPDATE_COMPONENT': {
-      if (!state.diagram) return state;
-      return {
-        ...state,
-        diagram: {
-          ...state.diagram,
-          components: state.diagram.components.map(comp =>
-            comp.id === action.payload.id 
-              ? { ...comp, ...action.payload.updates }
-              : comp
-          ),
-          metadata: {
-            ...state.diagram.metadata,
-            modified: new Date().toISOString()
-          }
-        }
-      };
-    }
-    
-    case 'REMOVE_COMPONENT': {
-      if (!state.diagram) return state;
-      return {
-        ...state,
-        diagram: {
-          ...state.diagram,
-          components: state.diagram.components.filter(comp => comp.id !== action.payload),
-          connections: state.diagram.connections.filter(conn => 
-            conn.fromComponentId !== action.payload && conn.toComponentId !== action.payload
-          ),
-          metadata: {
-            ...state.diagram.metadata,
-            modified: new Date().toISOString()
-          }
-        },
-        selectedComponents: state.selectedComponents.filter(id => id !== action.payload)
-      };
-    }
-    
-    case 'ADD_CONNECTION': {
-      if (!state.diagram) return state;
-      return {
-        ...state,
-        diagram: {
-          ...state.diagram,
-          connections: [...state.diagram.connections, action.payload],
-          metadata: {
-            ...state.diagram.metadata,
-            modified: new Date().toISOString()
-          }
-        }
-      };
-    }
-    
-    case 'REMOVE_CONNECTION': {
-      if (!state.diagram) return state;
-      return {
-        ...state,
-        diagram: {
-          ...state.diagram,
-          connections: state.diagram.connections.filter(conn => conn.id !== action.payload),
-          metadata: {
-            ...state.diagram.metadata,
-            modified: new Date().toISOString()
-          }
-        }
-      };
-    }
-    
+      return setDiagramReducer(state, action.payload);
+    case 'ADD_COMPONENT':
+      return addComponentReducer(state, action.payload);
+    case 'UPDATE_COMPONENT':
+      return updateComponentReducer(state, action.payload);
+    case 'REMOVE_COMPONENT':
+      return removeComponentReducer(state, action.payload);
+    case 'ADD_CONNECTION':
+      return addConnectionReducer(state, action.payload);
+    case 'REMOVE_CONNECTION':
+      return removeConnectionReducer(state, action.payload);
     case 'SELECT_COMPONENTS':
-      return {
-        ...state,
-        selectedComponents: action.payload
-      };
-      
+      return selectComponentsReducer(state, action.payload);
     case 'UPDATE_CANVAS_STATE':
-      return {
-        ...state,
-        canvasState: {
-          ...state.canvasState,
-          ...action.payload
-        }
-      };
-      
+      return updateCanvasStateReducer(state, action.payload);
     case 'UPDATE_UI_STATE':
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          ...action.payload
-        }
-      };
-      
+      return updateUIStateReducer(state, action.payload);
     case 'RESET_DIAGRAM':
-      return {
-        ...initialState,
-        diagram: {
-          ...initialState.diagram!,
-          id: 'diagram-' + Date.now(),
-          metadata: {
-            ...initialState.diagram!.metadata,
-            created: new Date().toISOString(),
-            modified: new Date().toISOString()
-          }
-        }
-      };
-      
+      return resetDiagramReducer(initialState);
     default:
       return state;
   }
@@ -216,7 +121,6 @@ const SLDDataContext = createContext<SLDDataContextType | undefined>(undefined);
 export const SLDDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(sldDataReducer, initialState);
   
-  // Memoized convenience methods
   const addComponent = React.useCallback((component: SLDComponent) => {
     dispatch({ type: 'ADD_COMPONENT', payload: component });
   }, []);

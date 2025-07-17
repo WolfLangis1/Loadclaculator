@@ -16,25 +16,18 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Create .env from example if it doesn't exist
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
+# Create .env.local from example if it doesn't exist for fallback
+RUN if [ ! -f .env.local ]; then cp .env.local.example .env.local; fi
 
-# Accept build arguments for environment variables
-ARG GOOGLE_MAPS_API_KEY=""
-ARG VITE_USE_REAL_AERIAL_DATA=false
-ARG VITE_GOOGLE_MAPS_API_KEY=""
-ARG VITE_MAPBOX_API_KEY=""
-ARG VITE_AERIAL_PROVIDER=google
+# Runtime environment variables (will be injected at container startup)
+# No build-time API keys to prevent exposure in image layers
 
-# Set environment variables
-ENV GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
-ENV VITE_USE_REAL_AERIAL_DATA=$VITE_USE_REAL_AERIAL_DATA
-ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
-ENV VITE_MAPBOX_API_KEY=$VITE_MAPBOX_API_KEY
-ENV VITE_AERIAL_PROVIDER=$VITE_AERIAL_PROVIDER
+# Set API base URL to local backend (no proxy needed in same container)
+ENV API_BASE_URL=http://localhost:3001
 
-# Set Vite API base URL to local backend (no proxy needed in same container)
-ENV VITE_API_BASE_URL=http://localhost:3001
+# Default feature flags (can be overridden at runtime)
+ENV USE_REAL_AERIAL_DATA=true
+ENV AERIAL_PROVIDER=google
 
 # Expose ports (3000 for frontend, 3001 for backend)
 EXPOSE 3000 3001
@@ -54,5 +47,5 @@ ENV VITE_PORT=3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/ && curl -f http://localhost:3001/api/health || exit 1
 
-# Start both backend and frontend servers with fullstack config
-CMD ["sh", "-c", "npx concurrently \"npm run server\" \"npx vite --config vite.config.fullstack.js\""]
+# Start both backend and frontend servers
+CMD ["sh", "-c", "npx concurrently \"npm run server\" \"npm run dev\""]

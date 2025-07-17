@@ -15,7 +15,8 @@ interface MeasurementPoint {
 
 interface LinearMeasurement {
   id: string;
-  points: MeasurementPoint[];
+  startPoint: MeasurementPoint;
+  endPoint: MeasurementPoint;
   distance: number;
   unit: 'feet' | 'meters';
   label?: string;
@@ -52,7 +53,7 @@ interface AerialViewState {
   ui: {
     viewMode: 'satellite' | 'streetview' | 'measurements';
     showMeasurements: boolean;
-    measurementMode: 'none' | 'linear' | 'area';
+    measurementMode: 'off' | 'linear' | 'area';
     loading: boolean;
     error: string | null;
   };
@@ -106,7 +107,7 @@ const initialState: AerialViewState = {
   ui: {
     viewMode: 'satellite',
     showMeasurements: true,
-    measurementMode: 'none',
+    measurementMode: 'off',
     loading: false,
     error: null
   }

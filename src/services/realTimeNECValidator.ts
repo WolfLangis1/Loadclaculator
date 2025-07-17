@@ -3,6 +3,9 @@
  * 
  * Provides continuous validation of electrical diagrams against NEC requirements
  * Integrates with intelligent SLD generation and manual editing workflows
+ * 
+ * Consolidated from: sldNECEngine.ts, sldNECComplianceService.ts, necComplianceEngine.ts
+ * for better organization and reduced duplication
  */
 
 import type { SLDComponent, SLDConnection, SLDDiagram } from '../types/sld';

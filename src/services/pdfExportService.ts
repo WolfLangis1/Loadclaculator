@@ -1,8 +1,8 @@
 import jsPDF from 'jspdf';
-import type { 
-  CalculationResults, 
-  ProjectInformation, 
-  LoadState, 
+import type {
+  CalculationResults,
+  ProjectInformation,
+  LoadState,
   CalculationMethod,
   PanelDetails,
   ProjectAttachment
@@ -380,7 +380,7 @@ export const exportToPDF = async (
   pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
   
-  pdf.text('Part A (General w/ Demand Factors):', summaryCol1X + 3, summaryY);
+  pdf.text(`Part A (General w/ Demand Factors):`, summaryCol1X + 3, summaryY);
   pdf.text(`${(calculations.generalDemand || 0).toLocaleString()} VA`, summaryCol1X + summaryColWidth - 25, summaryY);
   summaryY += 4;
   

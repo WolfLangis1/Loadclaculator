@@ -95,6 +95,15 @@ Cypress.Commands.add('login', (email: string, password: string) => {
   })
 })
 
+// Custom command for guest login
+Cypress.Commands.add('loginAsGuest', () => {
+  cy.visit('/login');
+  cy.scrollTo('bottom');
+  cy.get('[data-cy="guest-login"]').click();
+  // Wait for the redirect to complete
+  cy.url({ timeout: 10000 }).should('not.include', '/login');
+});
+
 // Prevent Cypress from failing on uncaught exceptions
 Cypress.on('uncaught:exception', (err, runnable) => {
   // returning false here prevents Cypress from failing the test

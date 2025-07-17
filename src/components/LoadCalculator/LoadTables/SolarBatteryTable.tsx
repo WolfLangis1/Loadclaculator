@@ -1,23 +1,21 @@
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useLoadData } from '../../../context/LoadDataContext';
 import { useCalculations } from '../../../context/CalculationContext';
 import { useProjectSettings } from '../../../context/ProjectSettingsContext';
 import { TooltipWrapper } from '../../UI/TooltipWrapper';
+import { SolarBatteryLoadRow } from './SolarBatteryLoadRow';
 
-export const SolarBatteryTable: React.FC = () => {
+export const SolarBatteryTable: React.FC = React.memo(() => {
   const { loads, updateLoad: updateLoadData, addLoad, removeLoad } = useLoadData();
   const { calculations } = useCalculations();
   const { settings } = useProjectSettings();
   const { solarBatteryLoads } = loads;
-  // Show all loads in a single table
-  const allLoads = (solarBatteryLoads || []);
 
-  const updateLoad = (id: number, field: string, value: any) => {
+  const handleUpdateLoad = (id: number, field: string, value: string | number | boolean) => {
     let processedValue = value;
     
     if (['kw', 'inverterAmps', 'breaker', 'quantity'].includes(field)) {
-      // Only parse non-empty strings, keep empty strings as 0
       processedValue = value === '' || value === null || value === undefined ? 0 : parseFloat(value) || 0;
     }
     
@@ -27,22 +25,18 @@ export const SolarBatteryTable: React.FC = () => {
     
     const volts = (field === 'volts' ? processedValue : load.volts) || 240;
     
-    // Bidirectional calculations
     if (field === 'kw') {
-      // KW → Inverter Amps → Breaker Size
       const inverterAmps = (processedValue * 1000) / volts;
       const recommendedBreaker = calculateRecommendedBreaker(inverterAmps);
       
-      updatedLoad.inverterAmps = inverterAmps;
+      updatedLoad.inverterAmps = inverterAmter;
       updatedLoad.amps = inverterAmps;
       updatedLoad.va = inverterAmps * volts;
       updatedLoad.total = updatedLoad.va;
       updatedLoad.breaker = recommendedBreaker;
       updatedLoad.quantity = processedValue > 0 ? 1 : 0;
     } else if (field === 'breaker') {
-      // Breaker Size → Inverter Amps → KW
       if (processedValue > 0) {
-        // Calculate max inverter amps from breaker (80% continuous load factor)
         const maxInverterAmps = processedValue * 0.8;
         const calculatedKW = (maxInverterAmps * volts) / 1000;
         
@@ -54,7 +48,6 @@ export const SolarBatteryTable: React.FC = () => {
         updatedLoad.quantity = calculatedKW > 0 ? 1 : 0;
       }
     } else if (field === 'volts' && processedValue > 0) {
-      // Recalculate when voltage changes
       if (load.kw > 0) {
         const inverterAmps = (load.kw * 1000) / processedValue;
         const recommendedBreaker = calculateRecommendedBreaker(inverterAmps);
@@ -72,17 +65,13 @@ export const SolarBatteryTable: React.FC = () => {
     });
   };
 
-  // Calculate recommended breaker size based on NEC requirements
   const calculateRecommendedBreaker = (inverterAmps: number): number => {
     if (inverterAmps === 0) return 0;
     
-    // NEC 705.12(D)(2)(3): Breaker rating should be 125% of inverter maximum continuous output
     const requiredBreaker = inverterAmps * 1.25;
     
-    // Standard breaker sizes
     const standardBreakers = [15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200];
     
-    // Find the next higher standard breaker size
     return standardBreakers.find(breaker => breaker >= requiredBreaker) || Math.ceil(requiredBreaker / 5) * 5;
   };
 
@@ -115,7 +104,6 @@ export const SolarBatteryTable: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 120% Rule Information */}
       <div className={`rounded-lg p-4 ${calculations.interconnectionCompliant ? 'bg-green-50' : 'bg-red-50'}`}>
         <h3 className={`text-sm font-medium mb-2 ${calculations.interconnectionCompliant ? 'text-green-800' : 'text-red-800'}`}>
           Solar Interconnection Analysis (NEC 705.12(B)(3)(2))
@@ -145,7 +133,6 @@ export const SolarBatteryTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Solar/Battery Loads Table */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Solar/Battery Systems</h3>
         <button
@@ -195,97 +182,19 @@ export const SolarBatteryTable: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {allLoads.map((load) => (
-              <tr key={load.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <input
-                    type="text"
-                    value={load.name || ''}
-                    onChange={(e) => updateLoad(load.id, 'name', e.target.value)}
-                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                    placeholder="System description"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    value={load.type || 'solar'}
-                    onChange={(e) => updateLoad(load.id, 'type', e.target.value)}
-                    className="w-28 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  >
-                    <option value="solar">Solar PV</option>
-                    <option value="battery">Battery</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    value={load.kw || ''}
-                    onChange={(e) => updateLoad(load.id, 'kw', e.target.value)}
-                    className="w-24 text-center border-blue-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-blue-50"
-                    min="0"
-                    step="0.1"
-                    placeholder="kW"
-                    title="Enter system capacity in kW - will auto-calculate inverter amps and breaker size"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="w-28 text-center p-2 bg-gray-100 rounded-md border border-gray-300">
-                    <span className="text-sm font-mono text-gray-700">
-                      {load.inverterAmps?.toFixed(1) || '0.0'}A
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    value={load.breaker || ''}
-                    onChange={(e) => updateLoad(load.id, 'breaker', e.target.value)}
-                    className="w-20 text-center border-green-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500 text-sm bg-green-50"
-                    min="0"
-                    step="5"
-                    placeholder="A"
-                    title="Enter breaker size in amps - will auto-calculate kW and inverter amps"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    value={load.location || 'backfeed'}
-                    onChange={(e) => updateLoad(load.id, 'location', e.target.value)}
-                    className="w-32 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                    title="Choose connection type - affects NEC 705.12 compliance"
-                  >
-                    <option value="backfeed" title="Most common: breaker in main panel">Backfeed</option>
-                    <option value="supply_side" title="Before main breaker: no 120% rule limit">Supply Side</option>
-                    <option value="load_side" title="After main breaker: subject to 120% rule">Load Side</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    value={load.volts || 240}
-                    onChange={(e) => updateLoad(load.id, 'volts', e.target.value)}
-                    className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  >
-                    <option value={240}>240</option>
-                    <option value={120}>120</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => removeSolarBatteryLoad(load.id)}
-                    className="text-red-600 hover:text-red-900 focus:outline-none"
-                    aria-label="Remove solar/battery load"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
+            {solarBatteryLoads.map((load) => (
+              <SolarBatteryLoadRow
+                key={load.id}
+                load={load}
+                updateLoad={handleUpdateLoad}
+                removeLoadRow={removeSolarBatteryLoad}
+              />
             ))}
           </tbody>
         </table>
       </div>
 
       
-      {/* Best Practices Recommendations */}
       <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-200">
         <h4 className="text-sm font-medium text-blue-800 mb-3 flex items-center">
           <span className="mr-2">💡</span>
@@ -332,4 +241,4 @@ export const SolarBatteryTable: React.FC = () => {
       </div>
     </div>
   );
-};
+});

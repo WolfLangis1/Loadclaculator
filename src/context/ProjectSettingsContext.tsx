@@ -1,39 +1,15 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import type { 
-  ProjectInformation, 
-  CalculationMethod, 
-  PanelDetails, 
-  ActualDemandData 
+import type {
+  ProjectInformation,
+  CalculationMethod,
+  PanelDetails,
+  ActualDemandData,
+  ProjectSettingsState
 } from '../types';
-
-interface ProjectSettingsState {
-  projectInfo: ProjectInformation;
-  squareFootage: number;
-  codeYear: string;
-  calculationMethod: CalculationMethod;
-  mainBreaker: number;
-  panelDetails: PanelDetails;
-  actualDemandData: ActualDemandData;
-  
-  // Load Management settings
-  useEMS: boolean;
-  emsMaxLoad: number;
-  loadManagementType: 'none' | 'ems' | 'simpleswitch' | 'dcc';
-  loadManagementMaxLoad: number;
-  simpleSwitchMode: 'branch_sharing' | 'feeder_monitoring';
-  simpleSwitchLoadA: {
-    type: 'general' | 'hvac' | 'evse';
-    id: number;
-    name: string;
-    amps: number;
-  } | null;
-  simpleSwitchLoadB: {
-    type: 'general' | 'hvac' | 'evse';
-    id: number;
-    name: string;
-    amps: number;
-  } | null;
-}
+import { initialProjectInfo } from '../constants/initialProjectInfo';
+import { initialPanelDetails } from '../constants/initialPanelDetails';
+import { initialActualDemandData } from '../constants/initialActualDemandData';
+import { initialLoadManagementSettings } from '../constants/initialLoadManagementSettings';
 
 interface ProjectSettingsContextType {
   settings: ProjectSettingsState;
@@ -52,58 +28,15 @@ interface ProjectSettingsContextType {
   loadFromLocalStorage: (projectId: string) => boolean;
 }
 
-const initialProjectInfo: ProjectInformation = {
-  customerName: '',
-  propertyAddress: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  projectName: '',
-  projectNumber: '',
-  engineerName: '',
-  engineerLicense: '',
-  contractorName: '',
-  contractorLicense: '',
-  permitNumber: '',
-  inspectionDate: '',
-  notes: ''
-};
-
-const initialPanelDetails: PanelDetails = {
-  manufacturer: '',
-  model: '',
-  type: 'main',
-  phases: 1,
-  voltage: 240,
-  busRating: 200,
-  interruptingRating: 10000,
-  availableSpaces: 40,
-  usedSpaces: 0
-};
-
-const initialActualDemandData: ActualDemandData = {
-  enabled: false,
-  averageDemand: 0,
-  peakDemand: 0,
-  dataSource: '',
-  measurementPeriod: '12-month'
-};
-
 const initialSettings: ProjectSettingsState = {
   projectInfo: initialProjectInfo,
-  squareFootage: 0,
+  squareFootage: 2000, // Default to 2000 sq ft for typical residence
   codeYear: '2023',
   calculationMethod: 'optional',
   mainBreaker: 200,
   panelDetails: initialPanelDetails,
   actualDemandData: initialActualDemandData,
-  useEMS: false,
-  emsMaxLoad: 0,
-  loadManagementType: 'none',
-  loadManagementMaxLoad: 0,
-  simpleSwitchMode: 'branch_sharing',
-  simpleSwitchLoadA: null,
-  simpleSwitchLoadB: null
+  ...initialLoadManagementSettings
 };
 
 const ProjectSettingsContext = createContext<ProjectSettingsContextType | undefined>(undefined);
@@ -113,7 +46,6 @@ const SESSION_KEY = 'loadCalculator_sessionSettings';
 
 export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<ProjectSettingsState>(() => {
-    // First try to load from sessionStorage (temporary working data)
     try {
       const sessionData = sessionStorage.getItem(SESSION_KEY);
       if (sessionData) {
@@ -124,11 +56,9 @@ export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = 
       console.warn('Failed to load session settings:', error);
     }
 
-    // If no session data, start with clean initial settings
     return initialSettings;
   });
 
-  // Auto-save to sessionStorage for temporary working data
   useEffect(() => {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(settings));
@@ -173,11 +103,10 @@ export const ProjectSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   
   const resetSettings = React.useCallback(() => {
     setSettings(initialSettings);
-    // Clear session storage when resetting
     try {
       sessionStorage.removeItem(SESSION_KEY);
     } catch (error) {
-      console.warn('Failed to clear session storage:', error);
+      console.warn('Failed to clear session data:', error);
     }
   }, []);
 

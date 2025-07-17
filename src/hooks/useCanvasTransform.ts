@@ -1,24 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CanvasTransforms, Easing } from '../utils/canvasTransforms';
-import type { Transform, Point, Bounds } from '../utils/canvasTransforms';
-
-interface UseCanvasTransformOptions {
-  initialTransform?: Transform;
-  minZoom?: number;
-  maxZoom?: number;
-  zoomSensitivity?: number;
-  bounds?: Bounds;
-  animationDuration?: number;
-}
-
-interface AnimationState {
-  isAnimating: boolean;
-  startTime: number;
-  startTransform: Transform;
-  targetTransform: Transform;
-  duration: number;
-  easing: (t: number) => number;
-}
+import type { Transform, Point, Bounds, UseCanvasTransformOptions, AnimationState } from '../types/canvas';
 
 /**
  * Professional canvas transform hook with smooth animations and constraints

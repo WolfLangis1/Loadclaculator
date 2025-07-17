@@ -19,6 +19,9 @@ import './commands'
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
 
+// Add Cypress types
+/// <reference types="cypress" />
+
 // Add custom commands to the Cypress interface
 declare global {
   namespace Cypress {
@@ -27,7 +30,7 @@ declare global {
        * Custom command to select DOM element by data-cy attribute.
        * @example cy.dataCy('greeting')
        */
-      dataCy(value: string): Chainable<JQuery<HTMLElement>>
+      dataCy(value: string): Chainable<Element>
       
       /**
        * Custom command to login (if authentication is implemented)
@@ -46,6 +49,12 @@ declare global {
        * @example cy.addLoad('evse', { name: 'Tesla Charger', amps: 48 })
        */
       addLoad(type: string, loadData: Record<string, any>): Chainable<void>
+
+      /**
+       * Custom command to login as guest
+       * @example cy.loginAsGuest()
+       */
+      loginAsGuest(): Chainable<void>;
     }
   }
 }

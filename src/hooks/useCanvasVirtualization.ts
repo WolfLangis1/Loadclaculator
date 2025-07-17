@@ -8,32 +8,7 @@ import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { createComponentLogger } from '../services/loggingService';
 import { SLDPerformanceService } from '../services/sldPerformanceService';
 import type { SLDComponent, SLDConnection } from '../types/sld';
-
-interface ViewportState {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  scale: number;
-}
-
-interface VirtualizationConfig {
-  chunkSize: number;
-  maxVisibleComponents: number;
-  enableLOD: boolean;
-  enableWebGL: boolean;
-  preloadRadius: number; // Chunks to preload around viewport
-}
-
-interface VirtualizationMetrics {
-  totalComponents: number;
-  visibleComponents: number;
-  totalChunks: number;
-  visibleChunks: number;
-  frameRate: number;
-  renderTime: number;
-  memoryUsage: number;
-}
+import type { ViewportState, VirtualizationConfig, VirtualizationMetrics } from '../types/virtualization';
 
 const logger = createComponentLogger('useCanvasVirtualization');
 

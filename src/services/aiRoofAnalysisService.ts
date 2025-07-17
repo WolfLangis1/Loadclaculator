@@ -90,6 +90,18 @@ export class AIRoofAnalysisService {
 
   /**
    * Analyze satellite image for roof detection and solar potential
+   * @deprecated Use analyzeRoofFromImage instead
+   */
+  static async analyzeRoof(
+    imageUrl: string, 
+    latitude: number, 
+    longitude: number
+  ): Promise<RoofAnalysisResult> {
+    return this.analyzeRoofFromImage(imageUrl, latitude, longitude);
+  }
+
+  /**
+   * Analyze satellite image for roof detection and solar potential
    */
   static async analyzeRoofFromImage(
     imageUrl: string, 

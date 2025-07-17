@@ -1,23 +1,25 @@
 import React, { useState, Suspense, lazy, memo, useCallback } from 'react';
-import { Calculator, FolderOpen, Zap, MapPin, Cable, Plus } from 'lucide-react';
+import { Calculator, FolderOpen, Zap, MapPin, Cable, Plus, Shield } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
 import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { useLoadData } from '../../context/LoadDataContext';
+import { useFeatureFlags } from '../../config/featureFlags';
 
 // Lazy load heavy components with Vercel-compatible fallback
 const WorkingIntelligentSLDCanvas = lazy(() => 
   import('../SLD/WorkingIntelligentSLDCanvas').then(module => ({ default: module.WorkingIntelligentSLDCanvas }))
 );
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
+const ComplianceMain = lazy(() => import('../Compliance/ComplianceMain').then(module => ({ default: module.ComplianceMain })));
 const EnhancedProjectManager = lazy(() => 
   import('../ProjectManager/EnhancedProjectManager').then(module => ({ default: module.EnhancedProjectManager }))
     .catch(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })))
 );
 
-type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing';
+type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing' | 'compliance';
 
 interface Tab {
   id: TabType;
@@ -35,10 +37,13 @@ export const TabbedInterface: React.FC = memo(() => {
   // Context hooks for clearing data
   const { resetSettings } = useProjectSettings();
   const { clearSessionData } = useLoadData();
+  const featureFlags = useFeatureFlags();
 
   // Feature flags
   const FEATURE_FLAGS = {
     SLD_ENABLED: false, // Set to false to disable SLD feature
+    COMPLIANCE_ENABLED: featureFlags.aerialView.compliance,
+    INSPECTION_ENABLED: featureFlags.aerialView.inspection,
   };
 
   const tabs: Tab[] = [
@@ -67,6 +72,14 @@ export const TabbedInterface: React.FC = memo(() => {
       label: 'Aerial View & Site Analysis',
       icon: MapPin,
       component: SimpleAerialViewMain
+    },
+    {
+      id: 'compliance',
+      label: 'Inspection & Compliance',
+      icon: Shield,
+      component: ComplianceMain,
+      disabled: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED,
+      comingSoon: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED
     }
   ];
 
@@ -231,13 +244,13 @@ export const TabbedInterface: React.FC = memo(() => {
         id={`tabpanel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
         className={`${
-          activeTab === 'sld-intelligent' || activeTab === 'aerial' 
+          activeTab === 'sld-intelligent' || activeTab === 'aerial' || activeTab === 'compliance'
             ? 'h-[calc(100vh-80px)] overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' 
             : activeTab === 'wire-sizing'
             ? 'max-w-7xl mx-auto py-3 sm:py-6 px-2 sm:px-0'
             : 'max-w-7xl mx-auto px-2 sm:px-0'
         }`}
-        style={activeTab === 'sld-intelligent' || activeTab === 'aerial' ? { 
+        style={activeTab === 'sld-intelligent' || activeTab === 'aerial' || activeTab === 'compliance' ? { 
           scrollBehavior: 'smooth',
           overflowY: 'auto',
           overflowX: 'auto'

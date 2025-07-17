@@ -1,0 +1,30 @@
+services:
+  # Simple production service - one container, one port
+  load-calculator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USE_REAL_AERIAL_DATA=${USE_REAL_AERIAL_DATA:-false}
+        - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
+        - MAPBOX_API_KEY=${MAPBOX_API_KEY:-}
+        - AERIAL_PROVIDER=${AERIAL_PROVIDER:-google}
+        - SUPABASE_URL=${SUPABASE_URL:-}
+        - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+    ports:
+      - "3000:3000"  # Single port for the application
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    driver: bridge

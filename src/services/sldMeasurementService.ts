@@ -8,6 +8,10 @@
  * - Running dimension chains
  * - Coordinate display
  * - Unit conversion and precision control
+ * - GPS coordinate integration
+ * 
+ * Consolidated from: advancedMeasurementService.ts
+ * for better organization and reduced duplication
  */
 
 export interface Point {

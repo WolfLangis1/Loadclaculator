@@ -2,27 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { WireRoutingEngine, type RoutedWire, type ComponentBounds, type Point } from '../utils/wireRouting';
 import { WireCollisionDetector, type CollisionResult, type ReRouteResult } from '../utils/wireCollisionDetection';
 import type { SLDComponent, SLDConnection, SLDDiagram } from '../types/sld';
-
-interface WireManagementOptions {
-  autoReroute: boolean;
-  collisionDetection: boolean;
-  optimizeOnMove: boolean;
-  realTimeValidation: boolean;
-  gridSize: number;
-  routingStrategy: 'shortest' | 'minimal_bends' | 'balanced' | 'grid_aligned';
-}
-
-interface WireManagementState {
-  wires: Map<string, RoutedWire>;
-  collisions: CollisionResult[];
-  isRouting: boolean;
-  isOptimizing: boolean;
-  routingStats: {
-    totalLength: number;
-    averageQuality: number;
-    collisionCount: number;
-  };
-}
+import type { WireManagementOptions, WireManagementState } from '../types/wire';
 
 /**
  * Professional wire management hook with intelligent routing and collision detection

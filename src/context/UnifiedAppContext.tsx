@@ -4,6 +4,7 @@ import { ProjectSettingsProvider, useProjectSettings } from './ProjectSettingsCo
 import { CalculationProvider, useCalculations } from './CalculationContext';
 import { SLDDataProvider } from './SLDDataContext';
 import { AerialViewProvider } from './AerialViewContext';
+import { ComplianceProvider } from './ComplianceContext';
 
 /**
  * Unified App Context Provider
@@ -16,6 +17,8 @@ import { AerialViewProvider } from './AerialViewContext';
  * 2. LoadDataProvider (load data management)
  * 3. CalculationProvider (calculations based on settings + loads)
  * 4. SLDProvider (single line diagram management)
+ * 5. AerialViewProvider (aerial view and site analysis)
+ * 6. ComplianceProvider (inspection and compliance management)
  */
 export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -24,7 +27,9 @@ export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         <CalculationProvider>
           <SLDDataProvider>
             <AerialViewProvider>
-              {children}
+              <ComplianceProvider>
+                {children}
+              </ComplianceProvider>
             </AerialViewProvider>
           </SLDDataProvider>
         </CalculationProvider>
@@ -37,9 +42,9 @@ export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 export const useLegacyLoadCalculator = () => {
   console.warn('useLegacyLoadCalculator is deprecated. Use specific context hooks instead.');
   
-  // This would need to be implemented if needed for backward compatibility
-  // For now, we'll encourage migration to the new hooks
-  throw new Error('Please migrate to useLoadData, useProjectSettings, and useCalculations hooks');
+  // Return null instead of throwing to prevent application crashes
+  // This allows graceful migration from legacy hook usage
+  return null;
 };
 
 // Migration helper hook that provides the old interface

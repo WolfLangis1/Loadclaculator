@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dataStorage, type StoredProject } from '../services/dataStorageService';
+import { projectDataService } from '../services/projectDataService';
 import { useProjectSettings } from '../context/ProjectSettingsContext';
 import { useLoadData } from '../context/LoadDataContext';
-import { ProjectTemplateService, type ProjectTemplate } from '../services/projectTemplateService';
+import type { StoredProject } from '../services/dataStorageService';
+import type { DetailedProjectTemplate } from '../services/projectService';
+import type { LoadCalculatorState } from '../types';
 
 export interface ProjectManagerState {
   projects: StoredProject[];
@@ -13,7 +15,7 @@ export interface ProjectManagerState {
 }
 
 export const useProjectManager = () => {
-  const { settings, updateProjectInfo, updateCalculationSettings } = useProjectSettings();
+  const { settings, updateProjectInfo, updateCalculationSettings, updatePanelDetails, updateLoadManagement, updateActualDemandData } = useProjectSettings();
   const { loads, resetLoads } = useLoadData();
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [currentProject, setCurrentProject] = useState<StoredProject | null>(null);
@@ -21,18 +23,13 @@ export const useProjectManager = () => {
   const [error, setError] = useState<string | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
-  /**
-   * Load all saved projects
-   */
   const loadProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const savedProjects = await dataStorage.getAllProjects();
-      setProjects(savedProjects.sort((a, b) => 
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      ));
+      const savedProjects = await projectDataService.getAllProjects();
+      setProjects(savedProjects);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load projects');
       console.error('Error loading projects:', err);
@@ -41,22 +38,17 @@ export const useProjectManager = () => {
     }
   }, []);
 
-  /**
-   * Save current project
-   */
   const saveProject = useCallback(async (projectName?: string): Promise<string | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const currentState = { ...settings, loads };
-      const projectId = await dataStorage.saveProject(currentState, projectName);
+      const currentState: LoadCalculatorState = { ...settings, loads };
+      const projectId = await projectDataService.saveProject(currentState, projectName);
       
-      // Update projects list
       await loadProjects();
       
-      // Update current project
-      const savedProject = await dataStorage.loadProject(projectId);
+      const savedProject = await projectDataService.loadProject(projectId);
       setCurrentProject(savedProject);
       
       return projectId;
@@ -69,40 +61,35 @@ export const useProjectManager = () => {
     }
   }, [settings, loads, loadProjects]);
 
-  /**
-   * Load a specific project
-   */
   const loadProject = useCallback(async (projectId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const project = await dataStorage.loadProject(projectId);
+      const project = await projectDataService.loadProject(projectId);
       
       if (!project) {
         setError('Project not found');
         return false;
       }
 
-      // Update the current application state with the loaded project
       const projectState = project.state;
       
-      // Update project information
       updateProjectInfo(projectState.projectInfo);
       
-      // Update loads
       if (projectState.loads) {
         resetLoads(projectState.loads);
       }
       
-      // Update settings (excluding loads and projectInfo which are handled separately)
       updateCalculationSettings({
         squareFootage: projectState.squareFootage,
         codeYear: projectState.codeYear,
         calculationMethod: projectState.calculationMethod,
         mainBreaker: projectState.mainBreaker,
-        panelDetails: projectState.panelDetails,
-        actualDemandData: projectState.actualDemandData,
+      });
+      updatePanelDetails(projectState.panelDetails);
+      updateActualDemandData(projectState.actualDemandData);
+      updateLoadManagement({
         useEMS: projectState.useEMS,
         emsMaxLoad: projectState.emsMaxLoad,
         loadManagementType: projectState.loadManagementType,
@@ -110,16 +97,6 @@ export const useProjectManager = () => {
         simpleSwitchMode: projectState.simpleSwitchMode,
         simpleSwitchLoadA: projectState.simpleSwitchLoadA,
         simpleSwitchLoadB: projectState.simpleSwitchLoadB,
-        showAdvanced: projectState.showAdvanced,
-        activeTab: projectState.activeTab,
-        attachments: projectState.attachments || [],
-        attachmentStats: projectState.attachmentStats || {
-          total: 0,
-          byType: {},
-          bySource: {},
-          markedForExport: 0,
-          totalFileSize: 0
-        }
       });
 
       setCurrentProject(project);
@@ -131,22 +108,18 @@ export const useProjectManager = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [updateProjectInfo, updateCalculationSettings, resetLoads]);
+  }, [updateProjectInfo, updateCalculationSettings, updatePanelDetails, updateActualDemandData, updateLoadManagement, resetLoads]);
 
-  /**
-   * Delete a project
-   */
   const deleteProject = useCallback(async (projectId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const success = await dataStorage.deleteProject(projectId);
+      const success = await projectDataService.deleteProject(projectId);
       
       if (success) {
         await loadProjects();
         
-        // Clear current project if it was deleted
         if (currentProject?.id === projectId) {
           setCurrentProject(null);
         }
@@ -162,39 +135,17 @@ export const useProjectManager = () => {
     }
   }, [loadProjects, currentProject]);
 
-  /**
-   * Create a new project (reset current state)
-   */
   const createNewProject = useCallback(() => {
     setCurrentProject(null);
-    // Reset to default state would be handled by the context
-    window.location.reload(); // Simple reset for now
+    window.location.reload();
   }, []);
 
-  /**
-   * Create a new project from template
-   */
-  const createProjectFromTemplate = useCallback(async (template: ProjectTemplate, projectName?: string): Promise<string | null> => {
+  const createProjectFromTemplate = useCallback(async (template: DetailedProjectTemplate, projectName?: string): Promise<string | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Apply template to get initial state
-      const templateState = ProjectTemplateService.applyTemplate(template.id);
-      if (!templateState) {
-        throw new Error('Failed to apply template');
-      }
-
-      // Create the new state from template (template service provides complete state)
-      const newState = templateState as LoadCalculatorState;
-
-      // Generate project name if not provided
-      const finalProjectName = projectName || `${template.name} - ${new Date().toLocaleDateString()}`;
-
-      // Save the new project
-      const projectId = await dataStorage.saveProject(newState, finalProjectName);
-      
-      // Load the saved project to apply it to current state
+      const projectId = await projectDataService.createProjectFromTemplate(template, projectName);
       const success = await loadProject(projectId);
       
       return success ? projectId : null;
@@ -207,41 +158,32 @@ export const useProjectManager = () => {
     }
   }, [loadProject]);
 
-  /**
-   * Auto-save current project
-   */
   const autoSave = useCallback(async () => {
     if (!autoSaveEnabled || !currentProject) return;
     
     try {
-      const currentState = { ...settings, loads };
-      await dataStorage.saveProject(currentState, currentProject.name + ' (Auto-saved)');
+      const currentState: LoadCalculatorState = { ...settings, loads };
+      await projectDataService.saveProject(currentState, currentProject.name + ' (Auto-saved)');
     } catch (err) {
       console.error('Auto-save failed:', err);
     }
   }, [settings, loads, currentProject, autoSaveEnabled]);
 
-  /**
-   * Export project to JSON
-   */
   const exportProject = useCallback(async (projectId: string): Promise<string | null> => {
     try {
-      return await dataStorage.exportProjectData(projectId);
+      return await projectDataService.exportProject(projectId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to export project');
       return null;
     }
   }, []);
 
-  /**
-   * Import project from JSON
-   */
   const importProject = useCallback(async (jsonData: string): Promise<string | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const projectId = await dataStorage.importProjectData(jsonData);
+      const projectId = await projectDataService.importProject(jsonData);
       await loadProjects();
       return projectId;
     } catch (err) {
@@ -252,24 +194,19 @@ export const useProjectManager = () => {
     }
   }, [loadProjects]);
 
-  /**
-   * Get storage statistics
-   */
   const getStorageStats = useCallback(async () => {
     try {
-      return await dataStorage.getStorageStats();
+      return await projectDataService.getStorageStats();
     } catch (err) {
       console.error('Error getting storage stats:', err);
       return null;
     }
   }, []);
 
-  // Load projects on mount
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
 
-  // Set up auto-save
   useEffect(() => {
     if (!autoSaveEnabled) return;
 
@@ -281,14 +218,12 @@ export const useProjectManager = () => {
   }, [autoSave, autoSaveEnabled]);
 
   return {
-    // State
     projects,
     currentProject,
     isLoading,
     error,
     autoSaveEnabled,
 
-    // Actions
     loadProjects,
     saveProject,
     loadProject,
@@ -299,10 +234,8 @@ export const useProjectManager = () => {
     importProject,
     getStorageStats,
 
-    // Settings
     setAutoSaveEnabled,
     
-    // Utility
     clearError: () => setError(null)
   };
 };

@@ -1,11 +1,6 @@
-/**
- * Statistics View Component
- * 
- * Displays project statistics and analytics
- */
-
 import React from 'react';
 import { BarChart3, FolderOpen, Clock, Star, TrendingUp } from 'lucide-react';
+import { StatCard } from '../UI/StatCard';
 
 interface ProjectStatistics {
   totalProjects: number;
@@ -33,27 +28,6 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ statistics }) =>
       </div>
     );
   }
-
-  const StatCard: React.FC<{ 
-    icon: React.ComponentType<{ className?: string }>;
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    color?: string;
-  }> = ({ icon: Icon, title, value, subtitle, color = 'blue' }) => (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <div className="flex items-center">
-        <div className={`p-2 rounded-lg bg-${color}-100`}>
-          <Icon className={`h-5 w-5 text-${color}-600`} />
-        </div>
-        <div className="ml-3">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-xl font-semibold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-6">
@@ -99,7 +73,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ statistics }) =>
           <div>
             <p className="text-sm text-gray-600">Average Project Size</p>
             <p className="text-xl font-semibold text-gray-900">
-              {statistics.averageProjectSize.toFixed(1)} KB
+              {statistics.averageProjectSize?.toFixed(1) || '0.0'} KB
             </p>
           </div>
           <div>

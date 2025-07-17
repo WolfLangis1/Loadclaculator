@@ -9,7 +9,11 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN if [ -f package-lock.json ]; then \
+    rm -f package-lock.json && npm install --omit=optional; \
+    else \
+    npm install --omit=optional; \
+    fi
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -18,19 +22,26 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Accept build arguments for environment variables
-ARG VITE_USE_REAL_AERIAL_DATA=false
-ARG VITE_GOOGLE_MAPS_API_KEY=""
-ARG VITE_MAPBOX_API_KEY=""
-ARG VITE_AERIAL_PROVIDER=google
+ARG USE_REAL_AERIAL_DATA=false
+ARG GOOGLE_MAPS_API_KEY=""
+ARG MAPBOX_API_KEY=""
+ARG AERIAL_PROVIDER=google
+ARG SUPABASE_URL=""
+ARG SUPABASE_ANON_KEY=""
 
 # Set environment variables for build
-ENV VITE_USE_REAL_AERIAL_DATA=$VITE_USE_REAL_AERIAL_DATA
-ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
-ENV VITE_MAPBOX_API_KEY=$VITE_MAPBOX_API_KEY
-ENV VITE_AERIAL_PROVIDER=$VITE_AERIAL_PROVIDER
+ENV USE_REAL_AERIAL_DATA=$USE_REAL_AERIAL_DATA
+ENV GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+ENV MAPBOX_API_KEY=$MAPBOX_API_KEY
+ENV AERIAL_PROVIDER=$AERIAL_PROVIDER
+ENV SUPABASE_URL=$SUPABASE_URL
+ENV SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 
 # Create .env file from example if it doesn't exist
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+# Install missing rollup dependency for musl
+RUN npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Build the application (skip TypeScript check for now)
 RUN npm run build:vite
@@ -44,6 +55,9 @@ RUN apk add --no-cache curl
 
 # Remove default nginx static assets
 RUN rm -rf ./*
+
+# Force complete refresh of copy layer with unique identifier
+RUN echo "Auth debugging build: $(date +%s)" > /tmp/auth_debug_build_id
 
 # Copy static assets from builder stage
 COPY --from=builder /app/dist .

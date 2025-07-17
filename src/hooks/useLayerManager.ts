@@ -1,21 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { SLDLayerService, type LayerDefinition, type LayerAssignment } from '../services/sldLayerService';
+import { SLDLayerService } from '../services/sldLayerService';
 import type { SLDComponent, SLDDiagram } from '../types/sld';
-
-interface LayerManagerOptions {
-  autoAssignment: boolean;
-  colorByLayer: boolean;
-  showLayerNames: boolean;
-  layerNameSize: number;
-}
-
-interface LayerManagerState {
-  isInitialized: boolean;
-  activeLayerId: string;
-  selectedLayers: Set<string>;
-  layerVisibility: Map<string, boolean>;
-  componentAssignments: Map<string, string>; // componentId -> layerId
-}
+import type { LayerDefinition, LayerAssignment, LayerManagerOptions, LayerManagerState } from '../types/layer';
 
 /**
  * Professional layer management hook for SLD drawings

@@ -1,21 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-
-interface PerformanceMetrics {
-  renderTime: number;
-  memoryUsage: number;
-  componentUpdates: number;
-  lastUpdate: Date;
-  averageRenderTime: number;
-  peakMemoryUsage: number;
-}
-
-interface PerformanceMonitorOptions {
-  trackRenders?: boolean;
-  trackMemory?: boolean;
-  trackUpdates?: boolean;
-  sampleInterval?: number;
-  alertThreshold?: number;
-}
+import type { PerformanceMetrics, PerformanceMonitorOptions } from '../types/performance';
 
 export const usePerformanceMonitor = (
   componentName: string,

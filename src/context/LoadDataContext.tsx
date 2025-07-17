@@ -8,15 +8,22 @@ import type {
   LoadCategory 
 } from '../types';
 import { LOAD_TEMPLATES } from '../constants';
+import { updateGeneralLoad, updateHVACLoad, updateEVSELoad, updateSolarBatteryLoad, addLoad as addLoadReducer, removeLoad as removeLoadReducer } from '../utils/loadReducers';
 
+// Type-safe value types for load fields
+type GeneralLoadValue = GeneralLoad[keyof GeneralLoad];
+type HVACLoadValue = HVACLoad[keyof HVACLoad];
+type EVSELoadValue = EVSELoad[keyof EVSELoad];
+type SolarBatteryLoadValue = SolarBatteryLoad[keyof SolarBatteryLoad];
+type LoadItemValue = GeneralLoadValue | HVACLoadValue | EVSELoadValue | SolarBatteryLoadValue;
 
-// Load-specific actions
+// Load-specific actions with proper typing
 type LoadDataAction = 
-  | { type: 'UPDATE_GENERAL_LOAD'; payload: { id: number; field: keyof GeneralLoad; value: any } }
-  | { type: 'UPDATE_HVAC_LOAD'; payload: { id: number; field: keyof HVACLoad; value: any } }
-  | { type: 'UPDATE_EVSE_LOAD'; payload: { id: number; field: keyof EVSELoad; value: any } }
-  | { type: 'UPDATE_SOLAR_BATTERY_LOAD'; payload: { id: number; field: keyof SolarBatteryLoad; value: any } }
-  | { type: 'ADD_LOAD'; payload: { category: LoadCategory; load: any } }
+  | { type: 'UPDATE_GENERAL_LOAD'; payload: { id: number; field: keyof GeneralLoad; value: GeneralLoadValue } }
+  | { type: 'UPDATE_HVAC_LOAD'; payload: { id: number; field: keyof HVACLoad; value: HVACLoadValue } }
+  | { type: 'UPDATE_EVSE_LOAD'; payload: { id: number; field: keyof EVSELoad; value: EVSELoadValue } }
+  | { type: 'UPDATE_SOLAR_BATTERY_LOAD'; payload: { id: number; field: keyof SolarBatteryLoad; value: SolarBatteryLoadValue } }
+  | { type: 'ADD_LOAD'; payload: { category: LoadCategory; load: Partial<GeneralLoad | HVACLoad | EVSELoad | SolarBatteryLoad> } }
   | { type: 'REMOVE_LOAD'; payload: { category: LoadCategory; id: number } }
   | { type: 'RESET_LOADS'; payload: LoadState }
   | { type: 'IMPORT_LOADS'; payload: LoadState };
@@ -25,9 +32,9 @@ interface LoadDataContextType {
   loads: LoadState;
   dispatch: React.Dispatch<LoadDataAction>;
   
-  // Convenience methods
-  updateLoad: (category: LoadCategory, id: number, field: string, value: any) => void;
-  addLoad: (category: LoadCategory, loadData?: Partial<any>) => void;
+  // Convenience methods with proper typing
+  updateLoad: (category: LoadCategory, id: number, field: string, value: LoadItemValue) => void;
+  addLoad: (category: LoadCategory, loadData?: Partial<GeneralLoad | HVACLoad | EVSELoad | SolarBatteryLoad>) => void;
   removeLoad: (category: LoadCategory, id: number) => void;
   resetLoads: (newLoads: LoadState) => void;
   
@@ -51,104 +58,22 @@ const initialLoadState: LoadState = {
 
 function loadDataReducer(state: LoadState, action: LoadDataAction): LoadState {
   switch (action.type) {
-    case 'UPDATE_GENERAL_LOAD': {
-      const { id, field, value } = action.payload;
-      return {
-        ...state,
-        generalLoads: state.generalLoads.map(load =>
-          load.id === id ? { ...load, [field]: value } : load
-        )
-      };
-    }
-    
-    case 'UPDATE_HVAC_LOAD': {
-      const { id, field, value } = action.payload;
-      return {
-        ...state,
-        hvacLoads: state.hvacLoads.map(load =>
-          load.id === id ? { ...load, [field]: value } : load
-        )
-      };
-    }
-    
-    case 'UPDATE_EVSE_LOAD': {
-      const { id, field, value } = action.payload;
-      return {
-        ...state,
-        evseLoads: state.evseLoads.map(load =>
-          load.id === id ? { ...load, [field]: value } : load
-        )
-      };
-    }
-    
-    case 'UPDATE_SOLAR_BATTERY_LOAD': {
-      const { id, field, value } = action.payload;
-      return {
-        ...state,
-        solarBatteryLoads: state.solarBatteryLoads.map(load =>
-          load.id === id ? { ...load, [field]: value } : load
-        )
-      };
-    }
-    
-    case 'ADD_LOAD': {
-      const { category, load } = action.payload;
-      const template = LOAD_TEMPLATES[category][0]; // Get default template
-      const newLoad = {
-        ...template,
-        ...load,
-        id: Date.now() + Math.random() // Ensure unique ID
-      };
-      
-      switch (category) {
-        case 'general':
-          return { ...state, generalLoads: [...state.generalLoads, newLoad] };
-        case 'hvac':
-          return { ...state, hvacLoads: [...state.hvacLoads, newLoad] };
-        case 'evse':
-          return { ...state, evseLoads: [...state.evseLoads, newLoad] };
-        case 'solar':
-          return { ...state, solarBatteryLoads: [...state.solarBatteryLoads, newLoad] };
-        default:
-          return state;
-      }
-    }
-    
-    case 'REMOVE_LOAD': {
-      const { category, id } = action.payload;
-      
-      switch (category) {
-        case 'general':
-          return { 
-            ...state, 
-            generalLoads: state.generalLoads.filter(load => load.id !== id) 
-          };
-        case 'hvac':
-          return { 
-            ...state, 
-            hvacLoads: state.hvacLoads.filter(load => load.id !== id) 
-          };
-        case 'evse':
-          return { 
-            ...state, 
-            evseLoads: state.evseLoads.filter(load => load.id !== id) 
-          };
-        case 'solar':
-          return { 
-            ...state, 
-            solarBatteryLoads: state.solarBatteryLoads.filter(load => load.id !== id) 
-          };
-        default:
-          return state;
-      }
-    }
-    
+    case 'UPDATE_GENERAL_LOAD':
+      return updateGeneralLoad(state, action.payload);
+    case 'UPDATE_HVAC_LOAD':
+      return updateHVACLoad(state, action.payload);
+    case 'UPDATE_EVSE_LOAD':
+      return updateEVSELoad(state, action.payload);
+    case 'UPDATE_SOLAR_BATTERY_LOAD':
+      return updateSolarBatteryLoad(state, action.payload);
+    case 'ADD_LOAD':
+      return addLoadReducer(state, action.payload);
+    case 'REMOVE_LOAD':
+      return removeLoadReducer(state, action.payload);
     case 'RESET_LOADS':
       return action.payload;
-      
     case 'IMPORT_LOADS':
       return { ...action.payload };
-    
     default:
       return state;
   }
@@ -161,12 +86,10 @@ const LOAD_SESSION_KEY = 'loadCalculator_sessionLoads';
 
 export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loads, dispatch] = useReducer(loadDataReducer, null, () => {
-    // First try to load from sessionStorage (temporary working data)
     try {
       const sessionData = sessionStorage.getItem(LOAD_SESSION_KEY);
       if (sessionData) {
         const parsed = JSON.parse(sessionData);
-        // Ensure all required arrays exist
         if (parsed && 
             Array.isArray(parsed.generalLoads) && 
             Array.isArray(parsed.hvacLoads) && 
@@ -179,11 +102,9 @@ export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.warn('Failed to load session data:', error);
     }
     
-    // If no session data, start with initial state
     return initialLoadState;
   });
 
-  // Auto-save to sessionStorage for temporary working data
   useEffect(() => {
     try {
       sessionStorage.setItem(LOAD_SESSION_KEY, JSON.stringify(loads));
@@ -192,30 +113,29 @@ export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [loads]);
   
-  // Memoized convenience methods
   const updateLoad = React.useCallback((
     category: LoadCategory, 
     id: number, 
     field: string, 
-    value: any
+    value: LoadItemValue
   ) => {
     switch (category) {
       case 'general':
-        dispatch({ type: 'UPDATE_GENERAL_LOAD', payload: { id, field: field as keyof GeneralLoad, value } });
+        dispatch({ type: 'UPDATE_GENERAL_LOAD', payload: { id, field: field as keyof GeneralLoad, value: value as GeneralLoadValue } });
         break;
       case 'hvac':
-        dispatch({ type: 'UPDATE_HVAC_LOAD', payload: { id, field: field as keyof HVACLoad, value } });
+        dispatch({ type: 'UPDATE_HVAC_LOAD', payload: { id, field: field as keyof HVACLoad, value: value as HVACLoadValue } });
         break;
       case 'evse':
-        dispatch({ type: 'UPDATE_EVSE_LOAD', payload: { id, field: field as keyof EVSELoad, value } });
+        dispatch({ type: 'UPDATE_EVSE_LOAD', payload: { id, field: field as keyof EVSELoad, value: value as EVSELoadValue } });
         break;
       case 'solar':
-        dispatch({ type: 'UPDATE_SOLAR_BATTERY_LOAD', payload: { id, field: field as keyof SolarBatteryLoad, value } });
+        dispatch({ type: 'UPDATE_SOLAR_BATTERY_LOAD', payload: { id, field: field as keyof SolarBatteryLoad, value: value as SolarBatteryLoadValue } });
         break;
     }
   }, []);
   
-  const addLoad = React.useCallback((category: LoadCategory, loadData: Partial<any> = {}) => {
+  const addLoad = React.useCallback((category: LoadCategory, loadData: Partial<GeneralLoad | HVACLoad | EVSELoad | SolarBatteryLoad> = {}) => {
     dispatch({ type: 'ADD_LOAD', payload: { category, load: loadData } });
   }, []);
   
@@ -228,13 +148,11 @@ export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
   
   const resetToDefaults = React.useCallback(() => {
-    // Clear session storage
     try {
       sessionStorage.removeItem(LOAD_SESSION_KEY);
     } catch (error) {
       console.warn('Failed to clear session storage:', error);
     }
-    // Reset to initial templates
     dispatch({ type: 'RESET_LOADS', payload: initialLoadState });
   }, []);
 
@@ -280,7 +198,6 @@ export const LoadDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
   
-  // Memoized statistics
   const loadCounts = useMemo(() => ({
     general: loads.generalLoads?.length || 0,
     hvac: loads.hvacLoads?.length || 0,

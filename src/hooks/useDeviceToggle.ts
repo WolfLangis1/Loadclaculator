@@ -1,23 +1,6 @@
-/**
- * Device Toggle Hook (Development Only)
- * 
- * Provides mobile/desktop UI toggle functionality for development testing
- * Only available in development environment for responsive design testing
- */
-
 import { useState, useEffect, useCallback } from 'react';
 import { createComponentLogger } from '../services/loggingService';
-
-type DeviceMode = 'desktop' | 'tablet' | 'mobile';
-type Orientation = 'portrait' | 'landscape';
-
-interface DevicePreset {
-  name: string;
-  width: number;
-  height: number;
-  userAgent: string;
-  touchEnabled: boolean;
-}
+import type { DeviceMode, Orientation, DevicePreset, DeviceToggleState } from '../types/device';
 
 const DEVICE_PRESETS: Record<DeviceMode, DevicePreset[]> = {
   desktop: [
@@ -70,15 +53,6 @@ const DEVICE_PRESETS: Record<DeviceMode, DevicePreset[]> = {
   ]
 };
 
-interface DeviceToggleState {
-  isEnabled: boolean;
-  deviceMode: DeviceMode;
-  presetIndex: number;
-  orientation: Orientation;
-  customDimensions: { width: number; height: number };
-  isCustomMode: boolean;
-}
-
 export const useDeviceToggle = () => {
   const logger = createComponentLogger('DeviceToggle');
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -95,7 +69,6 @@ export const useDeviceToggle = () => {
       };
     }
 
-    // Try to restore from localStorage
     try {
       const saved = localStorage.getItem('dev-device-toggle');
       if (saved) {
@@ -107,15 +80,14 @@ export const useDeviceToggle = () => {
 
     return {
       isEnabled: false,
-      deviceMode: 'desktop' as DeviceMode,
+      deviceMode: 'desktop',
       presetIndex: 0,
-      orientation: 'landscape' as Orientation,
+      orientation: 'landscape',
       customDimensions: { width: 1920, height: 1080 },
       isCustomMode: false
     };
   });
 
-  // Save state to localStorage
   useEffect(() => {
     if (!isDevelopment) return;
     
@@ -126,10 +98,8 @@ export const useDeviceToggle = () => {
     }
   }, [state, isDevelopment, logger]);
 
-  // Get current preset
   const currentPreset = DEVICE_PRESETS[state.deviceMode][state.presetIndex];
 
-  // Calculate effective dimensions
   const effectiveDimensions = useCallback(() => {
     if (state.isCustomMode) {
       return state.orientation === 'portrait' 
@@ -146,10 +116,8 @@ export const useDeviceToggle = () => {
       : { width: currentPreset.width, height: currentPreset.height };
   }, [state, currentPreset]);
 
-  // Apply viewport override
   useEffect(() => {
     if (!isDevelopment || !state.isEnabled) {
-      // Reset to natural viewport
       document.documentElement.style.removeProperty('--dev-viewport-width');
       document.documentElement.style.removeProperty('--dev-viewport-height');
       document.documentElement.classList.remove('dev-device-override');
@@ -175,7 +143,6 @@ export const useDeviceToggle = () => {
     };
   }, [isDevelopment, state.isEnabled, effectiveDimensions, state.deviceMode, state.orientation, currentPreset, logger]);
 
-  // Toggle device mode
   const toggleDeviceMode = useCallback(() => {
     if (!isDevelopment) return;
 
@@ -185,19 +152,17 @@ export const useDeviceToggle = () => {
     }));
   }, [isDevelopment]);
 
-  // Set device mode
   const setDeviceMode = useCallback((mode: DeviceMode) => {
     if (!isDevelopment) return;
 
     setState(prev => ({
       ...prev,
       deviceMode: mode,
-      presetIndex: 0, // Reset to first preset
+      presetIndex: 0,
       isCustomMode: false
     }));
   }, [isDevelopment]);
 
-  // Set preset
   const setPreset = useCallback((index: number) => {
     if (!isDevelopment) return;
 
@@ -211,7 +176,6 @@ export const useDeviceToggle = () => {
     }));
   }, [isDevelopment, state.deviceMode]);
 
-  // Toggle orientation
   const toggleOrientation = useCallback(() => {
     if (!isDevelopment) return;
 
@@ -221,7 +185,6 @@ export const useDeviceToggle = () => {
     }));
   }, [isDevelopment]);
 
-  // Set custom dimensions
   const setCustomDimensions = useCallback((width: number, height: number) => {
     if (!isDevelopment) return;
 
@@ -232,7 +195,6 @@ export const useDeviceToggle = () => {
     }));
   }, [isDevelopment]);
 
-  // Get responsive breakpoint info
   const getBreakpointInfo = useCallback(() => {
     const dimensions = effectiveDimensions();
     const width = dimensions.width;
@@ -245,12 +207,11 @@ export const useDeviceToggle = () => {
   }, [effectiveDimensions]);
 
   if (!isDevelopment) {
-    // Return disabled state for production
     return {
       isDevelopment: false,
       isEnabled: false,
-      deviceMode: 'desktop' as DeviceMode,
-      orientation: 'landscape' as Orientation,
+      deviceMode: 'desktop',
+      orientation: 'landscape',
       dimensions: { width: window.innerWidth, height: window.innerHeight },
       presets: [],
       currentPreset: null,

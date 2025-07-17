@@ -1,9 +1,3 @@
-/**
- * Enhanced Project Manager
- * 
- * Comprehensive project management with templates, persistence, and caching
- */
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   X, 
@@ -13,7 +7,8 @@ import {
   FolderOpen,
   Save,
   FileText as TemplateIcon,
-  BarChart3
+  BarChart3,
+  Check
 } from 'lucide-react';
 import { projectService, type ProjectData, type ProjectTemplate } from '../../services/projectService';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
@@ -26,6 +21,7 @@ import { CreateTemplateModal } from './CreateTemplateModal';
 import { EditProjectModal } from './EditProjectModal';
 import { TemplateCard } from './TemplateCard';
 import { StatisticsView } from './StatisticsView';
+import { SaveProjectDialog } from './SaveProjectDialog';
 
 interface EnhancedProjectManagerProps {
   isOpen: boolean;
@@ -46,7 +42,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   const { loads } = useLoadData();
   const { state: sldState } = useSLDData();
 
-  // State
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortBy, setSortBy] = useState<SortBy>('modified');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
@@ -60,8 +55,8 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
   const [statistics, setStatistics] = useState<any>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [editingProject, setEditingProject] = useState<ProjectData | null>(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-  // Load data on mount
   useEffect(() => {
     if (isOpen) {
       refreshData();
@@ -74,16 +69,13 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
     setStatistics(projectService.getProjectStatistics());
   }, []);
 
-  // Filter and sort projects
   const filteredAndSortedProjects = useMemo(() => {
     let filtered = projects;
 
-    // Apply search filter
     if (searchQuery) {
       filtered = projectService.searchProjects(searchQuery);
     }
 
-    // Apply category filter
     switch (filterBy) {
       case 'recent':
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -97,7 +89,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
         break;
     }
 
-    // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -114,7 +105,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
     return filtered;
   }, [projects, searchQuery, filterBy, sortBy]);
 
-  // Template categories
   const templateCategories = useMemo(() => {
     const categories = new Map<string, ProjectTemplate[]>();
     templates.forEach(template => {
@@ -127,7 +117,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
     return categories;
   }, [templates]);
 
-  // Handlers
   const handleCreateProject = useCallback((name: string, templateId?: string) => {
     const newProject = projectService.createProject(name, templateId);
     refreshData();
@@ -165,20 +154,12 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
 
   const handleLoadProject = useCallback((project: ProjectData) => {
     try {
-      // Load project data into current session contexts
       if (onProjectLoad) {
-        // Call the parent's project load handler which should:
-        // 1. Load project settings into ProjectSettingsContext
-        // 2. Load loads into LoadDataContext  
-        // 3. Load SLD diagram into SLDDataContext
-        // 4. Load aerial view data into AerialViewContext
         onProjectLoad(project);
       }
       
-      // Close the project manager
       onClose();
       
-      // Show success message
       alert(`Project "${project.metadata.name}" loaded successfully!`);
     } catch (error) {
       console.error('Failed to load project:', error);
@@ -262,25 +243,9 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
     }
   }, [refreshData]);
 
-  // Save current project state - auto-grabs info from ProjectInformation component
-  const handleSaveCurrentProject = useCallback(() => {
+  const handleSaveCurrentProject = useCallback((projectName: string) => {
     const currentProjectId = `project-${Date.now()}`;
     
-    // Auto-generate project name from available information
-    const projectName = (() => {
-      if (settings.projectInfo.projectName?.trim()) {
-        return settings.projectInfo.projectName.trim();
-      }
-      if (settings.projectInfo.customerName?.trim()) {
-        return `${settings.projectInfo.customerName.trim()} - Load Calculation`;
-      }
-      if (settings.projectInfo.propertyAddress?.trim()) {
-        return `Load Calc - ${settings.projectInfo.propertyAddress.trim()}`;
-      }
-      return 'Untitled Project';
-    })();
-
-    // Auto-generate description from project details
     const description = (() => {
       const parts = [];
       if (settings.projectInfo.propertyAddress) {
@@ -308,7 +273,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
       return parts.join(' | ') || 'Electrical load calculation project';
     })();
 
-    // Auto-determine author from available information
     const author = (() => {
       if (settings.projectInfo.calculatedBy?.trim()) {
         return settings.projectInfo.calculatedBy.trim();
@@ -322,7 +286,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
       return 'Load Calculator User';
     })();
 
-    // Auto-tag based on project characteristics
     const autoTags = [];
     if (settings.calculationMethod) {
       autoTags.push(settings.calculationMethod);
@@ -354,7 +317,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
         author,
         isTemplate: false,
         tags: autoTags,
-        // Include project info data for future reference
         companyInfo: settings.projectInfo.contractorName ? {
           name: settings.projectInfo.contractorName,
           address: settings.projectInfo.propertyAddress || '',
@@ -367,7 +329,7 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
       loads,
       sldDiagram: sldState.diagram,
       aerialView: null,
-      calculations: {}, // Would include current calculations if available
+      calculations: {}, 
       reports: {},
       assets: {
         logos: {},
@@ -376,14 +338,11 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
       }
     };
 
-    // Create the project (projectService handles unique ID generation)
     const newProject = projectService.createProject(projectData.metadata.name);
-    // Update with our full data structure
     projectService.updateProject(newProject.metadata.id, projectData);
 
     refreshData();
     
-    // Show success message with project name
     alert(`Project "${projectName}" saved successfully!`);
   }, [settings, loads, sldState.diagram, refreshData]);
 
@@ -404,7 +363,7 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
           
           <div className="flex items-center gap-2">
             <button
-              onClick={handleSaveCurrentProject}
+              onClick={() => setSaveDialogOpen(true)}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
@@ -520,7 +479,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                 </div>
               </div>
 
-              {/* Projects Grid/List */}
               <div className="flex-1 overflow-auto p-4">
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -544,11 +502,10 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                       <ProjectListItem
                         key={project.metadata.id}
                         project={project}
-                        onLoad={handleLoadProject}
-                        onDuplicate={handleDuplicateProject}
-                        onDelete={handleDeleteProject}
-                        onToggleFavorite={handleToggleFavorite}
-                        onExport={handleExportProject}
+                        currentProjectId={currentProject?.id}
+                        onLoadProject={handleLoadProject}
+                        onExportProject={handleExportProject}
+                        onDeleteProject={handleDeleteProject}
                       />
                     ))}
                   </div>
@@ -583,7 +540,7 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                         {category === 'residential' && '🏠'}
                         {category === 'commercial' && '🏢'}
                         {category === 'industrial' && '🏭'}
-                        {category === 'solar' && '☀️'}
+                        {category === 'solar' && <Zap className="h-4 w-4" />}
                         {category === 'evse' && '🚗'}
                         {category === 'custom' && '📋'}
                       </span>
@@ -595,7 +552,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                           key={template.id}
                           template={template}
                           onSelect={(templateId) => {
-                            // Handle template details view
                             console.log('Template selected:', templateId);
                           }}
                           onCreateProject={(templateId) => {
@@ -655,11 +611,16 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
           project={editingProject}
         />
       )}
+
+      {/* Save Project Dialog */}
+      <SaveProjectDialog
+        isOpen={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        onSave={handleSaveCurrentProject}
+        isLoading={false} // You might want to manage loading state within the dialog or pass it down
+      />
     </div>
   );
 };
-
-// Sub-components would go here (ProjectCard, ProjectListItem, TemplateCard, etc.)
-// Due to length constraints, I'll create these as separate files
 
 export default EnhancedProjectManager;

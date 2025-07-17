@@ -1,22 +1,13 @@
-/**
- * AI Analysis Hook
- * 
- * Manages AI-powered roof analysis state and operations
- */
-
 import { useState, useCallback } from 'react';
-import AIRoofAnalysisService, { 
+import { runComprehensiveAIAnalysis } from '../services/aiAnalysisService';
+import type {
   AIRoofAnalysisResult,
-  AIAnalysisOptions
-} from '../services/aiRoofAnalysisService';
-import TensorFlowDetectionService, {
-  RoofDetectionResult
-} from '../services/tensorflowDetectionService';
-import AIPanelPlacementService, {
+  AIAnalysisOptions,
+  RoofDetectionResult,
   PlacementSolution,
   PlacementConstraints,
   OptimizationOptions
-} from '../services/aiPanelPlacementService';
+} from '../services/aiRoofAnalysisService'; // Re-export types from a single source
 import { createComponentLogger } from '../services/loggingService';
 
 interface AnalysisProgress {
@@ -31,7 +22,6 @@ type AnalysisMode = 'basic' | 'ai_enhanced' | 'professional';
 export const useAIAnalysis = () => {
   const logger = createComponentLogger('AIAnalysis');
   
-  // Analysis state
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('ai_enhanced');
   const [aiAnalysisResult, setAiAnalysisResult] = useState<AIRoofAnalysisResult | null>(null);
   const [detectionResult, setDetectionResult] = useState<RoofDetectionResult | null>(null);
@@ -40,7 +30,6 @@ export const useAIAnalysis = () => {
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Analysis options
   const [analysisOptions, setAnalysisOptions] = useState<AIAnalysisOptions>({
     enableRoofPlaneDetection: true,
     enableObstacleDetection: true,
@@ -73,7 +62,6 @@ export const useAIAnalysis = () => {
     maximizeStrings: false
   });
 
-  // Progress tracking
   const updateProgress = useCallback((step: string, progress: number, message: string, complete = false) => {
     setAnalysisProgress(prev => {
       const existingIndex = prev.findIndex(p => p.step === step);
@@ -89,7 +77,6 @@ export const useAIAnalysis = () => {
     });
   }, []);
 
-  // Run comprehensive AI analysis
   const runAIAnalysis = useCallback(async (imageUrl: string, address: string) => {
     setIsAnalyzing(true);
     setAnalysisProgress([]);
@@ -97,42 +84,19 @@ export const useAIAnalysis = () => {
     try {
       logger.info('Starting AI analysis', { address });
       
-      // Step 1: Roof Analysis
-      updateProgress('roof_analysis', 0, 'Starting roof analysis...');
-      const roofResult = await AIRoofAnalysisService.analyzeRoof(
-        imageUrl, 
-        address, 
-        analysisOptions
-      );
-      setAiAnalysisResult(roofResult);
-      updateProgress('roof_analysis', 100, 'Roof analysis complete', true);
-
-      // Step 2: Object Detection
-      updateProgress('object_detection', 0, 'Detecting roof features...');
-      const detection = await TensorFlowDetectionService.detectRoofFeatures(
+      const { roofResult, detection, solutions } = await runComprehensiveAIAnalysis(
         imageUrl,
-        {
-          confidenceThreshold: 0.7,
-          enableChimneyDetection: true,
-          enableVentDetection: true,
-          enableSkylineDetection: true,
-          enableObstacleDetection: true
-        }
-      );
-      setDetectionResult(detection);
-      updateProgress('object_detection', 100, 'Feature detection complete', true);
-
-      // Step 3: Panel Placement Optimization
-      updateProgress('panel_placement', 0, 'Optimizing panel placement...');
-      const solutions = await AIPanelPlacementService.generatePlacementSolutions(
-        roofResult,
-        detection,
+        address,
+        analysisOptions,
         placementConstraints,
-        optimizationOptions
+        optimizationOptions,
+        updateProgress
       );
+
+      setAiAnalysisResult(roofResult);
+      setDetectionResult(detection);
       setPlacementSolutions(solutions);
       setSelectedSolution(0);
-      updateProgress('panel_placement', 100, 'Placement optimization complete', true);
 
       logger.info('AI analysis completed successfully', {
         roofPlanesDetected: roofResult.roofPlanes.length,
@@ -149,7 +113,6 @@ export const useAIAnalysis = () => {
     }
   }, [analysisOptions, placementConstraints, optimizationOptions, updateProgress, logger]);
 
-  // Clear analysis results
   const clearAnalysis = useCallback(() => {
     setAiAnalysisResult(null);
     setDetectionResult(null);
@@ -158,22 +121,18 @@ export const useAIAnalysis = () => {
     setAnalysisProgress([]);
   }, []);
 
-  // Update analysis options
   const updateAnalysisOptions = useCallback((updates: Partial<AIAnalysisOptions>) => {
     setAnalysisOptions(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Update placement constraints
   const updatePlacementConstraints = useCallback((updates: Partial<PlacementConstraints>) => {
     setPlacementConstraints(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Update optimization options
   const updateOptimizationOptions = useCallback((updates: Partial<OptimizationOptions>) => {
     setOptimizationOptions(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Select solution
   const selectSolution = useCallback((index: number) => {
     if (index >= 0 && index < placementSolutions.length) {
       setSelectedSolution(index);
@@ -182,7 +141,6 @@ export const useAIAnalysis = () => {
   }, [placementSolutions.length, logger]);
 
   return {
-    // State
     analysisMode,
     aiAnalysisResult,
     detectionResult,
@@ -191,12 +149,10 @@ export const useAIAnalysis = () => {
     analysisProgress,
     isAnalyzing,
     
-    // Options
     analysisOptions,
     placementConstraints,
     optimizationOptions,
     
-    // Actions
     setAnalysisMode,
     runAIAnalysis,
     clearAnalysis,
@@ -205,7 +161,6 @@ export const useAIAnalysis = () => {
     updateOptimizationOptions,
     selectSolution,
     
-    // Computed values
     hasAnalysisResults: aiAnalysisResult !== null,
     hasPlacementSolutions: placementSolutions.length > 0,
     currentSolution: placementSolutions[selectedSolution] || null,

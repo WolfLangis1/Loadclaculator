@@ -3,6 +3,9 @@
  * 
  * Automatically generates professional-looking wire paths for SLD diagrams
  * Features collision detection, optimal routing algorithms, and IEEE standards compliance
+ * 
+ * Consolidated from: smartWireRoutingService.ts, sldWireService.ts
+ * for better organization and reduced duplication
  */
 
 import type { SLDComponent, SLDConnection, SLDPosition } from '../types/sld';

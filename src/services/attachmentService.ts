@@ -1,10 +1,10 @@
 // Project Attachment Service
 // Manages aerial view images, site photos, and other attachments for permit applications
 
-import type { 
-  ProjectAttachment, 
-  AttachmentType, 
-  AttachmentSource, 
+import type {
+  ProjectAttachment,
+  AttachmentType,
+  AttachmentSource,
   AttachmentCollection,
   AttachmentFilter,
   AttachmentStats,
@@ -453,5 +453,64 @@ export class AttachmentService {
     if (!collection) return null;
     
     return collection.attachments.find(a => a.id === attachmentId) || null;
+  }
+
+  /**
+   * Save project asset (simplified version for compatibility)
+   * Creates attachment from blob data
+   */
+  static async saveProjectAsset(
+    projectId: string,
+    filename: string,
+    blob: Blob,
+    type?: AttachmentType,
+    metadata?: any
+  ): Promise<ProjectAttachment> {
+    try {
+      // Create object URL for the blob
+      const url = URL.createObjectURL(blob);
+      
+      // Determine attachment type from filename if not provided
+      const attachmentType = type || this.getTypeFromFilename(filename);
+      
+      // Create attachment from the blob URL
+      const attachment = await this.createAttachmentFromCapture(
+        projectId,
+        attachmentType,
+        'user_upload',
+        url,
+        {
+          description: `Downloaded ${filename}`,
+          ...metadata
+        }
+      );
+      
+      // Store the blob reference for cleanup
+      (attachment as any).blobUrl = url;
+      
+      return attachment;
+    } catch (error) {
+      console.error('Failed to save project asset:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Determine attachment type from filename
+   */
+  private static getTypeFromFilename(filename: string): AttachmentType {
+    const name = filename.toLowerCase();
+    
+    if (name.includes('satellite') || name.includes('aerial')) {
+      return 'satellite_image';
+    } else if (name.includes('street')) {
+      return 'street_view';
+    } else if (name.includes('solar')) {
+      return 'solar_analysis';
+    } else if (name.includes('diagram') || name.includes('sld')) {
+      return 'electrical_diagram';
+    } else {
+      return 'site_photo';
+    }
   }
 }

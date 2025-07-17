@@ -5,8 +5,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # No build arguments to prevent API key exposure in image layers
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
+      # Feature flags (non-sensitive)
+      - USE_REAL_AERIAL_DATA=true
+      - AERIAL_PROVIDER=google
+      - API_BASE_URL=/api
+    secrets:
+      - source: google_maps_api_key
+        target: /run/secrets/google_maps_api_key
+      - source: supabase_url
+        target: /run/secrets/supabase_url
+      - source: supabase_anon_key
+        target: /run/secrets/supabase_anon_key
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
@@ -16,6 +30,40 @@ services:
       start_period: 40s
     networks:
       - app-network
+    depends_on:
+      - api-server
+
+  # Production API server with secrets
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.fullstack
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    secrets:
+      - source: google_maps_api_key
+        target: /run/secrets/google_maps_api_key
+      - source: supabase_url
+        target: /run/secrets/supabase_url
+      - source: supabase_service_key
+        target: /run/secrets/supabase_service_key
+      - source: openweather_api_key
+        target: /run/secrets/openweather_api_key
+      - source: jwt_secret
+        target: /run/secrets/jwt_secret
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - app-network
+    command: ["npm", "run", "server"]
 
   nginx:
     image: nginx:alpine
@@ -82,3 +130,24 @@ volumes:
   nginx-logs:
   prometheus-data:
   grafana-data:
+
+# Docker secrets for production (external secrets must be created before deployment)
+secrets:
+  google_maps_api_key:
+    external: true
+    name: load_calculator_google_maps_api_key
+  supabase_url:
+    external: true
+    name: load_calculator_supabase_url
+  supabase_anon_key:
+    external: true
+    name: load_calculator_supabase_anon_key
+  supabase_service_key:
+    external: true
+    name: load_calculator_supabase_service_key
+  openweather_api_key:
+    external: true
+    name: load_calculator_openweather_api_key
+  jwt_secret:
+    external: true
+    name: load_calculator_jwt_secret

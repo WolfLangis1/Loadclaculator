@@ -226,13 +226,13 @@ export class SecureAerialViewService {
       
       // Determine API base using same logic as SecureApiService
       const API_BASE = (() => {
-        // If VITE_API_BASE_URL is empty string, use proxy
-        if (import.meta.env.VITE_API_BASE_URL === '') {
+        // If API_BASE_URL is empty string, use proxy
+        if (import.meta.env.API_BASE_URL === '') {
           return '/api';
         }
-        // If VITE_API_BASE_URL is set, use direct API calls
-        return import.meta.env.VITE_API_BASE_URL ? 
-          `${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
+        // If API_BASE_URL is set, use direct API calls
+        return import.meta.env.API_BASE_URL ? 
+          `${import.meta.env.API_BASE_URL}/api` : '/api';
       })();
       
       // Define multiple headings for comprehensive street view coverage

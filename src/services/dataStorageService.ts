@@ -1,18 +1,7 @@
-/**
- * Data Storage Service
- * Provides offline-first data persistence using IndexedDB with localStorage fallback
- * Supports project data, attachments, and user preferences
- */
-
-import type { LoadCalculatorState } from '../context/LoadCalculatorContext';
-import type { ProjectAttachment } from '../types';
-
-// IndexedDB configuration
-const DB_NAME = 'LoadCalculatorDB';
-const DB_VERSION = 1;
-const PROJECT_STORE = 'projects';
-const ATTACHMENT_STORE = 'attachments';
-const SETTINGS_STORE = 'settings';
+import type { LoadCalculatorState } from '../types';
+import type { ProjectAttachment } from '../types/attachment';
+import { IndexedDBHelper } from './indexedDBHelper';
+import { LocalStorageHelper } from './localStorageHelper';
 
 export interface StoredProject {
   id: string;
@@ -32,76 +21,27 @@ export interface StoredSettings {
 }
 
 export class DataStorageService {
-  private db: IDBDatabase | null = null;
-  private isIndexedDBSupported: boolean = false;
+  private indexedDBHelper: IndexedDBHelper;
+  private localStorageHelper: LocalStorageHelper;
+  private isIndexedDBPreferred: boolean = false;
 
   constructor() {
-    this.isIndexedDBSupported = this.checkIndexedDBSupport();
-    this.initializeDB();
+    this.indexedDBHelper = new IndexedDBHelper();
+    this.localStorageHelper = new LocalStorageHelper();
+    this.checkIndexedDBSupport();
   }
 
-  /**
-   * Check if IndexedDB is supported in the current browser
-   */
-  private checkIndexedDBSupport(): boolean {
-    return typeof window !== 'undefined' && 'indexedDB' in window && indexedDB !== null;
-  }
-
-  /**
-   * Initialize IndexedDB database
-   */
-  private async initializeDB(): Promise<void> {
-    if (!this.isIndexedDBSupported) {
-      console.warn('IndexedDB not supported, falling back to localStorage');
-      return;
-    }
-
+  private async checkIndexedDBSupport(): Promise<void> {
     try {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onerror = () => {
-          console.error('Error opening IndexedDB:', request.error);
-          reject(request.error);
-        };
-
-        request.onsuccess = () => {
-          this.db = request.result;
-          console.log('IndexedDB initialized successfully');
-          resolve();
-        };
-
-        request.onupgradeneeded = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-
-          // Create project store
-          if (!db.objectStoreNames.contains(PROJECT_STORE)) {
-            const projectStore = db.createObjectStore(PROJECT_STORE, { keyPath: 'id' });
-            projectStore.createIndex('name', 'name', { unique: false });
-            projectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-          }
-
-          // Create attachment store
-          if (!db.objectStoreNames.contains(ATTACHMENT_STORE)) {
-            const attachmentStore = db.createObjectStore(ATTACHMENT_STORE, { keyPath: 'id' });
-            attachmentStore.createIndex('projectId', 'projectId', { unique: false });
-            attachmentStore.createIndex('type', 'type', { unique: false });
-          }
-
-          // Create settings store
-          if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
-            db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
-          }
-        };
-      });
+      await this.indexedDBHelper.initializeDB();
+      this.isIndexedDBPreferred = true;
+      console.log('IndexedDB is supported and preferred.');
     } catch (error) {
-      console.error('Failed to initialize IndexedDB:', error);
+      this.isIndexedDBPreferred = false;
+      console.warn('IndexedDB not fully supported or initialized, falling back to localStorage.', error);
     }
   }
 
-  /**
-   * Save project to IndexedDB or localStorage
-   */
   async saveProject(projectState: LoadCalculatorState, projectName?: string): Promise<string> {
     const projectId = this.generateProjectId(projectState);
     const now = new Date();
@@ -115,222 +55,67 @@ export class DataStorageService {
       version: '1.0'
     };
 
-    if (this.isIndexedDBSupported && this.db) {
+    if (this.isIndexedDBPreferred) {
       try {
-        return await this.saveProjectToIndexedDB(project);
+        return await this.indexedDBHelper.saveProject(project);
       } catch (error) {
-        console.warn('Failed to save to IndexedDB, falling back to localStorage:', error);
+        console.warn('IndexedDB save failed, falling back to localStorage:', error);
       }
     }
-
-    // Fallback to localStorage
-    return this.saveProjectToLocalStorage(project);
+    return this.localStorageHelper.saveProject(project);
   }
 
-  /**
-   * Load project by ID
-   */
   async loadProject(projectId: string): Promise<StoredProject | null> {
-    if (this.isIndexedDBSupported && this.db) {
+    if (this.isIndexedDBPreferred) {
       try {
-        return await this.loadProjectFromIndexedDB(projectId);
+        const project = await this.indexedDBHelper.loadProject(projectId);
+        if (project) return project;
       } catch (error) {
-        console.warn('Failed to load from IndexedDB, trying localStorage:', error);
+        console.warn('IndexedDB load failed, trying localStorage:', error);
       }
     }
-
-    // Fallback to localStorage
-    return this.loadProjectFromLocalStorage(projectId);
+    return this.localStorageHelper.loadProject(projectId);
   }
 
-  /**
-   * Get all saved projects
-   */
   async getAllProjects(): Promise<StoredProject[]> {
-    if (this.isIndexedDBSupported && this.db) {
+    if (this.isIndexedDBPreferred) {
       try {
-        return await this.getAllProjectsFromIndexedDB();
+        return await this.indexedDBHelper.getAllProjects();
       } catch (error) {
-        console.warn('Failed to load from IndexedDB, trying localStorage:', error);
+        console.warn('IndexedDB getAll failed, trying localStorage:', error);
       }
     }
-
-    // Fallback to localStorage
-    return this.getAllProjectsFromLocalStorage();
+    return this.localStorageHelper.getAllProjects();
   }
 
-  /**
-   * Delete project
-   */
   async deleteProject(projectId: string): Promise<boolean> {
-    console.log('Attempting to delete project:', projectId);
-    
-    if (this.isIndexedDBSupported && this.db) {
+    if (this.isIndexedDBPreferred) {
       try {
-        await this.deleteProjectFromIndexedDB(projectId);
-        console.log('Successfully deleted project from IndexedDB:', projectId);
+        await this.indexedDBHelper.deleteProject(projectId);
         return true;
       } catch (error) {
-        console.warn('Failed to delete from IndexedDB, trying localStorage:', error);
+        console.warn('IndexedDB delete failed, trying localStorage:', error);
       }
     }
-
-    // Fallback to localStorage
-    const result = this.deleteProjectFromLocalStorage(projectId);
-    console.log('localStorage deletion result for project', projectId, ':', result);
-    return result;
+    return this.localStorageHelper.deleteProject(projectId);
   }
 
-  /**
-   * Save attachments
-   */
   async saveAttachments(projectId: string, attachments: ProjectAttachment[]): Promise<void> {
-    if (this.isIndexedDBSupported && this.db) {
+    if (this.isIndexedDBPreferred) {
       try {
-        return await this.saveAttachmentsToIndexedDB(projectId, attachments);
+        return await this.indexedDBHelper.saveAttachments(projectId, attachments);
       } catch (error) {
-        console.warn('Failed to save attachments to IndexedDB:', error);
+        console.warn('IndexedDB save attachments failed, falling back to localStorage:', error);
       }
     }
-
-    // Fallback to localStorage
-    return this.saveAttachmentsToLocalStorage(projectId, attachments);
+    return this.localStorageHelper.saveAttachments(projectId, attachments);
   }
 
-  /**
-   * Auto-save functionality
-   */
   setupAutoSave(projectState: LoadCalculatorState, interval: number = 5): void {
     setInterval(() => {
       this.saveProject(projectState, 'Auto-saved Project');
-    }, interval * 60 * 1000); // Convert minutes to milliseconds
+    }, interval * 60 * 1000);
   }
-
-  // === IndexedDB Implementation ===
-
-  private async saveProjectToIndexedDB(project: StoredProject): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([PROJECT_STORE], 'readwrite');
-      const store = transaction.objectStore(PROJECT_STORE);
-      const request = store.put(project);
-
-      request.onsuccess = () => resolve(project.id);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  private async loadProjectFromIndexedDB(projectId: string): Promise<StoredProject | null> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([PROJECT_STORE], 'readonly');
-      const store = transaction.objectStore(PROJECT_STORE);
-      const request = store.get(projectId);
-
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  private async getAllProjectsFromIndexedDB(): Promise<StoredProject[]> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([PROJECT_STORE], 'readonly');
-      const store = transaction.objectStore(PROJECT_STORE);
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  private async deleteProjectFromIndexedDB(projectId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([PROJECT_STORE], 'readwrite');
-      const store = transaction.objectStore(PROJECT_STORE);
-      const request = store.delete(projectId);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  private async saveAttachmentsToIndexedDB(projectId: string, attachments: ProjectAttachment[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([ATTACHMENT_STORE], 'readwrite');
-      const store = transaction.objectStore(ATTACHMENT_STORE);
-
-      let completed = 0;
-      const total = attachments.length;
-
-      if (total === 0) {
-        resolve();
-        return;
-      }
-
-      attachments.forEach(attachment => {
-        const request = store.put({ ...attachment, projectId });
-        request.onsuccess = () => {
-          completed++;
-          if (completed === total) resolve();
-        };
-        request.onerror = () => reject(request.error);
-      });
-    });
-  }
-
-  // === localStorage Fallback Implementation ===
-
-  private saveProjectToLocalStorage(project: StoredProject): string {
-    const projects = this.getAllProjectsFromLocalStorage();
-    const existingIndex = projects.findIndex(p => p.id === project.id);
-    
-    if (existingIndex >= 0) {
-      projects[existingIndex] = project;
-    } else {
-      projects.push(project);
-    }
-
-    localStorage.setItem('loadCalculatorProjects', JSON.stringify(projects));
-    return project.id;
-  }
-
-  private loadProjectFromLocalStorage(projectId: string): StoredProject | null {
-    const projects = this.getAllProjectsFromLocalStorage();
-    return projects.find(p => p.id === projectId) || null;
-  }
-
-  private getAllProjectsFromLocalStorage(): StoredProject[] {
-    try {
-      const data = localStorage.getItem('loadCalculatorProjects');
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error parsing localStorage data:', error);
-      return [];
-    }
-  }
-
-  private deleteProjectFromLocalStorage(projectId: string): boolean {
-    const projects = this.getAllProjectsFromLocalStorage();
-    console.log('Found projects in localStorage:', projects.length, 'projects');
-    console.log('Looking for project to delete:', projectId);
-    
-    const filteredProjects = projects.filter(p => p.id !== projectId);
-    console.log('After filtering:', filteredProjects.length, 'projects remain');
-    
-    if (filteredProjects.length < projects.length) {
-      localStorage.setItem('loadCalculatorProjects', JSON.stringify(filteredProjects));
-      console.log('Project deleted successfully from localStorage');
-      return true;
-    }
-    
-    console.log('Project not found in localStorage');
-    return false;
-  }
-
-  private saveAttachmentsToLocalStorage(projectId: string, attachments: ProjectAttachment[]): void {
-    const key = `attachments_${projectId}`;
-    localStorage.setItem(key, JSON.stringify(attachments));
-  }
-
-  // === Utility Methods ===
 
   private generateProjectId(projectState: LoadCalculatorState): string {
     const customer = projectState.projectInfo.customerName || 'Unknown';
@@ -345,19 +130,12 @@ export class DataStorageService {
     return `${customer} - ${date}`;
   }
 
-  /**
-   * Export project data for backup
-   */
   async exportProjectData(projectId: string): Promise<string> {
     const project = await this.loadProject(projectId);
     if (!project) throw new Error('Project not found');
-
     return JSON.stringify(project, null, 2);
   }
 
-  /**
-   * Import project data from backup
-   */
   async importProjectData(jsonData: string): Promise<string> {
     try {
       const project: StoredProject = JSON.parse(jsonData);
@@ -367,9 +145,6 @@ export class DataStorageService {
     }
   }
 
-  /**
-   * Get storage statistics
-   */
   async getStorageStats(): Promise<{
     projectCount: number;
     totalSize: number;
@@ -381,10 +156,9 @@ export class DataStorageService {
     return {
       projectCount: projects.length,
       totalSize,
-      storageType: this.isIndexedDBSupported && this.db ? 'IndexedDB' : 'localStorage'
+      storageType: this.isIndexedDBPreferred ? 'IndexedDB' : 'localStorage'
     };
   }
 }
 
-// Singleton instance
 export const dataStorage = new DataStorageService();

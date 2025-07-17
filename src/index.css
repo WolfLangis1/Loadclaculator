@@ -1,3 +1,50 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom styles for load calculator tables */
+@layer components {
+  .load-table-container {
+    @apply overflow-x-auto;
+    min-width: 800px;
+  }
+  
+  .load-table {
+    @apply min-w-full divide-y divide-gray-300;
+    table-layout: auto;
+  }
+  
+  .load-description-cell {
+    @apply min-w-32 max-w-64;
+    word-wrap: break-word;
+    white-space: normal;
+  }
+  
+  .load-number-cell {
+    @apply min-w-24 text-center;
+  }
+  
+  .load-amps-cell {
+    @apply min-w-20 text-center;
+  }
+  
+  .load-volts-cell {
+    @apply min-w-16 text-center;
+  }
+  
+  .load-va-cell {
+    @apply min-w-20 text-center;
+  }
+  
+  .load-total-cell {
+    @apply min-w-20 text-center font-medium;
+  }
+  
+  .load-critical-cell {
+    @apply min-w-16 text-center;
+  }
+  
+  .load-actions-cell {
+    @apply min-w-12 text-center;
+  }
+}

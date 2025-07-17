@@ -61,7 +61,6 @@ src/components/SLD/ExpandedComponentLibrary.tsx
 src/services/intelligentSLDService.ts
 src/services/intelligentSymbolService.ts
 src/services/intelligentWireSizingService.ts
-src/services/aiRoofAnalysisService.ts
 src/services/aerialViewService.ts
 src/services/threeDModelService.ts
 src/services/weatherDataService.ts

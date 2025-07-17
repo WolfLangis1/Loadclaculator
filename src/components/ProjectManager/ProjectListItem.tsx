@@ -1,97 +1,75 @@
-/**
- * Project List Item Component
- * 
- * List view representation of a project
- */
-
 import React from 'react';
-import { FolderOpen, Calendar, Star, MoreVertical } from 'lucide-react';
-import type { ProjectData } from '../../services/projectService';
+import { FolderOpen, Download, Trash2, Clock, Check } from 'lucide-react';
 
 interface ProjectListItemProps {
-  project: ProjectData;
-  onLoad: (project: ProjectData) => void;
-  onDuplicate: (projectId: string) => void;
-  onDelete: (projectId: string) => void;
-  onToggleFavorite: (projectId: string) => void;
-  onExport: (projectId: string) => void;
+  project: any; // Replace 'any' with your actual Project type
+  currentProjectId?: string | null;
+  onLoadProject: (projectId: string) => void;
+  onExportProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
 }
 
-export const ProjectListItem: React.FC<ProjectListItemProps> = ({
-  project,
-  onLoad,
-  onDuplicate,
-  onDelete,
-  onToggleFavorite,
-  onExport
-}) => {
-  const isFavorite = project.metadata.tags.includes('favorite');
-  const modifiedDate = new Date(project.metadata.modified).toLocaleDateString();
+export const ProjectListItem: React.FC<ProjectListItemProps> = React.memo(
+  ({ project, currentProjectId, onLoadProject, onExportProject, onDeleteProject }) => {
+    const formatDate = (date: Date | string) => {
+      const d = typeof date === 'string' ? new Date(date) : date;
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
-  return (
-    <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
-      <div className="flex items-center gap-3 flex-1">
-        <FolderOpen className="h-5 w-5 text-blue-600" />
-        <div className="flex-1">
-          <h3 className="font-medium text-gray-900">{project.metadata.name}</h3>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {modifiedDate}
-            </span>
-            {project.metadata.description && (
-              <span className="truncate max-w-xs">{project.metadata.description}</span>
-            )}
+    return (
+      <div
+        className={`p-4 border rounded-lg transition-colors ${
+          project.id === currentProjectId
+            ? 'border-blue-300 bg-blue-50'
+            : 'border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h4 className="font-medium text-gray-900">{project.name}</h4>
+            <div className="text-sm text-gray-600 mt-1">
+              Customer: {project.state.projectInfo.customerName || 'Unknown'}
+            </div>
+            <div className="text-sm text-gray-600">
+              Address: {project.state.projectInfo.propertyAddress || 'Not specified'}
+            </div>
+            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDate(project.updatedAt)}
+              </span>
+              <span>Method: {project.state.calculationMethod}</span>
+              <span>{project.state.squareFootage} sq ft</span>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onToggleFavorite(project.metadata.id)}
-          className={`p-2 rounded-md transition-colors ${
-            isFavorite 
-              ? 'text-yellow-500 hover:text-yellow-600' 
-              : 'text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          <Star className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
-        </button>
-
-        <button
-          onClick={() => onLoad(project)}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Load
-        </button>
-
-        <div className="relative group">
-          <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors">
-            <MoreVertical className="h-4 w-4" />
-          </button>
-          
-          <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+          <div className="flex items-center gap-1 ml-4">
             <button
-              onClick={() => onDuplicate(project.metadata.id)}
-              className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => onLoadProject(project.id)}
+              className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+              title="Load project"
             >
-              Duplicate
+              <FolderOpen className="h-4 w-4" />
             </button>
+
             <button
-              onClick={() => onExport(project.metadata.id)}
-              className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => onExportProject(project.id)}
+              className="p-2 text-green-600 hover:bg-green-100 rounded transition-colors"
+              title="Export project"
             >
-              Export
+              <Download className="h-4 w-4" />
             </button>
+
             <button
-              onClick={() => onDelete(project.metadata.id)}
-              className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+              onClick={() => onDeleteProject(project.id)}
+              className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
+              title="Delete project"
             >
-              Delete
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);

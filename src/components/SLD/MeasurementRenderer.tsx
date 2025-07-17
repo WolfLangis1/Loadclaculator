@@ -4,6 +4,7 @@ import type { Measurement, Point } from '../../services/sldMeasurementService';
 interface MeasurementRendererProps {
   measurements: Measurement[];
   transform: { x: number; y: number; zoom: number };
+  onMeasurementClick?: (id: string) => void;
   className?: string;
 }
 
@@ -13,6 +14,7 @@ interface MeasurementRendererProps {
 export const MeasurementRenderer: React.FC<MeasurementRendererProps> = ({
   measurements,
   transform,
+  onMeasurementClick,
   className = ''
 }) => {
   const visibleMeasurements = measurements.filter(m => m.visible);
@@ -20,15 +22,22 @@ export const MeasurementRenderer: React.FC<MeasurementRendererProps> = ({
   return (
     <g className={className}>
       {visibleMeasurements.map(measurement => {
+        const commonProps = { 
+          key: measurement.id, 
+          measurement, 
+          transform, 
+          onClick: onMeasurementClick ? () => onMeasurementClick(measurement.id) : undefined 
+        };
+        
         switch (measurement.type) {
           case 'linear':
-            return <LinearMeasurementRenderer key={measurement.id} measurement={measurement} transform={transform} />;
+            return <LinearMeasurementRenderer {...commonProps} />;
           case 'angular':
-            return <AngularMeasurementRenderer key={measurement.id} measurement={measurement} transform={transform} />;
+            return <AngularMeasurementRenderer {...commonProps} />;
           case 'area':
-            return <AreaMeasurementRenderer key={measurement.id} measurement={measurement} transform={transform} />;
+            return <AreaMeasurementRenderer {...commonProps} />;
           case 'coordinate':
-            return <CoordinateMeasurementRenderer key={measurement.id} measurement={measurement} transform={transform} />;
+            return <CoordinateMeasurementRenderer {...commonProps} />;
           default:
             return null;
         }
@@ -40,6 +49,7 @@ export const MeasurementRenderer: React.FC<MeasurementRendererProps> = ({
 interface LinearMeasurementRendererProps {
   measurement: Extract<Measurement, { type: 'linear' }>;
   transform: { x: number; y: number; zoom: number };
+  onClick?: () => void;
 }
 
 const LinearMeasurementRenderer: React.FC<LinearMeasurementRendererProps> = ({ measurement, transform }) => {

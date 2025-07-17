@@ -1,33 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { CanvasTransforms, Easing } from '../utils/canvasTransforms';
-import type { Transform, Point, Bounds, ViewPort } from '../utils/canvasTransforms';
-
-interface InfiniteCanvasOptions {
-  initialTransform?: Transform;
-  minZoom?: number;
-  maxZoom?: number;
-  zoomSensitivity?: number;
-  panSensitivity?: number;
-  bounds?: Bounds;
-  animationDuration?: number;
-  enableInertia?: boolean;
-  inertiaDecay?: number;
-  wheelZoomEnabled?: boolean;
-  touchZoomEnabled?: boolean;
-  constrainBounds?: boolean;
-}
-
-interface InertiaState {
-  velocity: Point;
-  lastTime: number;
-  animationId: number | null;
-}
-
-interface TouchState {
-  touches: Touch[];
-  lastDistance: number;
-  lastCenter: Point;
-}
+import type { Transform, Point, Bounds, ViewPort, InfiniteCanvasOptions, InertiaState, TouchState } from '../types/canvas';
 
 /**
  * Professional infinite canvas hook with advanced interaction features

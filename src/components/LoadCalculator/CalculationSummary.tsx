@@ -361,18 +361,18 @@ export const CalculationSummary: React.FC = () => {
         )}
 
         {/* Validation Messages */}
-        {(calculations.warnings.length > 0 || calculations.errors.length > 0) && (
+        {((calculations.warnings && calculations.warnings.length > 0) || (calculations.errors && calculations.errors.length > 0)) && (
           <div className="border border-red-200 rounded-lg p-4 bg-red-50">
             <h4 className="font-semibold text-red-800 mb-3">Code Compliance Issues</h4>
             
-            {calculations.errors.map((error, index) => (
+            {calculations.errors && calculations.errors.map((error, index) => (
               <div key={index} className="flex items-start gap-2 text-sm text-red-700 mb-2">
                 <span className="font-bold">ERROR:</span>
                 <span>{error.message} ({error.code})</span>
               </div>
             ))}
             
-            {calculations.warnings.map((warning, index) => (
+            {calculations.warnings && calculations.warnings.map((warning, index) => (
               <div key={index} className="flex items-start gap-2 text-sm text-orange-700 mb-2">
                 <span className="font-bold">WARNING:</span>
                 <span>{warning.message} ({warning.code})</span>

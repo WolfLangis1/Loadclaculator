@@ -6,16 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a professional electrical load calculator application built with React and TypeScript that performs NEC (National Electrical Code) compliant load calculations for residential and commercial electrical services. The application includes three main features: Load Calculator, Single Line Diagram (SLD) creation, and Aerial View & Site Analysis.
 
-**Latest Update**: Successfully resolved Vercel deployment issues and implemented production-ready SLD features with WorkingIntelligentSLDCanvas. Google API integration is now fully functional with real geocoding and places autocomplete. The application includes comprehensive drag-and-drop functionality, rubberband selection, and wire routing with NEC compliance. All features work reliably in both development and production environments.
+**Latest Update**: Successfully migrated from Firebase to Supabase authentication with comprehensive Google OAuth and guest mode support. Implemented fullstack Docker development environment with backend proxy for Google Maps APIs. Authentication now uses immediate fallback user creation pattern for optimal performance. All SLD features remain production-ready with WorkingIntelligentSLDCanvas including drag-and-drop, wire routing, and NEC compliance.
 
 ## Architecture
 
 ### Modern React Application Structure
 - **Framework**: React 18 with TypeScript, Vite for building
 - **UI Library**: Tailwind CSS for styling, Lucide React for icons
+- **Authentication**: Supabase with Google OAuth and guest mode support
 - **State Management**: Multiple specialized contexts using React Context API with useReducer
 - **Performance**: React.memo, useMemo optimization, lazy loading for advanced features
 - **Testing**: Vitest for unit testing electrical calculations
+- **Development**: Docker fullstack environment with backend proxy
 - **Deployment**: Vercel-optimized with selective component exclusion via .vercelignore
 
 ### Three-Module Architecture
@@ -27,12 +29,14 @@ The application consists of three main modules accessible via tabbed interface:
 
 ### Context Architecture
 ```
-UnifiedAppProvider
-├── ProjectSettingsProvider    # Project configuration
-├── LoadDataProvider          # Load data management  
-├── CalculationProvider       # NEC calculations
-├── SLDDataProvider          # Single line diagram state
-└── AerialViewProvider       # Aerial view state
+AppWithAuth
+├── SupabaseAuthProvider      # Authentication state management
+└── UnifiedAppProvider
+    ├── ProjectSettingsProvider    # Project configuration
+    ├── LoadDataProvider          # Load data management  
+    ├── CalculationProvider       # NEC calculations
+    ├── SLDDataProvider          # Single line diagram state
+    └── AerialViewProvider       # Aerial view state
 ```
 
 ### Key Directory Structure
@@ -54,10 +58,11 @@ src/
 │   ├── ProjectManager/        # Project management and templates
 │   └── UI/                    # Shared UI components
 ├── context/                   # Specialized context providers
-│   ├── UnifiedAppContext.tsx  # Main context hierarchy
-│   ├── LoadDataContext.tsx    # Load data management
-│   ├── SLDDataContext.tsx     # SLD state with drag-drop support
-│   └── AerialViewContext.tsx  # Aerial view state
+│   ├── SupabaseAuthContext.tsx  # Supabase authentication
+│   ├── UnifiedAppContext.tsx    # Main context hierarchy
+│   ├── LoadDataContext.tsx      # Load data management
+│   ├── SLDDataContext.tsx       # SLD state with drag-drop support
+│   └── AerialViewContext.tsx    # Aerial view state
 ├── services/                  # Business logic
 │   ├── necCalculations.ts     # NEC load calculations
 │   ├── wireRoutingEngine.ts   # Wire routing and collision detection
@@ -124,6 +129,11 @@ npm run typecheck    # Check TypeScript types
 
 ### Docker Commands
 ```bash
+# Fullstack Development (Frontend + Backend + API Proxy)
+npm run docker:build:fullstack  # Build fullstack Docker image
+npm run docker:run:fullstack    # Run fullstack container with both services
+docker-compose --profile fullstack up -d  # Start fullstack environment
+
 # Production Deployment
 npm run docker:build           # Build production Docker image
 npm run docker:run            # Run production container
@@ -327,6 +337,46 @@ The primary SLD component that includes all production-ready features:
 - **Feature Flags**: Environment-aware enabling of advanced features
 - **Build Optimization**: Vite bundling with proper code splitting and tree shaking
 
+## Authentication Architecture
+
+### Supabase Integration
+The application uses Supabase for authentication with a comprehensive fallback system:
+
+- **SupabaseAuthContext.tsx**: Primary authentication provider with immediate fallback user creation
+- **Google OAuth**: Configured for seamless sign-in with Google accounts
+- **Guest Mode**: Full application access without account creation
+- **Immediate Fallback**: Creates user objects instantly without database dependencies for optimal performance
+
+### Authentication Flow
+```typescript
+// Authentication initialization pattern
+const initializeUserData = useCallback(async (supabaseUser: SupabaseUser) => {
+  // Always create fallback user immediately - no database dependencies
+  const fallbackUser: User = {
+    id: supabaseUser.id,
+    email: supabaseUser.email || undefined,
+    name: supabaseUser.user_metadata?.name || 'User',
+    // ... other properties
+  };
+  
+  setDbUser(fallbackUser);
+  setUserSettings(fallbackSettings);
+  // Background database sync can be added here with timeout protection
+}, []);
+```
+
+### Protected Routes
+- **ProtectedRoute**: Wraps authenticated content with loading states and redirects
+- **Error Boundaries**: Authentication failures don't crash the entire application
+- **Graceful Degradation**: Guest users get full functionality with local storage persistence
+
+### Backend Proxy Architecture
+The fullstack Docker environment provides:
+- **Frontend**: http://localhost:3000 (Vite dev server)
+- **Backend API**: http://localhost:3001 (Express server with Google Maps proxy)
+- **Security**: API keys stored server-side only, never exposed to client
+- **Development**: Hot reload for both frontend and backend services
+
 ## Google API Integration
 
 ### Current Status
@@ -343,16 +393,34 @@ npm run test:api  # Tests all API endpoints including Google services
 
 ### Required Environment Variables
 ```bash
-# .env file (server-side only, not committed to git)
-GOOGLE_MAPS_API_KEY=your_actual_google_api_key
-OPENWEATHER_API_KEY=your_openweather_api_key_here  # Optional for weather data
+# .env file (not committed to git)
+# Supabase Authentication
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Google Maps API (backend only for security)
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+
+# Optional APIs
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+USE_REAL_AERIAL_DATA=true
+AERIAL_PROVIDER=google
 ```
+
+### Supabase Setup Required
+1. **Create Project**: https://app.supabase.com/new
+2. **Authentication**: Enable Google OAuth provider in Auth settings
+3. **Database**: Tables for users, user_settings, projects (optional for offline fallback)
+4. **API Keys**: Copy project URL and anon key to environment variables
+5. **RLS Policies**: Configure Row Level Security for data protection
 
 ### Google Cloud Console Setup Required
 1. **Enable APIs**: Maps JavaScript API, Places API (New), Geocoding API, Maps Static API
 2. **API Key Restrictions**: Set HTTP referrers to your domains (localhost, Vercel URLs)
-3. **Billing**: Required for production usage
-4. **Usage Monitoring**: Set up alerts for quota limits
+3. **OAuth Consent**: Configure for Supabase callback URLs
+4. **Billing**: Required for production usage
+5. **Usage Monitoring**: Set up alerts for quota limits
 
 ### User Experience
 - **AddressAutocomplete**: Shows real Google Places suggestions instead of mock data
@@ -360,10 +428,79 @@ OPENWEATHER_API_KEY=your_openweather_api_key_here  # Optional for weather data
 - **Error States**: Clear fallback messaging when APIs temporarily unavailable
 - **Performance**: Fast autocomplete with proper debouncing and caching
 
+## Common Development Workflows
+
+### Setting Up Development Environment
+```bash
+# 1. Clone and install dependencies
+npm install
+
+# 2. Copy environment variables
+cp .env.example .env
+# Edit .env with your actual API keys
+
+# 3. Start development server (frontend only)
+npm run dev
+
+# 4. Start fullstack environment (frontend + backend proxy)
+docker-compose --profile fullstack up -d
+```
+
+### Debugging Authentication Issues
+```bash
+# Check Supabase configuration
+console.log('Supabase URL:', import.meta.env.SUPABASE_URL)
+console.log('Supabase Key:', import.meta.env.SUPABASE_ANON_KEY?.substring(0, 10) + '...')
+
+# Monitor authentication state in browser console
+# Look for: "initializeUserData: Completed successfully - authentication ready"
+
+# Common fixes:
+# - Ensure environment variables are properly exposed via vite.config.js
+# - Check Google OAuth redirect URLs in Supabase dashboard
+# - Verify fallback user creation pattern in SupabaseAuthContext
+```
+
+### Adding New Load Calculation Types
+```bash
+# 1. Update types
+# Edit src/types/load.ts
+
+# 2. Add calculation logic
+# Edit src/utils/loadCalculations.ts or src/services/necCalculations.ts
+
+# 3. Update validation
+# Edit src/services/validationService.ts
+
+# 4. Create UI components
+# Add table component in src/components/LoadCalculator/LoadTables/
+
+# 5. Update context
+# Edit src/context/LoadDataContext.tsx for state management
+```
+
+### Container Rebuilding for Changes
+```bash
+# Stop current container
+docker stop $(docker ps -q) && docker rm $(docker ps -aq)
+
+# Rebuild and start with latest code
+source .env && docker build -f Dockerfile.fullstack -t load-calculator-fullstack . && \
+docker run -d -p 3000:3000 -p 3001:3001 \
+  -e GOOGLE_MAPS_API_KEY="$GOOGLE_MAPS_API_KEY" \
+  -e SUPABASE_URL="$SUPABASE_URL" \
+  -e SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+  --name load-calculator-fullstack load-calculator-fullstack
+```
+
 ### Rules
-- Make edits to existing code and only create essentially duplicate files if absolutely needed
-- No mock data, simulated values, or hardcoded data
-- Always use WorkingIntelligentSLDCanvas for SLD features - it includes all production-ready functionality
-- When adding SLD features, extend the existing working component rather than creating new ones
-- Test all changes locally with `npm run build` before deployment to ensure Vercel compatibility
-- Never commit API keys to git - they are properly excluded via .gitignore 
+- **Firebase Migration Complete**: Use Supabase authentication exclusively - no Firebase references remain in codebase
+- **Authentication Pattern**: Always use immediate fallback user creation without database dependencies to prevent infinite loading
+- **Calculation Safety**: Wrap `calculateLoadDemand` calls in try-catch with default return values to prevent UI crashes
+- **Default Values**: Ensure project settings have valid defaults (e.g., `squareFootage: 2000` not `0`)
+- **SLD Development**: Always use WorkingIntelligentSLDCanvas for SLD features - it includes all production-ready functionality
+- **Docker Development**: Use fullstack Docker environment for development requiring Google Maps API integration
+- **Environment Variables**: Use non-prefixed versions exposed via vite.config.js for frontend/backend compatibility
+- **Code Editing**: Make edits to existing code and only create duplicate files if absolutely needed
+- **Testing**: Test all changes locally with `npm run build` before deployment to ensure Vercel compatibility
+- **Security**: Never commit API keys to git - they are properly excluded via .gitignore

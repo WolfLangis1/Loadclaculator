@@ -4,6 +4,7 @@ import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { TooltipWrapper } from '../UI/TooltipWrapper';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
+import { InputField } from '../UI/InputField';
 
 export const ProjectInformation: React.FC = () => {
   const { state, updateProjectInfo, updateSettings } = useLoadCalculator();
@@ -20,20 +21,15 @@ export const ProjectInformation: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <div>
-          <label htmlFor="customer-name" className="block text-sm font-medium text-white/90 mb-2">
-            Customer Name *
-          </label>
-          <input
-            id="customer-name"
-            type="text"
-            value={projectInfo.customerName || ''}
-            onChange={(e) => updateProjectInfo({ customerName: e.target.value })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter customer name"
-            required
-          />
-        </div>
+        <InputField
+          id="customer-name"
+          label="Customer Name *"
+          type="text"
+          value={projectInfo.customerName || ''}
+          onChange={(e) => updateProjectInfo({ customerName: e.target.value })}
+          placeholder="Enter customer name"
+          required
+        />
 
         <div>
           <label htmlFor="property-address" className="block text-sm font-medium text-white/90 mb-2">
@@ -57,92 +53,62 @@ export const ProjectInformation: React.FC = () => {
           />
         </div>
 
-        <div>
-          <label htmlFor="city" className="block text-sm font-medium text-white/90 mb-2">
-            City
-          </label>
-          <input
-            id="city"
-            type="text"
-            value={projectInfo.city || ''}
-            onChange={(e) => updateProjectInfo({ city: e.target.value })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter city"
-          />
-        </div>
+        <InputField
+          id="city"
+          label="City"
+          type="text"
+          value={projectInfo.city || ''}
+          onChange={(e) => updateProjectInfo({ city: e.target.value })}
+          placeholder="Enter city"
+        />
 
-        <div>
-          <label htmlFor="state" className="block text-sm font-medium text-white/90 mb-2">
-            State
-          </label>
-          <input
-            id="state"
-            type="text"
-            value={projectInfo.state || ''}
-            onChange={(e) => updateProjectInfo({ state: e.target.value })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter state"
-          />
-        </div>
+        <InputField
+          id="state"
+          label="State"
+          type="text"
+          value={projectInfo.state || ''}
+          onChange={(e) => updateProjectInfo({ state: e.target.value })}
+          placeholder="Enter state"
+        />
 
-        <div>
-          <label htmlFor="zip-code" className="block text-sm font-medium text-white/90 mb-2">
-            ZIP Code
-          </label>
-          <input
-            id="zip-code"
-            type="text"
-            value={projectInfo.zipCode || ''}
-            onChange={(e) => updateProjectInfo({ zipCode: e.target.value })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter ZIP code"
-          />
-        </div>
+        <InputField
+          id="zip-code"
+          label="ZIP Code"
+          type="text"
+          value={projectInfo.zipCode || ''}
+          onChange={(e) => updateProjectInfo({ zipCode: e.target.value })}
+          placeholder="Enter ZIP code"
+        />
 
-        <div>
-          <label htmlFor="square-footage" className="block text-sm font-medium text-white/90 mb-2">
-            Square Footage *
-          </label>
-          <input
-            id="square-footage"
-            type="number"
-            value={state.squareFootage || ''}
-            onChange={(e) => updateSettings({ squareFootage: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter square footage"
-            min="0"
-            required
-          />
-        </div>
+        <InputField
+          id="square-footage"
+          label="Square Footage *"
+          type="number"
+          value={state.squareFootage || ''}
+          onChange={(e) => updateSettings({ squareFootage: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+          placeholder="Enter square footage"
+          min="0"
+          required
+        />
 
-        <div>
-          <label htmlFor="project-name" className="block text-sm font-medium text-white/90 mb-2">
-            Project Name
-          </label>
-          <input
-            id="project-name"
-            type="text"
-            value={projectInfo.projectName || ''}
-            onChange={(e) => updateProjectInfo({ projectName: e.target.value })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter project name"
-          />
-        </div>
+        <InputField
+          id="project-name"
+          label="Project Name"
+          type="text"
+          value={projectInfo.projectName || ''}
+          onChange={(e) => updateProjectInfo({ projectName: e.target.value })}
+          placeholder="Enter project name"
+        />
 
-        <div>
-          <label htmlFor="calculated-by" className="block text-sm font-medium text-white/90 mb-2">
-            Calculated By *
-          </label>
-          <input
-            id="calculated-by"
-            type="text"
-            value={projectInfo.calculatedBy || ''}
-            onChange={(e) => updateProjectInfo({ calculatedBy: e.target.value })}
-            className="w-full rounded-lg border-0 bg-white/20 text-white placeholder-white/70 focus:ring-2 focus:ring-white/50"
-            placeholder="Enter calculator name"
-            required
-          />
-        </div>
+        <InputField
+          id="calculated-by"
+          label="Calculated By *"
+          type="text"
+          value={projectInfo.calculatedBy || ''}
+          onChange={(e) => updateProjectInfo({ calculatedBy: e.target.value })}
+          placeholder="Enter calculator name"
+          required
+        />
 
         <div>
           <label htmlFor="main-breaker" className="block text-sm font-medium text-white/90 mb-2">

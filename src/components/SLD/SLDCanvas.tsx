@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Download, Save, Undo, Redo, Grid, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
-import type { SLDDiagram, SLDComponent, SLDConnection, SLDPosition } from '../../types/sld';
+import { Download, Save, Undo, Redo, Grid3x3, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
+import type { SLDDiagram, SLDConnection, SLDPosition } from '../../types/sld';
+import { SLDComponentRenderer } from './SLDComponentRenderer';
 
 interface SLDCanvasProps {
   diagram: SLDDiagram;
@@ -40,11 +41,9 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     offset: { x: 0, y: 0 }
   });
 
-  // Canvas dimensions and boundaries
   const CANVAS_PADDING = 50;
   const DEFAULT_CANVAS_SIZE = { width: 1200, height: 800 };
 
-  // Calculate canvas bounds based on components
   const calculateCanvasBounds = useCallback((): CanvasBounds => {
     if (diagram.components.length === 0) {
       return {
@@ -71,7 +70,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
       maxY = Math.max(maxY, bottom);
     });
 
-    // Add padding around components
     const boundsWidth = Math.max(maxX - minX + (CANVAS_PADDING * 2), DEFAULT_CANVAS_SIZE.width);
     const boundsHeight = Math.max(maxY - minY + (CANVAS_PADDING * 2), DEFAULT_CANVAS_SIZE.height);
 
@@ -85,7 +83,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     };
   }, [diagram.components]);
 
-  // Constrain position within canvas bounds
   const constrainPosition = useCallback((position: SLDPosition, componentSize: { width: number; height: number }): SLDPosition => {
     const bounds = calculateCanvasBounds();
     
@@ -95,7 +92,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     };
   }, [calculateCanvasBounds]);
 
-  // Handle component selection
   const handleComponentClick = useCallback((componentId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     if (!readonly) {
@@ -103,7 +99,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     }
   }, [readonly]);
 
-  // Handle component drag start
   const handleMouseDown = useCallback((componentId: string, event: React.MouseEvent) => {
     if (readonly) return;
     
@@ -130,7 +125,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     });
   }, [diagram.components, zoom, pan, readonly]);
 
-  // Handle mouse move for dragging
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
     if (!dragState.isDragging || !dragState.draggedComponent || readonly) return;
 
@@ -147,24 +141,19 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
       y: currentPosition.y - dragState.offset.y
     };
 
-    // Find the component being dragged to get its size
     const draggedComponent = diagram.components.find(c => c.id === dragState.draggedComponent);
     if (!draggedComponent) return;
 
-    // Constrain position within canvas bounds
     newPosition = constrainPosition(newPosition, draggedComponent.size);
 
-    // Snap to grid if enabled
     if (diagram.snapToGrid) {
       const gridSize = 20;
       newPosition.x = Math.round(newPosition.x / gridSize) * gridSize;
       newPosition.y = Math.round(newPosition.y / gridSize) * gridSize;
       
-      // Re-constrain after snapping to ensure we're still within bounds
       newPosition = constrainPosition(newPosition, draggedComponent.size);
     }
 
-    // Update component position
     const updatedDiagram = {
       ...diagram,
       components: diagram.components.map(component =>
@@ -177,7 +166,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     onDiagramChange(updatedDiagram);
   }, [dragState, zoom, pan, diagram, onDiagramChange, readonly, constrainPosition]);
 
-  // Handle mouse up to end dragging
   const handleMouseUp = useCallback(() => {
     setDragState({
       isDragging: false,
@@ -187,12 +175,10 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     });
   }, []);
 
-  // Handle canvas click (deselect)
   const handleCanvasClick = useCallback(() => {
     setSelectedComponent(null);
   }, []);
 
-  // Zoom controls
   const handleZoomIn = useCallback(() => {
     setZoom(prev => Math.min(prev * 1.2, 3));
   }, []);
@@ -201,7 +187,6 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     setZoom(prev => Math.max(prev / 1.2, 0.3));
   }, []);
 
-  // Fit canvas to screen
   const handleFitToScreen = useCallback(() => {
     if (!canvasRef.current || diagram.components.length === 0) {
       setZoom(1);
@@ -212,13 +197,11 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const bounds = calculateCanvasBounds();
     
-    // Calculate zoom to fit all components with some padding
     const viewPadding = 50;
     const scaleX = (canvasRect.width - viewPadding * 2) / bounds.width;
     const scaleY = (canvasRect.height - viewPadding * 2) / bounds.height;
-    const optimalZoom = Math.min(scaleX, scaleY, 2); // Cap at 200% zoom
+    const optimalZoom = Math.min(scaleX, scaleY, 2);
     
-    // Center the view on the components
     const centerX = (bounds.minX + bounds.maxX) / 2;
     const centerY = (bounds.minY + bounds.maxY) / 2;
     const canvasCenterX = canvasRect.width / 2 / optimalZoom;
@@ -231,16 +214,13 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     });
   }, [diagram.components, calculateCanvasBounds]);
 
-  // Reset view to origin
   const handleResetView = useCallback(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, []);
 
-  // Zoom to fit selection or all components
   const handleZoomToFit = useCallback(() => {
     if (selectedComponent) {
-      // Zoom to selected component
       const component = diagram.components.find(c => c.id === selectedComponent);
       if (!component || !canvasRef.current) return;
 
@@ -260,15 +240,12 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
         y: canvasRect.height / 2 / targetZoom - componentCenterY
       });
     } else {
-      // Fit all components
       handleFitToScreen();
     }
   }, [selectedComponent, diagram.components, handleFitToScreen]);
 
-  // Auto-fit when components change significantly
   useEffect(() => {
     if (diagram.components.length > 0) {
-      // Debounce the auto-fit to avoid excessive updates
       const timeoutId = setTimeout(() => {
         const bounds = calculateCanvasBounds();
         const isSignificantChange = 
@@ -284,12 +261,10 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     }
   }, [diagram.components.length, calculateCanvasBounds, handleFitToScreen]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (readonly) return;
 
-      // Only handle shortcuts when canvas is focused or no input is focused
       const activeElement = document.activeElement;
       const isInputFocused = activeElement && (
         activeElement.tagName === 'INPUT' || 
@@ -340,153 +315,10 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [readonly, handleFitToScreen, handleResetView, handleZoomIn, handleZoomOut]);
 
-  // Export diagram as SVG
   const handleExport = useCallback(() => {
-    // This would export the diagram as SVG for high-quality printing
     console.log('Exporting diagram...');
   }, []);
 
-  // Render electrical component
-  const renderComponent = (component: SLDComponent) => {
-    const isSelected = selectedComponent === component.id;
-    const isDragged = dragState.draggedComponent === component.id;
-
-    return (
-      <div
-        key={component.id}
-        className={`absolute border-2 rounded cursor-move transition-all ${
-          isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-400 bg-white'
-        } ${isDragged ? 'opacity-70' : ''}`}
-        style={{
-          left: component.position.x,
-          top: component.position.y,
-          width: component.size.width,
-          height: component.size.height,
-          transform: `rotate(${component.rotation}deg)`,
-          zIndex: isSelected ? 10 : 1
-        }}
-        onClick={(e) => handleComponentClick(component.id, e)}
-        onMouseDown={(e) => handleMouseDown(component.id, e)}
-      >
-        {renderComponentContent(component)}
-        
-        {/* Component labels */}
-        {component.necLabels.map((label, index) => (
-          <div
-            key={index}
-            className="absolute text-xs font-bold text-red-600 whitespace-nowrap"
-            style={{
-              top: -20 - (index * 12),
-              left: 0,
-              fontSize: '10px'
-            }}
-          >
-            {label}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Render component content based on type
-  const renderComponentContent = (component: SLDComponent) => {
-    const commonClasses = "w-full h-full flex items-center justify-center text-xs font-medium";
-    
-    switch (component.type) {
-      case 'pv_array':
-        return (
-          <div className={`${commonClasses} bg-yellow-200 border border-yellow-400`}>
-            <div className="text-center">
-              <div>PV Array</div>
-              <div className="text-xs">{(component as any).numStrings}S × {(component as any).modulesPerString}M</div>
-            </div>
-          </div>
-        );
-        
-      case 'inverter':
-        return (
-          <div className={`${commonClasses} bg-blue-200 border border-blue-400 rounded-full`}>
-            <div className="text-center">
-              <div>INV</div>
-              <div className="text-xs">{(component as any).acOutputKW}kW</div>
-            </div>
-          </div>
-        );
-        
-      case 'dc_disconnect':
-      case 'ac_disconnect':
-        return (
-          <div className={`${commonClasses} bg-red-200 border border-red-400`}>
-            <div className="text-center">
-              <div>DISC</div>
-              <div className="text-xs">{(component as any).rating}</div>
-            </div>
-          </div>
-        );
-        
-      case 'main_panel':
-        return (
-          <div className={`${commonClasses} bg-gray-200 border border-gray-400`}>
-            <div className="text-center">
-              <div>Main Panel</div>
-              <div className="text-xs">{(component as any).rating}A</div>
-            </div>
-          </div>
-        );
-        
-      case 'battery':
-        return (
-          <div className={`${commonClasses} bg-green-200 border border-green-400`}>
-            <div className="text-center">
-              <div>Battery</div>
-              <div className="text-xs">{(component as any).capacityKWh}kWh</div>
-            </div>
-          </div>
-        );
-        
-      case 'evse_charger':
-        return (
-          <div className={`${commonClasses} bg-purple-200 border border-purple-400`}>
-            <div className="text-center">
-              <div>EVSE</div>
-              <div className="text-xs">{(component as any).powerKW}kW</div>
-            </div>
-          </div>
-        );
-        
-      case 'grid':
-        return (
-          <div className={`${commonClasses} bg-orange-200 border border-orange-400`}>
-            <div className="text-center">
-              <div>GRID</div>
-              <div className="text-xs">{(component as any).serviceVoltage}V</div>
-            </div>
-          </div>
-        );
-        
-      case 'grounding_electrode':
-        return (
-          <div className={`${commonClasses} bg-brown-200 border border-brown-400 rounded-full`}>
-            <div className="text-center">
-              <div>⏚</div>
-              <div className="text-xs">GND</div>
-            </div>
-          </div>
-        );
-        
-      default:
-        return (
-          <div className={`${commonClasses} bg-gray-100 border border-gray-300`}>
-            <div className="text-center">
-              <div>{component.type}</div>
-              <div className="text-xs">{component.name}</div>
-            </div>
-          </div>
-        );
-    }
-  };
-
-  // Render connection line
   const renderConnection = (connection: SLDConnection) => {
     const fromComponent = diagram.components.find(c => c.id === connection.fromComponentId);
     const toComponent = diagram.components.find(c => c.id === connection.toComponentId);
@@ -574,7 +406,7 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
           className={`p-2 rounded hover:bg-gray-100 ${diagram.gridEnabled ? 'bg-blue-100' : ''}`}
           title="Toggle Grid"
         >
-          <Grid className="h-4 w-4" />
+          <Grid3x3 className="h-4 w-4" />
         </button>
         
         <div className="w-px h-6 bg-gray-300 mx-2" />
@@ -668,7 +500,16 @@ export const SLDCanvas: React.FC<SLDCanvasProps> = ({
           </svg>
 
           {/* Components */}
-          {diagram.components.map(renderComponent)}
+          {diagram.components.map(component => (
+            <SLDComponentRenderer
+              key={component.id}
+              component={component}
+              isSelected={selectedComponent === component.id}
+              isDragged={dragState.draggedComponent === component.id}
+              onComponentClick={handleComponentClick}
+              onMouseDown={handleMouseDown}
+            />
+          ))}
 
           {/* Labels */}
           {diagram.labels.map(label => (

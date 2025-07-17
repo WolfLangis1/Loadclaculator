@@ -4,6 +4,7 @@ import cors from 'cors';
 import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import paymentsRouter from './api/payments.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,6 +15,9 @@ const PORT = process.env.PORT || 3001;
 // Enable CORS for all origins
 app.use(cors());
 app.use(express.json());
+
+// Payment routes (with raw body parsing for webhooks)
+app.use('/api/payments', paymentsRouter);
 
 // Require API keys - no mock mode
 if (!process.env.GOOGLE_MAPS_API_KEY) {

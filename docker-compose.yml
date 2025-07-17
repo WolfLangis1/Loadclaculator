@@ -27,7 +27,7 @@ services:
       - VITE_PORT=3000
       - WATCHPACK_POLLING=true
       - FAST_REFRESH=false
-      - VITE_API_BASE_URL=http://api-server:3001
+      - API_BASE_URL=http://localhost:3004
     env_file:
       - .env
     restart: unless-stopped
@@ -47,12 +47,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.fullstack
-      args:
-        - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-        - VITE_USE_REAL_AERIAL_DATA=${VITE_USE_REAL_AERIAL_DATA:-true}
-        - VITE_AERIAL_PROVIDER=${VITE_AERIAL_PROVIDER:-google}
+      # No build arguments to prevent API key exposure in image layers
     ports:
-      - "3002:3000"  # Frontend
+      - "3003:3000"  # Frontend
       - "3001:3001"  # Backend API
     volumes:
       - ./src:/app/src:ro
@@ -70,7 +67,9 @@ services:
       - CHOKIDAR_INTERVAL=2000
       - VITE_HOST=0.0.0.0
       - VITE_PORT=3000
-      - VITE_API_BASE_URL=http://localhost:3001
+      - API_BASE_URL=http://localhost:3001
+      # Runtime API key injection (no exposure in image layers)
+      # Variables will be loaded from .env.local file
     env_file:
       - .env.local
     restart: unless-stopped
@@ -117,16 +116,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        # Pass build-time environment variables
-        - VITE_USE_REAL_AERIAL_DATA=${VITE_USE_REAL_AERIAL_DATA:-false}
-        - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY:-}
-        - VITE_MAPBOX_API_KEY=${VITE_MAPBOX_API_KEY:-}
-        - VITE_AERIAL_PROVIDER=${VITE_AERIAL_PROVIDER:-google}
+      # No build arguments to prevent API key exposure in image layers
     ports:
       - "3002:3000"
     environment:
       - NODE_ENV=production
+      # Runtime environment variables for production
+      - USE_REAL_AERIAL_DATA=${USE_REAL_AERIAL_DATA:-false}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - MAPBOX_API_KEY=${MAPBOX_API_KEY}
+      - AERIAL_PROVIDER=${AERIAL_PROVIDER:-google}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     env_file:
       - .env  # Load environment variables from .env file
     restart: unless-stopped
