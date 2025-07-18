@@ -4,12 +4,18 @@ export interface FeatureFlags {
     inspection: boolean;
     compliance: boolean;
   };
+  crm: {
+    enabled: boolean;
+  };
 }
 
 export const defaultFeatureFlags: FeatureFlags = {
   aerialView: {
     inspection: false,        // Coming soon
     compliance: false,        // Coming soon
+  },
+  crm: {
+    enabled: false,           // CRM feature disabled by default
   },
 };
 

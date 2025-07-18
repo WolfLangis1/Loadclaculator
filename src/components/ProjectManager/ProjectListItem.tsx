@@ -3,27 +3,20 @@ import { FolderOpen, Download, Trash2, Clock, Check } from 'lucide-react';
 
 interface ProjectListItemProps {
   project: any; // Replace 'any' with your actual Project type
-  currentProjectId?: string | null;
   onLoadProject: (projectId: string) => void;
   onExportProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
 }
 
 export const ProjectListItem: React.FC<ProjectListItemProps> = React.memo(
-  ({ project, currentProjectId, onLoadProject, onExportProject, onDeleteProject }) => {
+  ({ project, onLoadProject, onExportProject, onDeleteProject }) => {
     const formatDate = (date: Date | string) => {
       const d = typeof date === 'string' ? new Date(date) : date;
       return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     return (
-      <div
-        className={`p-4 border rounded-lg transition-colors ${
-          project.id === currentProjectId
-            ? 'border-blue-300 bg-blue-50'
-            : 'border-gray-200 hover:border-gray-300'
-        }`}
-      >
+      <div className="p-4 border border-gray-200 hover:border-gray-300 rounded-lg transition-colors">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h4 className="font-medium text-gray-900">{project.name}</h4>

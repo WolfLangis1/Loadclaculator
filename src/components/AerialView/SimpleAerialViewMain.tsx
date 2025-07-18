@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAerialView } from '../../context/AerialViewContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
+import { AerialMeasurementService } from '../../services/aerialMeasurementService';
 
 import { AddressSearchControls } from './AddressSearchControls';
 import { MeasurementTools } from './MeasurementTools';
@@ -28,7 +29,8 @@ export const SimpleAerialViewMain: React.FC = () => {
     setZoom,
     setSatelliteImage,
     addLinearMeasurement,
-    addAreaMeasurement
+    addAreaMeasurement,
+    addPolylineMeasurement
   } = useAerialView();
   
   const { settings } = useProjectSettings();
@@ -222,51 +224,67 @@ export const SimpleAerialViewMain: React.FC = () => {
       setMeasurementPoints(newPoints);
 
       if (state.ui.measurementMode === 'linear' && newPoints.length === 2) {
-        // Calculate linear distance
-        const distance = Math.sqrt(
-          Math.pow(newPoints[1].x - newPoints[0].x, 2) +
-          Math.pow(newPoints[1].y - newPoints[0].y, 2)
+        // Use improved measurement service
+        const result = AerialMeasurementService.calculateLinearDistance(
+          newPoints[0],
+          newPoints[1],
+          state.zoom,
+          state.coordinates?.latitude || 0,
+          'meters'
         );
-        
-        // Convert pixel distance to meters (improved calculation based on zoom)
-        const metersPerPixel = calculateMetersPerPixel(state.zoom, state.coordinates?.latitude || 0);
-        const realDistance = distance * metersPerPixel;
         
         // Add measurement to context
         const measurement = {
           id: Date.now().toString(),
           startPoint: newPoints[0],
           endPoint: newPoints[1],
-          distance: realDistance,
-          unit: 'meters' as const,
-          label: `${realDistance.toFixed(1)}m`
+          distance: result.distance,
+          unit: result.unit,
+          label: result.label
         };
         addLinearMeasurement(measurement);
         
         setMeasurementPoints([]);
+      } else if (state.ui.measurementMode === 'polyline') {
+        // Handle multi-point polyline measurement
+        if (e.detail === 2 && newPoints.length >= 2) { // Double-click to finish
+          const result = AerialMeasurementService.calculatePolylineDistance(
+            newPoints,
+            state.zoom,
+            state.coordinates?.latitude || 0,
+            'meters'
+          );
+          
+          const measurement = {
+            id: Date.now().toString(),
+            points: newPoints,
+            totalDistance: result.totalDistance,
+            segmentDistances: result.segmentDistances,
+            unit: result.unit,
+            label: result.label
+          };
+          addPolylineMeasurement(measurement);
+          
+          setMeasurementPoints([]);
+        }
+        // Continue adding points if not double-clicked
       } else if (state.ui.measurementMode === 'area') {
         // For area measurement, need at least 3 points and double-click to finish
         if (e.detail === 2 && newPoints.length >= 3) { // Double-click to finish
-          // Calculate area (simplified polygon area calculation)
-          let area = 0;
-          for (let i = 0; i < newPoints.length; i++) {
-            const j = (i + 1) % newPoints.length;
-            area += newPoints[i].x * newPoints[j].y;
-            area -= newPoints[j].x * newPoints[i].y;
-          }
-          area = Math.abs(area) / 2;
-          
-          // Convert pixel area to square meters
-          const metersPerPixel = calculateMetersPerPixel(state.zoom, state.coordinates?.latitude || 0);
-          const realArea = area * Math.pow(metersPerPixel, 2);
+          const result = AerialMeasurementService.calculatePolygonArea(
+            newPoints,
+            state.zoom,
+            state.coordinates?.latitude || 0,
+            'sqm'
+          );
           
           // Add measurement to context
           const measurement = {
             id: Date.now().toString(),
             points: newPoints,
-            area: realArea,
-            unit: 'sqm' as const,
-            label: `${realArea.toFixed(1)} m²`
+            area: result.area,
+            unit: result.unit,
+            label: result.label
           };
           addAreaMeasurement(measurement);
           
@@ -555,23 +573,26 @@ export const SimpleAerialViewMain: React.FC = () => {
                   onClick={handleImageClick}
                 />
                 {annotationsVisible && imageRef && (
-                  <AnnotationOverlay
-                    annotations={annotations}
-                    currentAnnotation={currentAnnotation}
-                    measurementPoints={measurementPoints}
-                    imageWidth={imageRef.clientWidth}
-                    imageHeight={imageRef.clientHeight}
-                    onAnnotationClick={handleAnnotationClick}
-                  />
+                  <div className="absolute inset-0 z-30">
+                    <AnnotationOverlay
+                      annotations={annotations}
+                      currentAnnotation={currentAnnotation}
+                      measurementPoints={measurementPoints}
+                      imageWidth={imageRef.clientWidth}
+                      imageHeight={imageRef.clientHeight}
+                      onAnnotationClick={handleAnnotationClick}
+                    />
+                  </div>
                 )}
                 
                 {/* Measurement overlay for active measurements */}
-                {(state.ui.measurementMode !== 'off' || measurementPoints.length > 0 || state.measurements.linear.length > 0 || state.measurements.area.length > 0) && imageRef && (
-                  <div className="absolute inset-0 pointer-events-none">
+                {(state.ui.measurementMode !== 'off' || measurementPoints.length > 0 || state.measurements.linear.length > 0 || state.measurements.area.length > 0 || state.measurements.polyline.length > 0) && imageRef && (
+                  <div className="absolute inset-0 pointer-events-none z-10">
                     <svg
                       width={imageRef.clientWidth}
                       height={imageRef.clientHeight}
-                      className="absolute inset-0"
+                      className="absolute inset-0 z-20"
+                      style={{ pointerEvents: 'none' }}
                     >
                       {/* Render measurement points */}
                       {measurementPoints.map((point, index) => (
@@ -597,6 +618,18 @@ export const SimpleAerialViewMain: React.FC = () => {
                           stroke="blue"
                           strokeWidth={2}
                           strokeDasharray="5,5"
+                          opacity={0.8}
+                        />
+                      )}
+                      
+                      {/* Render measurement lines for polyline mode */}
+                      {state.ui.measurementMode === 'polyline' && measurementPoints.length >= 2 && (
+                        <polyline
+                          points={measurementPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                          stroke="blue"
+                          strokeWidth={2}
+                          strokeDasharray="5,5"
+                          fill="none"
                           opacity={0.8}
                         />
                       )}
@@ -666,6 +699,37 @@ export const SimpleAerialViewMain: React.FC = () => {
                               x={centroid.x}
                               y={centroid.y}
                               fill="orange"
+                              fontSize="12"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                              className="pointer-events-none"
+                            >
+                              {measurement.label}
+                            </text>
+                          </g>
+                        );
+                      })}
+                      
+                      {/* Render completed polyline measurements */}
+                      {state.measurements.polyline.map((measurement) => {
+                        const midPoint = measurement.points[Math.floor(measurement.points.length / 2)];
+                        
+                        return (
+                          <g key={`polyline-${measurement.id}`}>
+                            <polyline
+                              points={measurement.points.map(p => `${p.x},${p.y}`).join(' ')}
+                              stroke="purple"
+                              strokeWidth={3}
+                              fill="none"
+                              opacity={0.8}
+                            />
+                            {measurement.points.map((point, pointIndex) => (
+                              <circle key={pointIndex} cx={point.x} cy={point.y} r={4} fill="purple" />
+                            ))}
+                            <text
+                              x={midPoint.x}
+                              y={midPoint.y - 15}
+                              fill="purple"
                               fontSize="12"
                               fontWeight="bold"
                               textAnchor="middle"

@@ -22,6 +22,7 @@ interface SupabaseAuthContextType {
   
   updateUserProfile: (updates: Partial<User>) => Promise<boolean>;
   updateSettings: (settings: Partial<UserSettings>) => Promise<boolean>;
+  uploadAvatar: (file: File) => Promise<string>;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
@@ -421,6 +422,47 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({ chil
     }
   }, [userSettings, isGuest]);
 
+  const uploadAvatar = useCallback(async (file: File): Promise<string> => {
+    if (!dbUser) throw new Error('User not authenticated');
+    
+    try {
+      // For guest users, we can't upload to Supabase, so return a mock URL
+      if (isGuest) {
+        // Create a local object URL for preview
+        const objectUrl = URL.createObjectURL(file);
+        const updatedUser = { ...dbUser, avatar_url: objectUrl };
+        localStorage.setItem('guest_user', JSON.stringify(updatedUser));
+        setDbUser(updatedUser);
+        return objectUrl;
+      }
+      
+      // For authenticated users, upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${dbUser.id}/avatar.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+      
+      if (error) throw error;
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+      
+      const avatarUrl = urlData.publicUrl;
+      
+      // Update user profile with new avatar URL
+      await updateUserProfile({ avatar_url: avatarUrl });
+      
+      return avatarUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      throw error;
+    }
+  }, [dbUser, isGuest, updateUserProfile]);
+
   const value: SupabaseAuthContextType = useMemo(() => ({
     supabaseUser,
     session,
@@ -436,7 +478,8 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({ chil
     signOut,
     convertGuestToUser,
     updateUserProfile,
-    updateSettings
+    updateSettings,
+    uploadAvatar
   }), [
     supabaseUser,
     session,
@@ -452,7 +495,8 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({ chil
     signOut,
     convertGuestToUser,
     updateUserProfile,
-    updateSettings
+    updateSettings,
+    uploadAvatar
   ]);
 
   return (

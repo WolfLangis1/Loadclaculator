@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
-import { Ruler, Square, RotateCcw, Save } from 'lucide-react';
+import { Ruler, Square, RotateCcw, Save, Zap, X } from 'lucide-react';
 import { useAerialView } from '../../context/AerialViewContext';
 import { AttachmentService } from '../../services/attachmentService';
+import { AerialMeasurementService } from '../../services/aerialMeasurementService';
 
 interface MeasurementToolsProps {
   measurementPoints: Array<{x: number, y: number}>;
@@ -15,11 +16,12 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
   const {
     state,
     updateUIState,
-    clearMeasurements
+    clearMeasurements,
+    removeMeasurement
   } = useAerialView();
 
   // Clear measurement points when switching modes
-  const handleMeasurementModeChange = useCallback((newMode: 'off' | 'linear' | 'area') => {
+  const handleMeasurementModeChange = useCallback((newMode: 'off' | 'linear' | 'area' | 'polyline') => {
     setMeasurementPoints([]);
     updateUIState({ measurementMode: newMode });
   }, [setMeasurementPoints, updateUIState]);
@@ -33,11 +35,12 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
 
 
   const saveMeasurements = useCallback(async () => {
-    if (!state.measurements.linear.length && !state.measurements.area.length) return;
+    if (!state.measurements.linear.length && !state.measurements.area.length && !state.measurements.polyline.length) return;
 
     const measurementData = {
       linear: state.measurements.linear,
       area: state.measurements.area,
+      polyline: state.measurements.polyline,
       timestamp: new Date().toISOString(),
       address: state.address
     };
@@ -96,6 +99,20 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
         </button>
         
         <button
+          onClick={() => handleMeasurementModeChange(
+            state.ui.measurementMode === 'polyline' ? 'off' : 'polyline'
+          )}
+          className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+            state.ui.measurementMode === 'polyline'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Zap className="h-4 w-4" />
+          Multi-Point
+        </button>
+        
+        <button
           onClick={handleClearAll}
           className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2"
         >
@@ -105,7 +122,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
         
         <button
           onClick={saveMeasurements}
-          disabled={!state.measurements.linear.length && !state.measurements.area.length}
+          disabled={!state.measurements.linear.length && !state.measurements.area.length && !state.measurements.polyline.length}
           className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2"
         >
           <Save className="h-4 w-4" />
@@ -119,16 +136,19 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
           <div className="text-sm text-blue-800 font-medium">
             {state.ui.measurementMode === 'linear' && '📏 Linear Measurement Mode'}
             {state.ui.measurementMode === 'area' && '📐 Area Measurement Mode'}
+            {state.ui.measurementMode === 'polyline' && '⚡ Multi-Point Distance Mode'}
           </div>
           <div className="text-xs text-blue-600 mt-1">
             {state.ui.measurementMode === 'linear' && 'Click two points on the satellite image to measure distance'}
             {state.ui.measurementMode === 'area' && 'Click multiple points to outline area (double-click to finish)'}
+            {state.ui.measurementMode === 'polyline' && 'Click multiple points to measure path distance (double-click to finish)'}
           </div>
           {measurementPoints.length > 0 && (
             <div className="text-xs text-blue-700 mt-2 font-medium">
               ✓ Points selected: {measurementPoints.length}
               {state.ui.measurementMode === 'linear' && measurementPoints.length >= 2 && ' (Ready to measure!)'}
               {state.ui.measurementMode === 'area' && measurementPoints.length >= 3 && ' (Double-click to finish)'}
+              {state.ui.measurementMode === 'polyline' && measurementPoints.length >= 2 && ' (Double-click to finish path)'}
             </div>
           )}
         </div>
@@ -146,13 +166,25 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
       )}
 
       {/* Measurement Results */}
-      {(state.measurements.linear.length > 0 || state.measurements.area.length > 0) && (
+      {(state.measurements.linear.length > 0 || state.measurements.area.length > 0 || state.measurements.polyline.length > 0) && (
         <div className="border-t pt-4">
-          <h5 className="font-medium text-gray-900 mb-2">Measurement Results</h5>
+          <div className="flex justify-between items-center mb-2">
+            <h5 className="font-medium text-gray-900">Measurement Results</h5>
+            <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              Accuracy: {AerialMeasurementService.getAccuracyEstimate(state.zoom)}
+            </div>
+          </div>
           
           {state.measurements.linear.map((measurement, index) => (
-            <div key={measurement.id} className="bg-gray-50 rounded p-2 text-sm mb-2 border-l-4 border-green-500">
-              <div className="font-medium text-gray-900">Linear {index + 1}</div>
+            <div key={measurement.id} className="bg-gray-50 rounded p-2 text-sm mb-2 border-l-4 border-green-500 relative">
+              <button
+                onClick={() => removeMeasurement('linear', measurement.id)}
+                className="absolute top-1 right-1 p-1 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700"
+                title="Delete measurement"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <div className="font-medium text-gray-900 pr-6">Linear {index + 1}</div>
               <div className="text-gray-600">{measurement.label}</div>
               <div className="text-xs text-gray-500">Distance: {measurement.distance.toFixed(2)} {measurement.unit}</div>
               <div className="text-xs text-green-600">✓ Shown in green on image</div>
@@ -160,11 +192,39 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
           ))}
           
           {state.measurements.area.map((measurement, index) => (
-            <div key={measurement.id} className="bg-gray-50 rounded p-2 text-sm mb-2 border-l-4 border-orange-500">
-              <div className="font-medium text-gray-900">Area {index + 1}</div>
+            <div key={measurement.id} className="bg-gray-50 rounded p-2 text-sm mb-2 border-l-4 border-orange-500 relative">
+              <button
+                onClick={() => removeMeasurement('area', measurement.id)}
+                className="absolute top-1 right-1 p-1 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700"
+                title="Delete measurement"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <div className="font-medium text-gray-900 pr-6">Area {index + 1}</div>
               <div className="text-gray-600">{measurement.label}</div>
               <div className="text-xs text-gray-500">Area: {measurement.area.toFixed(2)} {measurement.unit}</div>
               <div className="text-xs text-orange-600">✓ Shown in orange on image</div>
+            </div>
+          ))}
+          
+          {state.measurements.polyline.map((measurement, index) => (
+            <div key={measurement.id} className="bg-gray-50 rounded p-2 text-sm mb-2 border-l-4 border-blue-500 relative">
+              <button
+                onClick={() => removeMeasurement('polyline', measurement.id)}
+                className="absolute top-1 right-1 p-1 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700"
+                title="Delete measurement"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <div className="font-medium text-gray-900 pr-6">Multi-Point Path {index + 1}</div>
+              <div className="text-gray-600">{measurement.label}</div>
+              <div className="text-xs text-gray-500">
+                Total: {measurement.totalDistance.toFixed(2)} {measurement.unit}
+              </div>
+              <div className="text-xs text-gray-500">
+                Segments: {measurement.segmentDistances.map(d => d.toFixed(1)).join(' + ')} {measurement.unit}
+              </div>
+              <div className="text-xs text-blue-600">✓ Shown in purple on image</div>
             </div>
           ))}
         </div>

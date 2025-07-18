@@ -16,16 +16,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 class CRMService {
-  // Helper method to get user ID from Firebase UID
-  async getUserId(firebaseUid) {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id')
-      .eq('firebase_uid', firebaseUid)
-      .single();
-    
-    if (error) throw new Error(`User not found: ${error.message}`);
-    return user.id;
+  // Helper method to get user ID - simplified for Supabase auth
+  async getUserId(supabaseUserId) {
+    // Since we're using Supabase auth directly, the user ID is the Supabase user ID
+    return supabaseUserId;
   }
 
   // Customer Management
@@ -240,8 +234,7 @@ class CRMService {
       .select(`
         *,
         customer:crm_customers(*),
-        stage:crm_stages(*),
-        assigned_user:users(id, name, email)
+        stage:crm_stages(*)
       `)
       .eq('crm_customers.user_id', userId)
       .order('created_at', { ascending: false });
@@ -312,8 +305,7 @@ class CRMService {
       .select(`
         *,
         customer:crm_customers(*),
-        stage:crm_stages(*),
-        assigned_user:users(id, name, email)
+        stage:crm_stages(*)
       `)
       .single();
 
@@ -342,8 +334,7 @@ class CRMService {
       .select(`
         *,
         customer:crm_customers(*),
-        stage:crm_stages(*),
-        assigned_user:users(id, name, email)
+        stage:crm_stages(*)
       `)
       .single();
 
@@ -370,8 +361,7 @@ class CRMService {
       .select(`
         *,
         customer:crm_customers(*),
-        stage:crm_stages(*),
-        assigned_user:users(id, name, email)
+        stage:crm_stages(*)
       `)
       .eq('id', projectId)
       .single();
@@ -400,7 +390,6 @@ class CRMService {
       .from('crm_activities')
       .select(`
         *,
-        user:users(id, name, email),
         project:crm_projects(id, customer:crm_customers(name)),
         customer:crm_customers(name)
       `)
@@ -446,7 +435,6 @@ class CRMService {
       })
       .select(`
         *,
-        user:users(id, name, email),
         project:crm_projects(id, customer:crm_customers(name)),
         customer:crm_customers(name)
       `)
@@ -464,7 +452,6 @@ class CRMService {
       .from('crm_tasks')
       .select(`
         *,
-        assigned_user:users(id, name, email),
         project:crm_projects(id, customer:crm_customers(name)),
         customer:crm_customers(name)
       `)
@@ -522,7 +509,6 @@ class CRMService {
       })
       .select(`
         *,
-        assigned_user:users(id, name, email),
         project:crm_projects(id, customer:crm_customers(name)),
         customer:crm_customers(name)
       `)
@@ -542,7 +528,6 @@ class CRMService {
       .eq('user_id', userId)
       .select(`
         *,
-        assigned_user:users(id, name, email),
         project:crm_projects(id, customer:crm_customers(name)),
         customer:crm_customers(name)
       `)

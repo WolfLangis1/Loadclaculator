@@ -1,10 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SupabaseAuthProvider, useSupabaseAuth } from './context/SupabaseAuthContext';
 import { UnifiedAppProvider } from './context/UnifiedAppContext';
+import { UserSettingsProvider } from './context/UserSettingsContext';
 import { TabbedInterface } from './components/TabbedInterface/TabbedInterface';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { SupabaseLoginPage } from './components/Auth/SupabaseLoginPage';
 import { UserMenu } from './components/Auth/UserMenu';
+import { SettingsPage } from './pages/SettingsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { Analytics } from '@vercel/analytics/react';
 
 // Protected route component
@@ -61,11 +64,13 @@ import { MainLayout } from './components/Layout/MainLayout';
 // Main app layout with authentication
 function AuthenticatedApp() {
   return (
-    <UnifiedAppProvider>
-      <MainLayout>
-        <TabbedInterface />
-      </MainLayout>
-    </UnifiedAppProvider>
+    <UserSettingsProvider>
+      <UnifiedAppProvider>
+        <MainLayout>
+          <TabbedInterface />
+        </MainLayout>
+      </UnifiedAppProvider>
+    </UserSettingsProvider>
   );
 }
 
@@ -78,12 +83,52 @@ function AppWithAuth() {
           <Routes>
             <Route path="/login" element={<SupabaseLoginPage />} />
             <Route
-              path="/*"
+              path="/"
               element={
                 <ProtectedRoute>
                   <AuthenticatedApp />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <UserSettingsProvider>
+                    <UnifiedAppProvider>
+                      <MainLayout>
+                        <SettingsPage />
+                      </MainLayout>
+                    </UnifiedAppProvider>
+                  </UserSettingsProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <UserSettingsProvider>
+                    <UnifiedAppProvider>
+                      <MainLayout>
+                        <ProfilePage />
+                      </MainLayout>
+                    </UnifiedAppProvider>
+                  </UserSettingsProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={<Navigate to="/" replace />}
+            />
+            <Route
+              path="/help"
+              element={<Navigate to="/" replace />}
+            />
+            <Route
+              path="*"
+              element={<Navigate to="/" replace />}
             />
           </Routes>
           <Analytics />

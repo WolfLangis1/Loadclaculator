@@ -30,6 +30,15 @@ interface AreaMeasurement {
   label?: string;
 }
 
+interface PolylineMeasurement {
+  id: string;
+  points: MeasurementPoint[];
+  totalDistance: number;
+  segmentDistances: number[];
+  unit: 'feet' | 'meters';
+  label?: string;
+}
+
 interface AerialViewState {
   address: string;
   coordinates: Coordinates | null;
@@ -47,13 +56,14 @@ interface AerialViewState {
   measurements: {
     linear: LinearMeasurement[];
     area: AreaMeasurement[];
+    polyline: PolylineMeasurement[];
   };
   
   // UI State
   ui: {
     viewMode: 'satellite' | 'streetview' | 'measurements';
     showMeasurements: boolean;
-    measurementMode: 'off' | 'linear' | 'area';
+    measurementMode: 'off' | 'linear' | 'area' | 'polyline';
     loading: boolean;
     error: string | null;
   };
@@ -67,7 +77,8 @@ type AerialViewAction =
   | { type: 'SET_STREET_VIEW_IMAGES'; payload: AerialViewState['streetViewImages'] }
   | { type: 'ADD_LINEAR_MEASUREMENT'; payload: LinearMeasurement }
   | { type: 'ADD_AREA_MEASUREMENT'; payload: AreaMeasurement }
-  | { type: 'REMOVE_MEASUREMENT'; payload: { type: 'linear' | 'area'; id: string } }
+  | { type: 'ADD_POLYLINE_MEASUREMENT'; payload: PolylineMeasurement }
+  | { type: 'REMOVE_MEASUREMENT'; payload: { type: 'linear' | 'area' | 'polyline'; id: string } }
   | { type: 'CLEAR_MEASUREMENTS' }
   | { type: 'UPDATE_UI_STATE'; payload: Partial<AerialViewState['ui']> }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -86,7 +97,8 @@ interface AerialViewContextType {
   setStreetViewImages: (images: AerialViewState['streetViewImages']) => void;
   addLinearMeasurement: (measurement: LinearMeasurement) => void;
   addAreaMeasurement: (measurement: AreaMeasurement) => void;
-  removeMeasurement: (type: 'linear' | 'area', id: string) => void;
+  addPolylineMeasurement: (measurement: PolylineMeasurement) => void;
+  removeMeasurement: (type: 'linear' | 'area' | 'polyline', id: string) => void;
   clearMeasurements: () => void;
   updateUIState: (updates: Partial<AerialViewState['ui']>) => void;
   setLoading: (loading: boolean) => void;
@@ -102,7 +114,8 @@ const initialState: AerialViewState = {
   streetViewImages: [],
   measurements: {
     linear: [],
-    area: []
+    area: [],
+    polyline: []
   },
   ui: {
     viewMode: 'satellite',
@@ -163,6 +176,15 @@ function aerialViewReducer(state: AerialViewState, action: AerialViewAction): Ae
         }
       };
       
+    case 'ADD_POLYLINE_MEASUREMENT':
+      return {
+        ...state,
+        measurements: {
+          ...state.measurements,
+          polyline: [...state.measurements.polyline, action.payload]
+        }
+      };
+      
     case 'REMOVE_MEASUREMENT': {
       const { type, id } = action.payload;
       return {
@@ -179,7 +201,8 @@ function aerialViewReducer(state: AerialViewState, action: AerialViewAction): Ae
         ...state,
         measurements: {
           linear: [],
-          area: []
+          area: [],
+          polyline: []
         }
       };
       
@@ -254,7 +277,11 @@ export const AerialViewProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     dispatch({ type: 'ADD_AREA_MEASUREMENT', payload: measurement });
   }, []);
   
-  const removeMeasurement = React.useCallback((type: 'linear' | 'area', id: string) => {
+  const addPolylineMeasurement = React.useCallback((measurement: PolylineMeasurement) => {
+    dispatch({ type: 'ADD_POLYLINE_MEASUREMENT', payload: measurement });
+  }, []);
+  
+  const removeMeasurement = React.useCallback((type: 'linear' | 'area' | 'polyline', id: string) => {
     dispatch({ type: 'REMOVE_MEASUREMENT', payload: { type, id } });
   }, []);
   
@@ -288,6 +315,7 @@ export const AerialViewProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setStreetViewImages,
     addLinearMeasurement,
     addAreaMeasurement,
+    addPolylineMeasurement,
     removeMeasurement,
     clearMeasurements,
     updateUIState,
@@ -303,6 +331,7 @@ export const AerialViewProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setStreetViewImages,
     addLinearMeasurement,
     addAreaMeasurement,
+    addPolylineMeasurement,
     removeMeasurement,
     clearMeasurements,
     updateUIState,

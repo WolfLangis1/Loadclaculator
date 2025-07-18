@@ -7,6 +7,21 @@ import { AerialViewProvider } from './AerialViewContext';
 import { ComplianceProvider } from './ComplianceContext';
 import { CRMProvider } from './CRMContext';
 import { AddressSyncProvider } from './AddressSyncContext';
+import { useFeatureFlags } from '../config/featureFlags';
+
+/**
+ * Conditional CRM Provider Wrapper
+ * Only includes CRM provider if the feature flag is enabled
+ */
+const ConditionalCRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const featureFlags = useFeatureFlags();
+  
+  if (featureFlags.crm.enabled) {
+    return <CRMProvider>{children}</CRMProvider>;
+  }
+  
+  return <>{children}</>;
+};
 
 /**
  * Unified App Context Provider
@@ -21,7 +36,7 @@ import { AddressSyncProvider } from './AddressSyncContext';
  * 4. SLDProvider (single line diagram management)
  * 5. AerialViewProvider (aerial view and site analysis)
  * 6. ComplianceProvider (inspection and compliance management)
- * 7. CRMProvider (customer relationship management)
+ * 7. CRMProvider (customer relationship management) - conditional
  */
 export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -32,9 +47,9 @@ export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             <AerialViewProvider>
               <AddressSyncProvider>
                 <ComplianceProvider>
-                  <CRMProvider>
+                  <ConditionalCRMProvider>
                     {children}
-                  </CRMProvider>
+                  </ConditionalCRMProvider>
                 </ComplianceProvider>
               </AddressSyncProvider>
             </AerialViewProvider>

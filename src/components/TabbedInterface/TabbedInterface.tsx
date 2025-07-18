@@ -46,7 +46,7 @@ export const TabbedInterface: React.FC = memo(() => {
     SLD_ENABLED: false, // Set to false to disable SLD feature
     COMPLIANCE_ENABLED: featureFlags.aerialView.compliance,
     INSPECTION_ENABLED: featureFlags.aerialView.inspection,
-    CRM_ENABLED: true, // CRM system is now available
+    CRM_ENABLED: featureFlags.crm.enabled, // CRM controlled by feature flag
   };
 
   const tabs: Tab[] = [

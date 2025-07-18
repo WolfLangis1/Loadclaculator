@@ -8,7 +8,8 @@ import {
   Save,
   FileText as TemplateIcon,
   BarChart3,
-  Check
+  Check,
+  Zap
 } from 'lucide-react';
 import { projectService, type ProjectData, type ProjectTemplate } from '../../services/projectService';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
@@ -502,7 +503,6 @@ export const EnhancedProjectManager: React.FC<EnhancedProjectManagerProps> = ({
                       <ProjectListItem
                         key={project.metadata.id}
                         project={project}
-                        currentProjectId={currentProject?.id}
                         onLoadProject={handleLoadProject}
                         onExportProject={handleExportProject}
                         onDeleteProject={handleDeleteProject}

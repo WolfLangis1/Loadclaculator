@@ -625,6 +625,12 @@ export const useCRM = (): CRMContextValue => {
   return context;
 };
 
+// Safe hook that returns null if CRM is not enabled
+export const useCRMSafe = (): CRMContextValue | null => {
+  const context = useContext(CRMContext);
+  return context || null;
+};
+
 // Specialized hooks for convenience
 export const useCustomers = () => {
   const { customers, loadCustomers, createCustomer, updateCustomer, deleteCustomer, loading } = useCRM();
