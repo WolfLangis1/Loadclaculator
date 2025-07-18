@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a professional electrical load calculator application built with React and TypeScript that performs NEC (National Electrical Code) compliant load calculations for residential and commercial electrical services. The application includes three main features: Load Calculator, Single Line Diagram (SLD) creation, and Aerial View & Site Analysis.
 
-**Latest Update**: Successfully migrated from Firebase to Supabase authentication with comprehensive Google OAuth and guest mode support. Implemented fullstack Docker development environment with backend proxy for Google Maps APIs. Authentication now uses immediate fallback user creation pattern for optimal performance. All SLD features remain production-ready with WorkingIntelligentSLDCanvas including drag-and-drop, wire routing, and NEC compliance.
+**Latest Update**: Successfully migrated to Vercel serverless functions architecture. Fixed infinite re-rendering address field glitch caused by circular dependencies. All API endpoints now work in production with proper Google Maps integration. Supabase authentication with comprehensive Google OAuth and guest mode support. All SLD features remain production-ready with WorkingIntelligentSLDCanvas including drag-and-drop, wire routing, and NEC compliance.
 
 ## Architecture
 
@@ -17,8 +17,8 @@ This is a professional electrical load calculator application built with React a
 - **State Management**: Multiple specialized contexts using React Context API with useReducer
 - **Performance**: React.memo, useMemo optimization, lazy loading for advanced features
 - **Testing**: Vitest for unit testing electrical calculations
-- **Development**: Docker fullstack environment with backend proxy
-- **Deployment**: Vercel-optimized with selective component exclusion via .vercelignore
+- **Development**: Docker fullstack environment with backend proxy OR Vercel serverless functions
+- **Deployment**: Vercel serverless functions with proper API routing and Google Maps integration
 
 ### Three-Module Architecture
 The application consists of three main modules accessible via tabbed interface:
@@ -68,17 +68,21 @@ src/
 │   ├── wireRoutingEngine.ts   # Wire routing and collision detection
 │   ├── realTimeNECValidator.ts # Real-time NEC compliance
 │   ├── projectService.ts      # Project management with templates
-│   └── [Secure API services for external integrations]
+│   ├── secureApiService.ts    # Main API client for external services
+│   ├── apiClient.ts           # Authenticated API client
+│   └── [Additional API services for Google Maps, solar, etc.]
 └── types/                     # TypeScript definitions
 ```
 
-### Vercel Deployment Strategy
+### Vercel Serverless Architecture
 
-The application uses a selective exclusion strategy via `.vercelignore` to ensure reliable deployments:
+The application uses Vercel serverless functions for backend API operations:
 
-- **Included**: Core load calculator, WorkingIntelligentSLDCanvas.tsx, SimpleAerialViewMain.tsx, essential services
-- **Excluded**: Only truly problematic components (ExpandedIEEESymbols, PerformanceMonitor) 
-- **Result**: Stable builds with full SLD functionality including drag-drop, wire routing, and NEC validation
+- **Frontend**: Static React app deployed to Vercel edge network
+- **Backend**: Serverless functions in `/api/*.js` handle Google Maps API calls
+- **Security**: API keys stored server-side only, never exposed to client
+- **Performance**: Fast serverless function execution with proper caching
+- **Result**: Fully functional application with working Google Maps integration
 
 ### Key Architecture Decisions
 
@@ -116,8 +120,16 @@ npm run preview      # Preview production build
 
 ### Testing
 ```bash
-npm run test         # Run unit tests (Vitest)
-npm run test:ui      # Run tests with UI
+npm run test                    # Run unit tests (Vitest)
+npm run test:ui                 # Run tests with UI  
+npm run test:coverage           # Run tests with coverage report
+npm run test:e2e               # Run all Cypress E2E tests
+npm run test:e2e:load-calculator # Test load calculator module
+npm run test:e2e:sld           # Test SLD module  
+npm run test:e2e:project-manager # Test project manager
+npm run test:e2e:compliance    # Test compliance module
+npm run cypress:open           # Open Cypress test runner
+npm run cypress:run            # Run Cypress tests headless
 ```
 
 ### Code Quality
@@ -125,6 +137,19 @@ npm run test:ui      # Run tests with UI
 npm run lint         # Run ESLint
 npm run lint:fix     # Fix linting issues
 npm run typecheck    # Check TypeScript types
+```
+
+### API Testing
+```bash
+npm run test:api     # Test Google Maps API endpoints
+npm run test:solar   # Test Solar API integration
+```
+
+### Vercel Deployment
+```bash
+npm run vercel:test  # Test production build locally
+npm run vercel:dev   # Run Vercel development server
+npm run vercel:build # Build for Vercel deployment
 ```
 
 ### Docker Commands
@@ -370,21 +395,31 @@ const initializeUserData = useCallback(async (supabaseUser: SupabaseUser) => {
 - **Error Boundaries**: Authentication failures don't crash the entire application
 - **Graceful Degradation**: Guest users get full functionality with local storage persistence
 
-### Backend Proxy Architecture
-The fullstack Docker environment provides:
-- **Frontend**: http://localhost:3000 (Vite dev server)
-- **Backend API**: http://localhost:3001 (Express server with Google Maps proxy)
-- **Security**: API keys stored server-side only, never exposed to client
+### API Architecture Patterns
+The application supports multiple deployment strategies:
+
+**Vercel Serverless (Production)**:
+- **Frontend**: Static app deployed to Vercel CDN
+- **Backend**: Serverless functions in `/api/*.js` handle external API calls
+- **Security**: Environment variables managed in Vercel dashboard
+
+**Docker Development (Local)**:
+- **Frontend**: http://localhost:3000 (Vite dev server)  
+- **Backend**: http://localhost:3001 (Express server with Google Maps proxy)
 - **Development**: Hot reload for both frontend and backend services
 
 ## Google API Integration
 
 ### Current Status
-- ✅ **Google Geocoding API**: Fully functional for address-to-coordinates conversion
-- ✅ **Google Places API**: Working for real-time address autocomplete suggestions  
-- ✅ **Backend Proxy Security**: All API keys stored server-side only via `/api/*` endpoints
-- ✅ **Error Handling**: Graceful fallback to mock data when APIs unavailable
-- ✅ **Production Ready**: Successfully tested and deployed
+- ✅ **Google Geocoding API**: Fully functional for address-to-coordinates conversion via `/api/geocode`
+- ✅ **Google Places API**: Working for real-time address autocomplete via `/api/places`
+- ✅ **Google Solar API**: Integrated solar analysis via `/api/solar` with fallback calculations
+- ✅ **Google Street View API**: Multi-angle property photography via `/api/streetview`
+- ✅ **Google Static Maps API**: Satellite imagery via `/api/satellite`
+- ✅ **Vercel Serverless Functions**: All endpoints deployed as serverless functions
+- ✅ **Security**: API keys stored server-side only, never exposed to client
+- ✅ **Error Handling**: Graceful fallback when APIs unavailable
+- ✅ **Production Ready**: Successfully deployed and tested on Vercel
 
 ### API Test Command
 ```bash
@@ -493,14 +528,64 @@ docker run -d -p 3000:3000 -p 3001:3001 \
   --name load-calculator-fullstack load-calculator-fullstack
 ```
 
-### Rules
-- **Firebase Migration Complete**: Use Supabase authentication exclusively - no Firebase references remain in codebase
+### Critical Development Rules
+
+#### Architecture Rules
+- **Vercel Serverless**: All API endpoints must be Vercel serverless functions in `/api/*.js` format
 - **Authentication Pattern**: Always use immediate fallback user creation without database dependencies to prevent infinite loading
+- **Context Anti-Pattern**: Never create circular dependencies between contexts (e.g., AddressSyncContext infinite loops)
+- **API Base URL**: Use `/api` in production, proper environment variable handling for development
+
+#### Component Development Rules  
+- **SLD Development**: Always use WorkingIntelligentSLDCanvas for SLD features - it includes all production-ready functionality
+- **Address Fields**: Avoid infinite re-rendering by only syncing addresses on place selection, not every keystroke
+- **Error Boundaries**: Each major feature should have its own error boundary for graceful degradation
+- **Lazy Loading**: Use lazy loading for non-critical modules (SLD, Aerial View) with proper error handling
+
+#### Deployment Rules
 - **Calculation Safety**: Wrap `calculateLoadDemand` calls in try-catch with default return values to prevent UI crashes
 - **Default Values**: Ensure project settings have valid defaults (e.g., `squareFootage: 2000` not `0`)
-- **SLD Development**: Always use WorkingIntelligentSLDCanvas for SLD features - it includes all production-ready functionality
-- **Docker Development**: Use fullstack Docker environment for development requiring Google Maps API integration
-- **Environment Variables**: Use non-prefixed versions exposed via vite.config.js for frontend/backend compatibility
-- **Code Editing**: Make edits to existing code and only create duplicate files if absolutely needed
 - **Testing**: Test all changes locally with `npm run build` before deployment to ensure Vercel compatibility
+- **Environment Variables**: Use non-prefixed versions exposed via vite.config.js for frontend/backend compatibility
 - **Security**: Never commit API keys to git - they are properly excluded via .gitignore
+
+#### Code Quality Rules
+- **Code Editing**: Make edits to existing code and only create duplicate files if absolutely needed
+- **Context Usage**: Use specific context hooks instead of legacy compatibility hooks
+- **State Updates**: Update context state through provided actions, not direct state mutation
+
+## Recent Critical Fixes & Common Issues
+
+### API Deployment Issues
+**Problem**: API calls work in development but fail in Vercel production
+**Root Cause**: Missing backend serverless functions deployment
+**Solution**: Convert Express API routes to Vercel serverless function format
+- Files: `/api/*.js` must export `export default async function handler(req, res)`
+- Configuration: `vercel.json` must include functions and rewrites configuration
+- Environment: API keys must be configured in Vercel dashboard
+
+### Address Field Infinite Re-rendering
+**Problem**: Address field glitches, text appears/disappears, cannot delete address
+**Root Cause**: Circular dependency in AddressSyncContext causes infinite useEffect loops
+**Solution**: Remove bidirectional auto-sync, track update sources
+- Issue: Two useEffect hooks triggering each other infinitely
+- Fix: Use source tracking and only sync on place selection, not every keystroke
+- Files: `AddressSyncContext.tsx`, `ProjectInformation.tsx`
+
+### Context Circular Dependencies
+**Problem**: Infinite re-renders causing performance issues and UI glitches
+**Symptoms**: Console warnings about maximum update depth, components not responding
+**Prevention**: 
+- Never create useEffect hooks that update each other's dependencies
+- Use useCallback and useRef for update source tracking
+- Avoid syncing state on every keystroke - use debouncing or selection-based triggers
+
+### Vercel Build Failures
+**Common Issues**:
+- TypeScript errors in production but not development
+- Missing environment variables for API functions
+- Component imports causing build-time errors
+**Solutions**:
+- Always test with `npm run build` before deployment
+- Check `vercel.json` configuration for proper function setup
+- Verify environment variables are set in Vercel dashboard
