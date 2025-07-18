@@ -29,7 +29,7 @@ export const SolarBatteryTable: React.FC = React.memo(() => {
       const inverterAmps = (processedValue * 1000) / volts;
       const recommendedBreaker = calculateRecommendedBreaker(inverterAmps);
       
-      updatedLoad.inverterAmps = inverterAmter;
+      updatedLoad.inverterAmps = inverterAmps;
       updatedLoad.amps = inverterAmps;
       updatedLoad.va = inverterAmps * volts;
       updatedLoad.total = updatedLoad.va;
