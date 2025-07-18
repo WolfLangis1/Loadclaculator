@@ -12,7 +12,16 @@ export const initialProjectInfo: ProjectInformation = {
   engineerLicense: '',
   contractorName: '',
   contractorLicense: '',
+  calculatedBy: '',
+  date: new Date().toISOString().split('T')[0], // Default to today's date
   permitNumber: '',
+  jobNumber: '',
+  prnNumber: '',
+  issueDate: '',
   inspectionDate: '',
+  approvedBy: '',
+  jurisdiction: '',
+  phone: '',
+  email: '',
   notes: ''
 };

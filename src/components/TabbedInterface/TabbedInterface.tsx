@@ -1,13 +1,10 @@
 import React, { useState, Suspense, lazy, memo, useCallback } from 'react';
-import { Calculator, FolderOpen, Zap, MapPin, Cable, Plus, Shield, Users } from 'lucide-react';
+import { Calculator, FolderOpen, Zap, MapPin, Cable, Shield, Users } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
 import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
 import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
-import { useProjectSettings } from '../../context/ProjectSettingsContext';
-import { useLoadData } from '../../context/LoadDataContext';
 import { useFeatureFlags } from '../../config/featureFlags';
-import { DonationButton } from '../UI/DonationButton';
 
 // Lazy load heavy components with Vercel-compatible fallback
 const WorkingIntelligentSLDCanvas = lazy(() => 
@@ -36,9 +33,6 @@ export const TabbedInterface: React.FC = memo(() => {
   const [activeTab, setActiveTab] = useState<TabType>('calculator');
   const [showProjectManager, setShowProjectManager] = useState(false);
   
-  // Context hooks for clearing data
-  const { resetSettings } = useProjectSettings();
-  const { clearSessionData } = useLoadData();
   const featureFlags = useFeatureFlags();
 
   // Feature flags
@@ -172,16 +166,6 @@ export const TabbedInterface: React.FC = memo(() => {
     }
   }, [handleTabClick, tabs, activeTab]);
 
-  const handleNewProject = useCallback(() => {
-    // Clear all temporary session data
-    resetSettings();
-    clearSessionData();
-    // Switch to calculator tab
-    setActiveTab('calculator');
-  }, [resetSettings, clearSessionData]);
-
-
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Tab Navigation */}
@@ -226,18 +210,6 @@ export const TabbedInterface: React.FC = memo(() => {
             </div>
             
             <div className="flex items-center gap-2">
-              <DonationButton size="sm" className="hidden sm:flex" />
-              <DonationButton size="sm" showText={false} className="sm:hidden" />
-              
-              <button
-                onClick={handleNewProject}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors text-xs sm:text-sm"
-                aria-label="Start new project"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">New</span>
-              </button>
-              
               <button
                 onClick={() => setShowProjectManager(true)}
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-xs sm:text-sm"

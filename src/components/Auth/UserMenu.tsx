@@ -17,6 +17,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext';
+import { DonationButton } from '../UI/DonationButton';
 
 export const UserMenu: React.FC = () => {
   const navigate = useNavigate();
@@ -152,6 +153,11 @@ export const UserMenu: React.FC = () => {
           )}
           
           <div className="border-t border-gray-100 mt-2 pt-2">
+            {/* Donation Button */}
+            <div className="px-4 py-2">
+              <DonationButton size="sm" className="w-full justify-center" />
+            </div>
+            
             <button
               onClick={() => navigate('/help')}
               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"

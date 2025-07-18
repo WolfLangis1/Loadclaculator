@@ -89,6 +89,24 @@ export const ProjectInformation: React.FC = () => {
         />
 
         <InputField
+          id="phone"
+          label="Phone Number"
+          type="tel"
+          value={projectInfo.phone || ''}
+          onChange={(e) => updateProjectInfo({ phone: e.target.value })}
+          placeholder="(555) 123-4567"
+        />
+
+        <InputField
+          id="email"
+          label="Email Address"
+          type="email"
+          value={projectInfo.email || ''}
+          onChange={(e) => updateProjectInfo({ email: e.target.value })}
+          placeholder="customer@example.com"
+        />
+
+        <InputField
           id="square-footage"
           label="Square Footage *"
           type="number"

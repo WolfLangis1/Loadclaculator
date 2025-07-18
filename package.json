@@ -86,7 +86,7 @@
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.45.0",
     "@rollup/rollup-linux-x64-musl": "^4.45.0",
-    "@rollup/rollup-win32-x64-msvc": "^4.45.0"
+    "@rollup/rollup-win32-x64-msvc": "^4.45.1"
   },
   "devDependencies": {
     "@cypress/vite-dev-server": "^6.0.3",

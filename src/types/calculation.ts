@@ -51,6 +51,7 @@ export interface ProjectInformation {
   approvedBy: string;
   jurisdiction: string;
   phone: string;
+  email: string;
   notes: string;
 }
 
