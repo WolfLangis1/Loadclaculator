@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.USE_REAL_AERIAL_DATA': JSON.stringify(env.USE_REAL_AERIAL_DATA),
       'import.meta.env.AERIAL_PROVIDER': JSON.stringify(env.AERIAL_PROVIDER),
       'import.meta.env.MAPBOX_API_KEY': JSON.stringify(env.MAPBOX_API_KEY),
+      'import.meta.env.REACT_APP_STRIPE_DONATION_URL': JSON.stringify(env.REACT_APP_STRIPE_DONATION_URL),
       'import.meta.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL),
       'import.meta.env.API_URL': JSON.stringify(env.API_URL),
       'import.meta.env.VERCEL_ENV': JSON.stringify(env.VERCEL_ENV),

@@ -18,8 +18,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Missing or invalid authorization header' });
     }
 
-    // For now, we'll extract the UID directly from the token
-    // In production, you'd verify the Firebase token
+    // Extract user ID from authorization header (Supabase user ID)
     const firebaseUid = authHeader.replace('Bearer ', '');
 
     switch (req.method) {

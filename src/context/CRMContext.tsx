@@ -227,7 +227,7 @@ const API_BASE = typeof window !== 'undefined' ?
 // CRM Provider
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(crmReducer, initialState);
-  const { user } = useSupabaseAuth();
+  const { dbUser: user } = useSupabaseAuth();
 
   // Helper function to make API calls
   const apiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {

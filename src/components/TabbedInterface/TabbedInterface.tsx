@@ -7,6 +7,7 @@ import { LazyLoadingSpinner } from '../UI/LazyLoadingSpinner';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { useLoadData } from '../../context/LoadDataContext';
 import { useFeatureFlags } from '../../config/featureFlags';
+import { DonationButton } from '../UI/DonationButton';
 
 // Lazy load heavy components with Vercel-compatible fallback
 const WorkingIntelligentSLDCanvas = lazy(() => 
@@ -62,26 +63,10 @@ export const TabbedInterface: React.FC = memo(() => {
       component: WireSizingChart
     },
     {
-      id: 'sld-intelligent',
-      label: 'SLD',
-      icon: Zap,
-      component: WorkingIntelligentSLDCanvas,
-      disabled: !FEATURE_FLAGS.SLD_ENABLED,
-      comingSoon: !FEATURE_FLAGS.SLD_ENABLED
-    },
-    {
       id: 'aerial',
-      label: 'Aerial View & Site Analysis',
+      label: 'Site Analysis',
       icon: MapPin,
       component: SimpleAerialViewMain
-    },
-    {
-      id: 'compliance',
-      label: 'Inspection & Compliance',
-      icon: Shield,
-      component: ComplianceMain,
-      disabled: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED,
-      comingSoon: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED
     },
     {
       id: 'crm',
@@ -90,6 +75,22 @@ export const TabbedInterface: React.FC = memo(() => {
       component: CRMMain,
       disabled: !FEATURE_FLAGS.CRM_ENABLED,
       comingSoon: !FEATURE_FLAGS.CRM_ENABLED
+    },
+    {
+      id: 'sld-intelligent',
+      label: 'SLD',
+      icon: Zap,
+      component: WorkingIntelligentSLDCanvas,
+      disabled: !FEATURE_FLAGS.SLD_ENABLED,
+      comingSoon: !FEATURE_FLAGS.SLD_ENABLED
+    },
+    {
+      id: 'compliance',
+      label: 'Inspection & Compliance',
+      icon: Shield,
+      component: ComplianceMain,
+      disabled: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED,
+      comingSoon: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED
     }
   ];
 
@@ -225,6 +226,9 @@ export const TabbedInterface: React.FC = memo(() => {
             </div>
             
             <div className="flex items-center gap-2">
+              <DonationButton size="sm" className="hidden sm:flex" />
+              <DonationButton size="sm" showText={false} className="sm:hidden" />
+              
               <button
                 onClick={handleNewProject}
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors text-xs sm:text-sm"
