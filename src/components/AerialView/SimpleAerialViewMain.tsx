@@ -5,23 +5,28 @@ import {
   Satellite,
   Download,
   Sun,
-  Zap
+  Zap,
+  Edit,
+  Maximize,
+  ChevronDown
 } from 'lucide-react';
 import { useAerialView } from '../../context/AerialViewContext';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { AerialMeasurementService } from '../../services/aerialMeasurementService';
+import { CRMProjectIntegrationService } from '../../services/crmProjectIntegrationService';
 
 import { AddressSearchControls } from './AddressSearchControls';
-import { MeasurementTools } from './MeasurementTools';
 import { SolarAnalysisResults } from './SolarAnalysisResults';
 import { StreetViewGallery } from './StreetViewGallery';
 import { AnnotationOverlay, type Annotation, type AnnotationStyle } from './AnnotationOverlay';
-import { AnnotationTools } from './AnnotationTools';
+import { PhotoEditor } from './PhotoEditor/PhotoEditor';
+import { PhotoEditorProvider } from '../../context/PhotoEditorContext';
 
 import { SecureAerialViewService } from '../../services/secureAerialViewService';
 import { AttachmentService } from '../../services/attachmentService';
 import { GoogleSolarService } from '../../services/googleSolarService';
 import { AIRoofAnalysisService, type RoofAnalysisResult } from '../../services/aiRoofAnalysisService';
+import { HighResolutionSatelliteService } from '../../services/highResolutionSatelliteService';
 
 export const SimpleAerialViewMain: React.FC = () => {
   const {
@@ -41,6 +46,21 @@ export const SimpleAerialViewMain: React.FC = () => {
   const [solarAnalysisLoading, setSolarAnalysisLoading] = useState(false);
   const [aiRoofAnalysis, setAiRoofAnalysis] = useState<RoofAnalysisResult | null>(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  
+  // Photo Editor state
+  const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
+  const [photoEditorImage, setPhotoEditorImage] = useState<{
+    url: string;
+    type: 'satellite' | 'streetview';
+    metadata?: any;
+  } | null>(null);
+
+  // High-resolution imagery state
+  const [highResLoading, setHighResLoading] = useState(false);
+  const [availableProviders, setAvailableProviders] = useState<any[]>([]);
+  const [showProviders, setShowProviders] = useState(false);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
   // Annotation state
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -210,6 +230,80 @@ export const SimpleAerialViewMain: React.FC = () => {
       setSolarAnalysisLoading(false);
     }
   }, [state.coordinates]);
+
+  // Photo Editor handlers
+  const handleOpenPhotoEditor = useCallback((imageUrl: string, imageType: 'satellite' | 'streetview', metadata?: any) => {
+    setPhotoEditorImage({ url: imageUrl, type: imageType, metadata });
+    setPhotoEditorOpen(true);
+  }, []);
+
+  const handleClosePhotoEditor = useCallback(() => {
+    setPhotoEditorOpen(false);
+    setPhotoEditorImage(null);
+  }, []);
+
+  // High-resolution imagery handlers
+  const handleCheckHighResProviders = useCallback(async () => {
+    if (!state.coordinates) return;
+    
+    setHighResLoading(true);
+    setProviderError(null);
+    
+    try {
+      const providers = await HighResolutionSatelliteService.getMaxZoomForLocation(
+        state.coordinates.latitude,
+        state.coordinates.longitude
+      );
+      setAvailableProviders(providers);
+      setShowProviders(true);
+      
+      if (providers.length === 0) {
+        setProviderError('No high-resolution providers available for this location');
+      }
+    } catch (error) {
+      console.error('Failed to check high-res providers:', error);
+      setProviderError(error instanceof Error ? error.message : 'Failed to check available providers');
+    } finally {
+      setHighResLoading(false);
+    }
+  }, [state.coordinates]);
+
+  const handleLoadHighResImage = useCallback(async (provider: string) => {
+    if (!state.coordinates) return;
+    
+    setLoadingProvider(provider);
+    setProviderError(null);
+    
+    try {
+      const result = await HighResolutionSatelliteService.getHighResolutionImage({
+        latitude: state.coordinates.latitude,
+        longitude: state.coordinates.longitude,
+        zoom: 23,
+        width: 1200,
+        height: 900,
+        provider
+      });
+      
+      setSatelliteImage(result.imageUrl);
+      setShowProviders(false);
+      
+      console.log(`✅ Loaded high-resolution image from ${result.provider} (${result.resolution.toFixed(2)}m/pixel)`);
+      
+      // Show success feedback briefly
+      setProviderError(`✅ Successfully loaded ${result.provider} imagery`);
+      setTimeout(() => setProviderError(null), 3000);
+      
+    } catch (error) {
+      console.error(`Failed to load high-res image from ${provider}:`, error);
+      const errorMessage = error instanceof Error ? error.message : `Failed to load ${provider} imagery`;
+      setProviderError(errorMessage);
+      
+      // Clear error after 5 seconds
+      setTimeout(() => setProviderError(null), 5000);
+    } finally {
+      setLoadingProvider(null);
+    }
+  }, [state.coordinates, setSatelliteImage]);
 
   // Image click handler for measurements and annotations
   const handleImageClick = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
@@ -441,6 +535,24 @@ export const SimpleAerialViewMain: React.FC = () => {
               timestamp: new Date().toISOString()
             }
           );
+
+          // Auto-save to CRM if customer exists
+          try {
+            const lastCRMCustomerId = localStorage.getItem('lastCRMCustomerId');
+            
+            if (lastCRMCustomerId) {
+              await CRMProjectIntegrationService.saveAerialImageToCRM(
+                lastCRMCustomerId,
+                blob,
+                filename,
+                `Annotated satellite view with ${annotations.length} annotations - ${settings.projectInfo.propertyAddress || 'project location'}`
+              );
+              
+              console.log('✅ Annotated satellite image automatically saved to CRM customer attachments');
+            }
+          } catch (crmError) {
+            console.warn('Failed to save annotated image to CRM (continuing with local save):', crmError);
+          }
         }, 'image/jpeg', 0.9);
       };
       
@@ -488,10 +600,14 @@ export const SimpleAerialViewMain: React.FC = () => {
     try {
       const response = await fetch(state.satelliteImage);
       const blob = await response.blob();
+      const timestamp = Date.now();
+      const filename = `satellite-view-${timestamp}.jpg`;
+      
+      // Save locally
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `satellite-view-${Date.now()}.jpg`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -500,18 +616,37 @@ export const SimpleAerialViewMain: React.FC = () => {
       // Save to project assets
       await AttachmentService.saveProjectAsset(
         'current',
-        `satellite-view-${Date.now()}.jpg`,
+        filename,
         blob,
         'satellite_image',
         'satellite'
       );
+
+      // Auto-save to CRM if customer exists
+      try {
+        const lastCRMCustomerId = localStorage.getItem('lastCRMCustomerId');
+        
+        if (lastCRMCustomerId) {
+          await CRMProjectIntegrationService.saveAerialImageToCRM(
+            lastCRMCustomerId,
+            blob,
+            filename,
+            `Satellite view of property at ${settings.projectInfo.propertyAddress || 'project location'}`
+          );
+          
+          console.log('✅ Satellite image automatically saved to CRM customer attachments');
+        }
+      } catch (crmError) {
+        console.warn('Failed to save satellite image to CRM (continuing with local save):', crmError);
+      }
     } catch (error) {
       console.error('Failed to save image:', error);
     }
-  }, [state.satelliteImage]);
+  }, [state.satelliteImage, settings.projectInfo.propertyAddress]);
 
   return (
-    <div className="space-y-6 p-6">
+    <PhotoEditorProvider>
+      <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Site Analysis</h2>
         <div className="text-sm text-gray-600">
@@ -774,31 +909,91 @@ export const SimpleAerialViewMain: React.FC = () => {
                   <Zap className="h-4 w-4" />
                   {aiAnalysisLoading ? 'Processing...' : 'AI Roof Analysis'}
                 </button>
+                
+                <button
+                  onClick={() => state.satelliteImage && handleOpenPhotoEditor(state.satelliteImage, 'satellite')}
+                  disabled={!state.satelliteImage}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  title="Open Photo Editor for precise measurements and annotations"
+                >
+                  <Edit className="h-4 w-4" />
+                  Photo Editor
+                </button>
+                
+                <div className="relative">
+                  <button
+                    onClick={handleCheckHighResProviders}
+                    disabled={!state.coordinates || highResLoading}
+                    className="flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                    title="Access high-resolution satellite imagery sources"
+                  >
+                    <Maximize className="h-4 w-4" />
+                    {highResLoading ? 'Checking...' : 'High-Res'}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  
+                  {showProviders && (
+                    <div className="absolute top-full mt-2 left-0 z-50 bg-white border border-gray-200 rounded-lg shadow-lg min-w-80">
+                      <div className="p-3 border-b border-gray-100">
+                        <h4 className="font-medium text-gray-900">High-Resolution Providers</h4>
+                        <p className="text-xs text-gray-600">Available sources for maximum zoom</p>
+                      </div>
+                      
+                      <div className="max-h-64 overflow-y-auto">
+                        {availableProviders.map((provider, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleLoadHighResImage(provider.provider)}
+                            disabled={highResLoading}
+                            className="w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 disabled:opacity-50"
+                          >
+                            <div className="font-medium text-gray-900">{provider.provider}</div>
+                            <div className="text-sm text-gray-600">
+                              Max Zoom: {provider.maxZoom} | Resolution: {provider.estimatedResolution.toFixed(2)}m/pixel
+                            </div>
+                          </button>
+                        ))}
+                        
+                        {availableProviders.length === 0 && !highResLoading && (
+                          <div className="p-3 text-center text-gray-500 text-sm">
+                            No enhanced providers available for this location
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="p-3 border-t border-gray-100">
+                        <button
+                          onClick={() => setShowProviders(false)}
+                          className="text-sm text-gray-600 hover:text-gray-900"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Measurement Tools - Always visible */}
-          <MeasurementTools 
-            measurementPoints={measurementPoints}
-            setMeasurementPoints={setMeasurementPoints}
-          />
-          
-          {/* Annotation Tools */}
-          <AnnotationTools
-            currentTool={currentTool}
-            onToolChange={setCurrentTool}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onClear={handleClearAnnotations}
-            onSave={handleSaveAnnotations}
-            canUndo={historyIndex > 0}
-            canRedo={historyIndex < annotationHistory.length - 1}
-            annotationsVisible={annotationsVisible}
-            onToggleVisibility={() => setAnnotationsVisible(!annotationsVisible)}
-            currentStyle={currentStyle}
-            onStyleChange={handleStyleChange}
-          />
+          {/* Photo Editor Integration */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Edit className="h-5 w-5 text-blue-600" />
+              Photo Editor & Measurements
+            </h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Use the Photo Editor for advanced measurement tools, annotations, and layer management.
+            </p>
+            <button
+              onClick={() => state.satelliteImage && handleOpenPhotoEditor(state.satelliteImage, 'satellite')}
+              disabled={!state.satelliteImage}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              Open Photo Editor
+            </button>
+          </div>
         </div>
 
         {/* Right Column - Analysis Results and Street View */}
@@ -813,9 +1008,24 @@ export const SimpleAerialViewMain: React.FC = () => {
           />
 
           {/* Street View Gallery */}
-          <StreetViewGallery />
+          <StreetViewGallery onEditImage={handleOpenPhotoEditor} />
         </div>
       </div>
+      
+      {/* Photo Editor Modal */}
+      <PhotoEditor
+        isOpen={photoEditorOpen}
+        onClose={handleClosePhotoEditor}
+        initialImage={photoEditorImage?.url}
+        initialImageType={photoEditorImage?.type || 'satellite'}
+        imageMetadata={photoEditorImage ? {
+          width: imageRef?.naturalWidth || 800,
+          height: imageRef?.naturalHeight || 600,
+          scale: photoEditorImage.type === 'satellite' ? undefined : undefined, // Will be estimated or manually set
+          location: photoEditorImage.metadata?.label || settings.projectInfo.propertyAddress || 'Unknown Location'
+        } : undefined}
+      />
     </div>
+    </PhotoEditorProvider>
   );
 };

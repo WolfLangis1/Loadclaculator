@@ -11,7 +11,9 @@ import AppWithAuth from './AppWithAuth.tsx'
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
-if (import.meta.env.DEV) {
+// Temporarily disable StrictMode in development to reduce re-renders
+// StrictMode causes double-rendering in development which can trigger reload issues
+if (import.meta.env.DEV && false) { // Disabled for now
   root.render(
     <React.StrictMode>
       <AppWithAuth />

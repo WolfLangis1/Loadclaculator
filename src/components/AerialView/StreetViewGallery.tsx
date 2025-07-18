@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { Camera, Download, AlertCircle, RefreshCw } from 'lucide-react';
+import { Camera, Download, AlertCircle, RefreshCw, Edit } from 'lucide-react';
 import { useAerialView } from '../../context/AerialViewContext';
+import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { AttachmentService } from '../../services/attachmentService';
+import { CRMProjectIntegrationService } from '../../services/crmProjectIntegrationService';
 
 interface StreetViewImageProps {
   image: {
@@ -10,9 +12,11 @@ interface StreetViewImageProps {
     heading: number;
   };
   onFallback: () => void;
+  onEdit?: (imageUrl: string, label: string) => void;
 }
 
-const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback }) => {
+const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback, onEdit }) => {
+  const { settings } = useProjectSettings();
   const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [retryCount, setRetryCount] = useState(0);
   const [showCopyright, setShowCopyright] = useState(false);
@@ -43,10 +47,13 @@ const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback }) 
     try {
       const response = await fetch(image.imageUrl);
       const blob = await response.blob();
+      const filename = `street-view-${image.label.toLowerCase().replace(/\s+/g, '-')}.jpg`;
+      
+      // Save locally
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `street-view-${image.label.toLowerCase().replace(/\s+/g, '-')}.jpg`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -55,15 +62,33 @@ const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback }) 
       // Save to project assets
       await AttachmentService.saveProjectAsset(
         'current',
-        `street-view-${image.label.toLowerCase().replace(/\s+/g, '-')}.jpg`,
+        filename,
         blob,
         'street_view',
         'streetview'
       );
+
+      // Auto-save to CRM if customer exists
+      try {
+        const lastCRMCustomerId = localStorage.getItem('lastCRMCustomerId');
+        
+        if (lastCRMCustomerId) {
+          await CRMProjectIntegrationService.saveAerialImageToCRM(
+            lastCRMCustomerId,
+            blob,
+            filename,
+            `Street view ${image.label} - ${settings.projectInfo.propertyAddress || 'project location'}`
+          );
+          
+          console.log(`✅ Street view ${image.label} automatically saved to CRM customer attachments`);
+        }
+      } catch (crmError) {
+        console.warn('Failed to save street view to CRM (continuing with local save):', crmError);
+      }
     } catch (error) {
       console.error('Failed to download image:', error);
     }
-  }, [image.imageUrl, image.label]);
+  }, [image.imageUrl, image.label, settings.projectInfo.propertyAddress]);
 
   const renderErrorFallback = () => (
     <div className="w-full h-48 bg-gray-100 border border-gray-200 rounded-lg flex flex-col items-center justify-center">
@@ -110,13 +135,26 @@ const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback }) 
             style={{ display: imageStatus === 'loading' ? 'none' : 'block' }}
           />
           {imageStatus === 'loaded' && (
-            <button
-              onClick={handleDownload}
-              className="absolute top-2 right-2 p-1 bg-black bg-opacity-50 text-white rounded hover:bg-opacity-70"
-              title="Download image"
-            >
-              <Download className="h-4 w-4" />
-            </button>
+            <>
+              <div className="absolute top-2 right-2 flex gap-1">
+                <button
+                  onClick={handleDownload}
+                  className="p-1 bg-black bg-opacity-50 text-white rounded hover:bg-opacity-70"
+                  title="Download image"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(image.imageUrl, image.label)}
+                    className="p-1 bg-black bg-opacity-50 text-white rounded hover:bg-opacity-70"
+                    title="Edit in Photo Editor"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </>
           )}
           {showCopyright && imageStatus === 'loaded' && (
             <div className="absolute bottom-2 right-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded">
@@ -130,13 +168,23 @@ const StreetViewImage: React.FC<StreetViewImageProps> = ({ image, onFallback }) 
   );
 };
 
-export const StreetViewGallery: React.FC = () => {
+interface StreetViewGalleryProps {
+  onEditImage?: (imageUrl: string, imageType: 'streetview', metadata: { label: string }) => void;
+}
+
+export const StreetViewGallery: React.FC<StreetViewGalleryProps> = ({ onEditImage }) => {
   const { state } = useAerialView();
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const handleImageFallback = useCallback((imageUrl: string) => {
     setFailedImages(prev => new Set(prev).add(imageUrl));
   }, []);
+
+  const handleEditImage = useCallback((imageUrl: string, label: string) => {
+    if (onEditImage) {
+      onEditImage(imageUrl, 'streetview', { label });
+    }
+  }, [onEditImage]);
 
   const availableImages = state.streetViewImages.filter(
     image => !failedImages.has(image.imageUrl)
@@ -165,6 +213,7 @@ export const StreetViewGallery: React.FC = () => {
               key={`${image.imageUrl}-${index}`}
               image={image}
               onFallback={() => handleImageFallback(image.imageUrl)}
+              onEdit={onEditImage ? handleEditImage : undefined}
             />
           ))}
         </div>

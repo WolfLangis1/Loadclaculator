@@ -339,23 +339,48 @@ export const CalculationSummary: React.FC = () => {
                 </div>
               ))}
               
-              <div className="bg-yellow-100 p-2 rounded border border-yellow-300 mt-3">
-                <div className="text-yellow-800 font-medium mb-1">NEC 705.12(B)(3)(2) - 120% Rule:</div>
-                <div className="flex justify-between text-sm">
-                  <span>Bus Rating × 120%:</span>
-                  <span className="font-mono">{state.panelDetails.busRating} A × 1.2 = {(state.panelDetails.busRating * 1.2).toFixed(0)} A</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Main Breaker + Solar:</span>
-                  <span className="font-mono">{state.mainBreaker} A + {(calculations.totalInterconnectionAmps || 0).toFixed(1)} A = {(state.mainBreaker + (calculations.totalInterconnectionAmps || 0)).toFixed(1)} A</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span>Compliance:</span>
-                  <span className={`font-mono ${calculations.interconnectionCompliant ? 'text-green-600' : 'text-red-600'}`}>
-                    {calculations.interconnectionCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                // Use the same intelligent default logic as necCalculations.ts
+                const getDefaultBusbarRating = (mainBreakerSize) => {
+                  if (mainBreakerSize <= 150) {
+                    return mainBreakerSize;
+                  } else if (mainBreakerSize <= 200) {
+                    return 225; // Conservative default that allows reasonable solar
+                  } else {
+                    return Math.max(mainBreakerSize * 1.25, 400);
+                  }
+                };
+                
+                const busRating = state.panelDetails.busRating || getDefaultBusbarRating(state.mainBreaker);
+                const maxAllowableSolar = (busRating * 1.2) - state.mainBreaker;
+                const isUsingDefault = !state.panelDetails.busRating;
+                
+                return (
+                  <div className="bg-yellow-100 p-2 rounded border border-yellow-300 mt-3">
+                    <div className="text-yellow-800 font-medium mb-1">NEC 705.12(B)(3)(2) - 120% Rule:</div>
+                    <div className="flex justify-between text-sm">
+                      <span>Bus Rating × 120%:</span>
+                      <span className="font-mono">
+                        {busRating} A{isUsingDefault && <span className="text-yellow-600"> (default)</span>} × 1.2 = {(busRating * 1.2).toFixed(0)} A
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Max Allowable Solar:</span>
+                      <span className="font-mono">({(busRating * 1.2).toFixed(0)} A - {state.mainBreaker} A) = {maxAllowableSolar.toFixed(1)} A</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Current Solar Amps:</span>
+                      <span className="font-mono">{(calculations.totalInterconnectionAmps || 0).toFixed(1)} A</span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Compliance:</span>
+                      <span className={`font-mono ${calculations.interconnectionCompliant ? 'text-green-600' : 'text-red-600'}`}>
+                        {calculations.interconnectionCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

@@ -5,6 +5,9 @@ import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import paymentsRouter from './api/payments.js';
+import usgsImageryHandler from './api/usgs-imagery.js';
+import esriImageryHandler from './api/esri-imagery.js';
+import satelliteEnhancedHandler from './api/satellite-enhanced.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -421,6 +424,36 @@ function getErrorMessage(status) {
       return `Street view unavailable (${status})`;
   }
 }
+
+// USGS imagery endpoint
+app.get('/api/usgs-imagery', async (req, res) => {
+  try {
+    await usgsImageryHandler(req, res);
+  } catch (error) {
+    console.error('USGS imagery error:', error);
+    res.status(500).json({ error: 'Failed to get USGS imagery: Internal Server Error' });
+  }
+});
+
+// Esri imagery endpoint
+app.get('/api/esri-imagery', async (req, res) => {
+  try {
+    await esriImageryHandler(req, res);
+  } catch (error) {
+    console.error('Esri imagery error:', error);
+    res.status(500).json({ error: 'Failed to get Esri imagery: Internal Server Error' });
+  }
+});
+
+// Enhanced satellite imagery endpoint
+app.get('/api/satellite-enhanced', async (req, res) => {
+  try {
+    await satelliteEnhancedHandler(req, res);
+  } catch (error) {
+    console.error('Enhanced satellite imagery error:', error);
+    res.status(500).json({ error: 'Failed to get enhanced satellite imagery: Internal Server Error' });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

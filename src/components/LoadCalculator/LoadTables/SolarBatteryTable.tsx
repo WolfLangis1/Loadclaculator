@@ -99,7 +99,18 @@ export const SolarBatteryTable: React.FC = React.memo(() => {
     removeLoad('solar', id);
   };
 
-  const busbarRating = settings.panelDetails.busRating || settings.mainBreaker;
+  // Use the same intelligent default logic as necCalculations.ts
+  const getDefaultBusbarRating = (mainBreakerSize: number): number => {
+    if (mainBreakerSize <= 150) {
+      return mainBreakerSize;
+    } else if (mainBreakerSize <= 200) {
+      return 225; // Conservative default that allows reasonable solar
+    } else {
+      return Math.max(mainBreakerSize * 1.25, 400);
+    }
+  };
+  
+  const busbarRating = settings.panelDetails.busRating || getDefaultBusbarRating(settings.mainBreaker);
   const maxAllowableBackfeed = (busbarRating * 1.2) - settings.mainBreaker;
 
   return (
@@ -117,6 +128,9 @@ export const SolarBatteryTable: React.FC = React.memo(() => {
           <div>
             <span className={calculations.interconnectionCompliant ? 'text-green-700' : 'text-red-700'}>
               Busbar Rating: {busbarRating}A
+              {!settings.panelDetails.busRating && (
+                <span className="text-yellow-600 text-xs ml-1">(default)</span>
+              )}
             </span>
           </div>
           <div>
@@ -225,6 +239,30 @@ export const SolarBatteryTable: React.FC = React.memo(() => {
           </div>
         </div>
       </div>
+
+      {!settings.panelDetails.busRating && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-yellow-800 mb-2 flex items-center">
+            <span className="mr-2">⚠️</span>
+            Busbar Rating Default Applied
+          </h4>
+          <div className="text-xs text-yellow-700 space-y-2">
+            <p>
+              <strong>Current Default:</strong> {busbarRating}A busbar rating for {settings.mainBreaker}A main breaker
+            </p>
+            <p>
+              <strong>Solar Capacity:</strong> {maxAllowableBackfeed.toFixed(0)}A / {((maxAllowableBackfeed * 240) / 1000).toFixed(1)}kW maximum solar interconnection
+            </p>
+            <p>
+              <strong>To increase solar capacity:</strong> Specify actual busbar rating in Project Information above.
+              Common ratings: 225A, 250A, 300A, 400A panels allow larger solar systems.
+            </p>
+            <p className="text-yellow-600">
+              💡 <em>Many 200A panels have 225A+ busbar ratings, allowing 70A+ solar interconnection.</em>
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-purple-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-purple-800 mb-2">

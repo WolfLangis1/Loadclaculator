@@ -1,4 +1,4 @@
-# Professional Load Calculator
+# ProLoadCalc.com
 
 A modern, NEC-compliant electrical load calculator for residential and commercial applications. This application helps electrical professionals calculate service loads, wire sizes, and generate permit-ready reports.
 

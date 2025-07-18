@@ -1,17 +1,66 @@
-import React from 'react';
-import { Home } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Home, Users, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
 import { useAddressSync } from '../../context/AddressSyncContext';
+import { useCRMSafe } from '../../context/CRMContext';
+import { useFeatureFlags } from '../../config/featureFlags';
 import { TooltipWrapper } from '../UI/TooltipWrapper';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
 import { InputField } from '../UI/InputField';
+import { CRMProjectIntegrationService } from '../../services/crmProjectIntegrationService';
 
 export const ProjectInformation: React.FC = () => {
   const { state, updateProjectInfo, updateSettings } = useLoadCalculator();
   const { updatePanelDetails } = useProjectSettings();
   const { syncAddressToAerialView } = useAddressSync();
+  const crm = useCRMSafe();
+  const featureFlags = useFeatureFlags();
   const { projectInfo } = state;
+
+  const [isSavingToCRM, setIsSavingToCRM] = useState(false);
+  const [crmSaveStatus, setCrmSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [crmError, setCrmError] = useState<string | null>(null);
+
+  // Check if project is ready for CRM save
+  const isReadyForCRM = useMemo(() => {
+    return CRMProjectIntegrationService.isProjectReadyForCRM(projectInfo, state.squareFootage || 0);
+  }, [projectInfo, state.squareFootage]);
+
+  // Get validation errors
+  const validationErrors = useMemo(() => {
+    return CRMProjectIntegrationService.getValidationErrors(projectInfo, state.squareFootage || 0);
+  }, [projectInfo, state.squareFootage]);
+
+  // Handle CRM save
+  const handleSaveToCRM = async () => {
+    if (!isReadyForCRM || !crm) return;
+
+    setIsSavingToCRM(true);
+    setCrmError(null);
+    setCrmSaveStatus('idle');
+
+    try {
+      const { customerId, projectId } = await CRMProjectIntegrationService.saveToCRM(
+        projectInfo,
+        state.squareFootage || 0,
+        state.calculations
+      );
+
+      // Store customer ID for future reference
+      localStorage.setItem('lastCRMCustomerId', customerId);
+      localStorage.setItem('lastCRMProjectId', projectId);
+
+      setCrmSaveStatus('success');
+      setTimeout(() => setCrmSaveStatus('idle'), 3000); // Reset after 3 seconds
+    } catch (error) {
+      console.error('Failed to save to CRM:', error);
+      setCrmError(error instanceof Error ? error.message : 'Failed to save to CRM');
+      setCrmSaveStatus('error');
+    } finally {
+      setIsSavingToCRM(false);
+    }
+  };
 
   return (
     <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl shadow-lg p-6">
@@ -158,7 +207,12 @@ export const ProjectInformation: React.FC = () => {
           </label>
           <select
             id="bus-rating"
-            value={state.panelDetails?.busRating || 200}
+            value={state.panelDetails?.busRating || (() => {
+              const mainBreaker = state.mainBreaker || 200;
+              if (mainBreaker <= 150) return mainBreaker;
+              else if (mainBreaker <= 200) return 225;
+              else return Math.max(mainBreaker * 1.25, 400);
+            })()}
             onChange={(e) => updatePanelDetails({ 
               busRating: parseInt(e.target.value) 
             })}
@@ -168,8 +222,123 @@ export const ProjectInformation: React.FC = () => {
               <option key={size} value={size} className="text-gray-900 bg-white">{size}A</option>
             ))}
           </select>
+          
+          {/* Solar Capacity Indicator */}
+          {(() => {
+            const getDefaultBusbarRating = (mainBreakerSize: number): number => {
+              if (mainBreakerSize <= 150) {
+                return mainBreakerSize;
+              } else if (mainBreakerSize <= 200) {
+                return 225;
+              } else {
+                return Math.max(mainBreakerSize * 1.25, 400);
+              }
+            };
+            
+            const mainBreaker = state.mainBreaker || 200;
+            const busRating = state.panelDetails?.busRating || getDefaultBusbarRating(mainBreaker);
+            const maxSolarAmps = (busRating * 1.2) - mainBreaker;
+            const maxSolarKW = (maxSolarAmps * 240) / 1000;
+            
+            const isDefault = !state.panelDetails?.busRating;
+            
+            return (
+              <div className="mt-2 p-2 bg-white/10 rounded text-xs text-white/80">
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">Solar Capacity:</span>
+                  <span className="text-green-200">
+                    {maxSolarAmps.toFixed(0)}A / {maxSolarKW.toFixed(1)}kW max
+                  </span>
+                  {isDefault && (
+                    <span className="text-yellow-200">(default)</span>
+                  )}
+                </div>
+                <div className="text-white/60 mt-1">
+                  NEC 120% rule: ({busRating}A × 1.2) - {mainBreaker}A = {maxSolarAmps.toFixed(0)}A
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
+
+      {/* Save to CRM Section */}
+      {featureFlags.crm.enabled && crm && (
+        <div className="mt-6 pt-6 border-t border-white/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-white" />
+              <div>
+                <h3 className="text-lg font-semibold text-white">Customer Management</h3>
+                <p className="text-sm text-white/80">
+                  {isReadyForCRM 
+                    ? 'Project information is complete - ready to save to CRM'
+                    : 'Complete the required fields to save to CRM'
+                  }
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveToCRM}
+              disabled={!isReadyForCRM || isSavingToCRM}
+              className={`
+                flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300
+                ${isReadyForCRM 
+                  ? crmSaveStatus === 'success'
+                    ? 'bg-green-600 text-white shadow-lg'
+                    : crmSaveStatus === 'error'
+                    ? 'bg-red-600 text-white shadow-lg'
+                    : 'bg-white text-green-600 hover:bg-green-50 shadow-lg hover:shadow-xl transform hover:scale-105'
+                  : 'bg-white/20 text-white/60 cursor-not-allowed'
+                }
+              `}
+              title={isReadyForCRM ? 'Save project to CRM' : validationErrors.join(', ')}
+            >
+              {isSavingToCRM ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : crmSaveStatus === 'success' ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Saved to CRM
+                </>
+              ) : crmSaveStatus === 'error' ? (
+                <>
+                  <AlertCircle className="h-4 w-4" />
+                  Save Failed
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4" />
+                  Save to CRM
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Error display */}
+          {crmError && (
+            <div className="mt-3 p-3 bg-red-500/20 border border-red-400 rounded-lg">
+              <p className="text-sm text-white">{crmError}</p>
+            </div>
+          )}
+
+          {/* Validation errors for incomplete fields */}
+          {!isReadyForCRM && validationErrors.length > 0 && (
+            <div className="mt-3 p-3 bg-orange-500/20 border border-orange-400 rounded-lg">
+              <p className="text-sm text-white font-medium mb-1">Complete these fields to save to CRM:</p>
+              <ul className="text-sm text-white/90 list-disc list-inside">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

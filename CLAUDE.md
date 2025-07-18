@@ -86,24 +86,33 @@ The application uses Vercel serverless functions for backend API operations:
 
 ### Key Architecture Decisions
 
-#### 1. **Lazy Loading with Error Boundaries**
+#### 1. **Feature Flag Architecture**
+- **Centralized Control**: Feature flags in `TabbedInterface.tsx` control module availability
+- **Current Flags**: 
+  - `SLD_ENABLED: false` (Single Line Diagram disabled)
+  - `CRM_ENABLED: false` (CRM module disabled)
+  - `COMPLIANCE_ENABLED` and `INSPECTION_ENABLED` (controlled by feature flag service)
+- **UI Integration**: Disabled features show "Coming Soon" labels and prevent navigation
+- **Testing Strategy**: E2E tests skip disabled features automatically
+
+#### 2. **Lazy Loading with Error Boundaries**
 - SLD and Aerial View components are lazy loaded
 - Each feature has its own error boundary
 - Features can fail independently without affecting core functionality
 - Graceful fallback UI for missing dependencies
 
-#### 2. **Production-Ready Component Strategy**
+#### 3. **Production-Ready Component Strategy**
 - **Working Components**: Production-ready with full features (e.g., WorkingIntelligentSLDCanvas.tsx)
 - **Enhanced Components**: Development-only advanced features for testing
 - **Strategy**: Use working components in production with selective .vercelignore exclusions
 
-#### 3. **Context Separation**
+#### 4. **Context Separation**
 - Each major feature has its own context provider
 - Contexts are specialized rather than monolithic
 - Clear data flow and dependency management
 - Easy to add/remove features without affecting others
 
-#### 4. **Error Handling Strategy**
+#### 5. **Error Handling Strategy**
 - Dependency-free error boundaries
 - No external service dependencies in critical error handling
 - Production-safe error reporting
@@ -120,16 +129,29 @@ npm run preview      # Preview production build
 
 ### Testing
 ```bash
+# Unit Tests
 npm run test                    # Run unit tests (Vitest)
 npm run test:ui                 # Run tests with UI  
 npm run test:coverage           # Run tests with coverage report
+
+# E2E Tests (Comprehensive Test Suite - 81 test scenarios across 7 files)
 npm run test:e2e               # Run all Cypress E2E tests
-npm run test:e2e:load-calculator # Test load calculator module
-npm run test:e2e:sld           # Test SLD module  
-npm run test:e2e:project-manager # Test project manager
+npm run test:e2e:load-calculator # Test load calculator module (11 scenarios)
+npm run test:e2e:sld           # Test SLD module (disabled by feature flag)
+npm run test:e2e:project-manager # Test project manager (11 scenarios)
 npm run test:e2e:compliance    # Test compliance module
-npm run cypress:open           # Open Cypress test runner
+npm run cypress:open           # Open Cypress test runner (interactive)
 npm run cypress:run            # Run Cypress tests headless
+npm run cypress:run:headless   # Alternative headless execution
+
+# Individual E2E Test Categories
+# - Load Calculator: Core calculations, NEC compliance, PDF generation
+# - Wire Sizing: Ampacity tables, conduit fill, voltage drop calculations  
+# - Aerial View: Site analysis, measurement tools, satellite imagery
+# - Project Manager: CRUD operations, templates, import/export
+# - Authentication: Guest login, OAuth flows, session management
+# - UI Navigation: Tabbed interface, keyboard navigation, responsive design
+# - Accessibility: WCAG compliance, screen reader support, keyboard access
 ```
 
 ### Code Quality
@@ -553,6 +575,64 @@ docker run -d -p 3000:3000 -p 3001:3001 \
 - **Code Editing**: Make edits to existing code and only create duplicate files if absolutely needed
 - **Context Usage**: Use specific context hooks instead of legacy compatibility hooks
 - **State Updates**: Update context state through provided actions, not direct state mutation
+
+## E2E Test Suite Architecture
+
+### Comprehensive Test Coverage
+The application includes a complete E2E test suite with **81 test scenarios** across **7 test files**:
+
+1. **Load Calculator Tests** (`cypress/e2e/load-calculator/comprehensive-load-calculator.cy.ts`)
+   - Project information handling, all load types (general, EVSE, HVAC, solar/battery)
+   - NEC compliance validation, PDF generation, input validation, CRUD operations
+
+2. **Wire Sizing Tests** (`cypress/e2e/wire-sizing/wire-sizing-chart.cy.ts`)
+   - Ampacity tables, conductor types, temperature factors, conduit fill calculations
+   - NEC code references, voltage drop calculations, responsive design
+
+3. **Aerial View Tests** (`cypress/e2e/aerial-view/site-analysis.cy.ts`)
+   - Address search, satellite imagery, measurement tools, property analysis
+   - Export functionality, street view integration, coordinate systems
+
+4. **Project Manager Tests** (`cypress/e2e/project-manager/project-management.cy.ts`)
+   - Project CRUD operations, templates, import/export functionality
+   - Recent projects, search/filtering, modal interactions
+
+5. **Authentication Tests** (`cypress/e2e/auth/authentication-flows.cy.ts`)
+   - Guest login, Google OAuth, session persistence, route protection
+   - Error handling, logout functionality, loading states
+
+6. **UI Navigation Tests** (`cypress/e2e/ui/tabbed-navigation.cy.ts`)
+   - Tab switching, keyboard navigation, ARIA compliance, responsive design
+   - Focus management, error boundaries, state persistence
+
+7. **Accessibility Tests** (`cypress/e2e/ui/accessibility.cy.ts`)
+   - WCAG 2.1 compliance, screen reader support, keyboard navigation
+   - Focus indicators, semantic HTML, high contrast mode support
+
+### E2E Testing Strategy
+- **Feature Flag Awareness**: Tests only enabled features (SLD and CRM are disabled)
+- **Defensive Testing**: Multiple selector strategies, graceful degradation
+- **Real User Workflows**: Tests mirror actual user interactions and data flows
+- **Cross-Browser Ready**: Proper selectors and timing for production testing
+
+### Running Single Tests
+```bash
+# Run specific test file
+npx cypress run --spec 'cypress/e2e/load-calculator/comprehensive-load-calculator.cy.ts'
+
+# Run tests for specific module (requires dev server running on localhost:3000)
+npm run dev & 
+npm run test:e2e:load-calculator
+
+# Interactive test development
+npm run cypress:open  # Opens Cypress UI for debugging and development
+```
+
+### Test Prerequisites
+- Development server must be running (`npm run dev`)
+- Cypress dependencies may need system libraries (`libnss3`, `libgtk`, etc.)
+- Tests use guest authentication mode by default
+- All tests are designed to work without external API dependencies
 
 ## Recent Critical Fixes & Common Issues
 

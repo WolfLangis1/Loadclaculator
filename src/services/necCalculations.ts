@@ -260,7 +260,23 @@ export const calculateLoadDemand = (
   
   calc.totalInterconnectionAmps = backfeedAndLoadSideAmps;
   
-  const busbarRating = panelDetails.busRating || mainBreaker;
+  // Fix: Provide realistic default busbar rating based on main breaker size
+  // Small panels: busbar = main breaker (appropriate for MLO panels)
+  // Large panels: use next standard size to avoid overly restrictive calculations
+  const getDefaultBusbarRating = (mainBreakerSize: number): number => {
+    if (mainBreakerSize <= 150) {
+      // For smaller panels, busbar often equals main breaker
+      return mainBreakerSize;
+    } else if (mainBreakerSize <= 200) {
+      // For 200A main, typical busbar ratings are 225A or 400A
+      return 225; // Conservative default that allows reasonable solar
+    } else {
+      // For larger mains, assume appropriately sized busbar
+      return Math.max(mainBreakerSize * 1.25, 400);
+    }
+  };
+  
+  const busbarRating = panelDetails.busRating || getDefaultBusbarRating(mainBreaker);
   const maxAllowableBackfeed = (busbarRating * 1.2) - mainBreaker;
   calc.interconnectionCompliant = calc.totalInterconnectionAmps <= maxAllowableBackfeed;
   

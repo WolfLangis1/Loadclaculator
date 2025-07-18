@@ -94,29 +94,32 @@ class SimpleRateLimiter {
 
 const rateLimiter = new SimpleRateLimiter();
 
-export const rateLimit = (req, res, limit = 60, windowMs = 60000) => {
-  const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-                   req.headers['x-real-ip'] || 
-                   req.connection?.remoteAddress || 
-                   req.ip || 'unknown';
-  
-  const rateLimitResult = rateLimiter.isAllowed(clientIP, limit, windowMs);
-  
-  // Set rate limit headers
-  res.setHeader('X-RateLimit-Limit', limit.toString());
-  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-  res.setHeader('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
-  
-  if (!rateLimitResult.allowed) {
-    res.status(429).json({
-      error: 'Too Many Requests',
-      message: `Rate limit exceeded. Try again in ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
-      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
-    });
-    return true; // Indicates request was handled
-  }
-  
-  return false; // Indicates to continue processing
+export const rateLimit = (limit = 60, windowMs = 60000) => {
+  return (req, res, next) => {
+    // Safely handle missing headers object
+    const headers = req.headers || {};
+    const clientIP = headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                     headers['x-real-ip'] || 
+                     req.connection?.remoteAddress || 
+                     req.ip || 'unknown';
+    
+    const rateLimitResult = rateLimiter.isAllowed(clientIP, limit, windowMs);
+    
+    // Set rate limit headers
+    res.setHeader('X-RateLimit-Limit', limit.toString());
+    res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    res.setHeader('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+    
+    if (!rateLimitResult.allowed) {
+      return res.status(429).json({
+        error: 'Too Many Requests',
+        message: `Rate limit exceeded. Try again in ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
+        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+      });
+    }
+    
+    next(); // Continue to next middleware
+  };
 };
 
 import jwt from 'jsonwebtoken';

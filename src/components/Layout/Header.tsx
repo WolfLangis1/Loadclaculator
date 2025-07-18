@@ -9,7 +9,7 @@ export const Header: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <h1 className="text-xl font-semibold text-gray-900">
-              Professional Load Calculator
+              ProLoadCalc.com
             </h1>
           </div>
           <UserMenu />
