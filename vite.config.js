@@ -44,16 +44,16 @@ export default defineConfig(({ mode }) => {
     // Production-specific settings and environment variable exposure
     define: {
       'process.env.NODE_ENV': mode === 'production' ? '"production"' : '"development"',
-      // Expose specific environment variables without VITE_ prefix for client access
-      'import.meta.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || env.VITE_SUPABASE_URL),
-      'import.meta.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY),
-      'import.meta.env.USE_REAL_AERIAL_DATA': JSON.stringify(env.USE_REAL_AERIAL_DATA || env.VITE_USE_REAL_AERIAL_DATA),
-      'import.meta.env.AERIAL_PROVIDER': JSON.stringify(env.AERIAL_PROVIDER || env.VITE_AERIAL_PROVIDER),
-      'import.meta.env.MAPBOX_API_KEY': JSON.stringify(env.MAPBOX_API_KEY || env.VITE_MAPBOX_API_KEY),
-      'import.meta.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL || env.VITE_API_BASE_URL),
-      'import.meta.env.API_URL': JSON.stringify(env.API_URL || env.VITE_API_URL),
-      'import.meta.env.VERCEL_ENV': JSON.stringify(env.VERCEL_ENV || env.VITE_VERCEL_ENV),
-      'import.meta.env.NODE_ENV': JSON.stringify(env.NODE_ENV || env.VITE_NODE_ENV),
+      // Expose environment variables without VITE_ prefix for client access
+      'import.meta.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL),
+      'import.meta.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY),
+      'import.meta.env.USE_REAL_AERIAL_DATA': JSON.stringify(env.USE_REAL_AERIAL_DATA),
+      'import.meta.env.AERIAL_PROVIDER': JSON.stringify(env.AERIAL_PROVIDER),
+      'import.meta.env.MAPBOX_API_KEY': JSON.stringify(env.MAPBOX_API_KEY),
+      'import.meta.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL),
+      'import.meta.env.API_URL': JSON.stringify(env.API_URL),
+      'import.meta.env.VERCEL_ENV': JSON.stringify(env.VERCEL_ENV),
+      'import.meta.env.NODE_ENV': JSON.stringify(env.NODE_ENV),
       ...(mode === 'production' && {
         'import.meta.env.DEV': 'false',
         'import.meta.env.PROD': 'true'
@@ -94,7 +94,7 @@ export default defineConfig(({ mode }) => {
       // Proxy API calls to backend server
       proxy: {
         '/api': {
-          target: env.API_BASE_URL || env.VITE_API_BASE_URL || 'http://api-server:3001',
+          target: env.API_BASE_URL || 'http://api-server:3001',
           changeOrigin: true,
           secure: false,
           timeout: 5000,

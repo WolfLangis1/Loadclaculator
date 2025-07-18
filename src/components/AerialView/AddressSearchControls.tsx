@@ -19,45 +19,61 @@ export const AddressSearchControls: React.FC = () => {
   const { updateProjectInfo } = useProjectSettings();
 
   const handleAddressSearch = useCallback(async () => {
-    if (!state.address.trim()) return;
+    if (!state.address.trim()) {
+      console.log('🔍 No address to search');
+      return;
+    }
 
+    console.log('🔍 Starting address search for:', state.address);
     setLoading(true);
     setError(null);
 
     try {
+      console.log('🔍 Step 1: Geocoding address...');
       const geocodeResult = await SecureAerialViewService.geocodeAddress(state.address);
+      console.log('🔍 Geocode result:', geocodeResult);
       
       if (!geocodeResult) {
-        throw new Error('Geocoding failed');
+        throw new Error('Geocoding failed - no results returned');
       }
       
       setCoordinates(geocodeResult.coordinates);
       updateProjectInfo({ propertyAddress: geocodeResult.address });
       
+      console.log('🔍 Step 2: Getting satellite image...');
       // Get satellite image
       const satelliteResult = await SecureAerialViewService.getSatelliteImagery(
         geocodeResult.coordinates.latitude,
         geocodeResult.coordinates.longitude,
         { width: 800, height: 600, zoom: state.zoom }
       );
+      console.log('🔍 Satellite result:', satelliteResult);
       
       if (satelliteResult.success) {
         setSatelliteImage(satelliteResult.data.imageUrl);
+      } else {
+        console.warn('🔍 Satellite image failed:', satelliteResult.error);
       }
       
+      console.log('🔍 Step 3: Getting street view images...');
       // Get street view images
       const streetViewResult = await SecureAerialViewService.getMultiAngleStreetView(
         geocodeResult.coordinates.latitude,
         geocodeResult.coordinates.longitude
       );
+      console.log('🔍 Street view result:', streetViewResult);
       
       if (streetViewResult && streetViewResult.length > 0) {
         setStreetViewImages(streetViewResult);
+      } else {
+        console.warn('🔍 Street view failed or no images returned');
       }
       
+      console.log('🔍 Address search completed successfully');
+      
     } catch (error) {
-      console.error('Error fetching aerial view data:', error);
-      setError('Failed to fetch aerial view data. Please try again.');
+      console.error('🔍 Address search error:', error);
+      setError(`Failed to fetch aerial view data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

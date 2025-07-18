@@ -79,8 +79,8 @@ The authentication system includes:
    VITE_FIREBASE_APP_ID=your_app_id
    
    # Supabase Configuration
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your_anon_key
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your_anon_key
    
    # Backend-only variables
    SUPABASE_SERVICE_KEY=your_service_key

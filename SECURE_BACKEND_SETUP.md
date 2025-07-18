@@ -121,7 +121,7 @@ GET /api/satellite?lat=40.7128&lon=-74.0060&zoom=18&provider=mapbox
 #### **Before (Insecure):**
 ```typescript
 // ❌ API key exposed in client
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const apiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
 const response = await fetch(
   `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${apiKey}`
 );

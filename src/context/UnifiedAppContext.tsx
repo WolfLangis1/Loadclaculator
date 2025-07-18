@@ -6,6 +6,7 @@ import { SLDDataProvider } from './SLDDataContext';
 import { AerialViewProvider } from './AerialViewContext';
 import { ComplianceProvider } from './ComplianceContext';
 import { CRMProvider } from './CRMContext';
+import { AddressSyncProvider } from './AddressSyncContext';
 
 /**
  * Unified App Context Provider
@@ -29,11 +30,13 @@ export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         <CalculationProvider>
           <SLDDataProvider>
             <AerialViewProvider>
-              <ComplianceProvider>
-                <CRMProvider>
-                  {children}
-                </CRMProvider>
-              </ComplianceProvider>
+              <AddressSyncProvider>
+                <ComplianceProvider>
+                  <CRMProvider>
+                    {children}
+                  </CRMProvider>
+                </ComplianceProvider>
+              </AddressSyncProvider>
             </AerialViewProvider>
           </SLDDataProvider>
         </CalculationProvider>

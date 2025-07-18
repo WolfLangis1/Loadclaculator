@@ -87,7 +87,11 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({ chil
     console.log('SupabaseAuthContext: Initializing...');
     
     if (!supabase) {
-      console.warn('Supabase not configured, running in offline mode');
+      console.warn('🔒 Supabase not configured, running in offline mode');
+      console.log('💡 To enable authentication, set environment variables in Vercel dashboard:');
+      console.log('   - SUPABASE_URL: Your Supabase project URL');
+      console.log('   - SUPABASE_ANON_KEY: Your Supabase anonymous key');
+      
       // Try to load guest user from localStorage
       const guestUser = localStorage.getItem('guest_user');
       const guestSettings = localStorage.getItem('guest_settings');
@@ -95,6 +99,28 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({ chil
         console.log('Loading guest user from localStorage');
         setDbUser(JSON.parse(guestUser));
         setUserSettings(JSON.parse(guestSettings));
+      } else {
+        // Create a default offline user
+        const offlineUser: User = {
+          id: 'offline-user',
+          email: undefined,
+          name: 'Offline User',
+          created_at: new Date().toISOString(),
+          subscription_tier: 'free',
+          is_guest: true
+        };
+        const offlineSettings: UserSettings = {
+          user_id: 'offline-user',
+          theme: 'light',
+          default_code_year: '2023',
+          default_calculation_method: 'optional',
+          auto_save_enabled: false,
+          auto_save_interval: 5,
+          units: 'imperial',
+          notifications_enabled: false
+        };
+        setDbUser(offlineUser);
+        setUserSettings(offlineSettings);
       }
       console.log('Setting loading to false (offline mode)');
       setIsLoading(false);

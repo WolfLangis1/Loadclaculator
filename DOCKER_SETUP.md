@@ -14,16 +14,16 @@ Edit `.env` with your actual API keys:
 
 ```bash
 # Enable real satellite data (set to 'true' to use real APIs)
-VITE_USE_REAL_AERIAL_DATA=true
+USE_REAL_AERIAL_DATA=true
 
 # Google Maps API Keys (required for satellite imagery)
-VITE_GOOGLE_MAPS_API_KEY=your_actual_google_maps_api_key_here
+GOOGLE_MAPS_API_KEY=your_actual_google_maps_api_key_here
 
 # Mapbox API Key (alternative)
-VITE_MAPBOX_API_KEY=your_actual_mapbox_api_key_here
+MAPBOX_API_KEY=your_actual_mapbox_api_key_here
 
 # Preferred provider ('google' or 'mapbox')
-VITE_AERIAL_PROVIDER=google
+AERIAL_PROVIDER=google
 ```
 
 ### 2. Getting API Keys
@@ -107,10 +107,10 @@ npm run docker:run
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `VITE_USE_REAL_AERIAL_DATA` | Enable real API calls vs mock data | `false` | No |
-| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps API key for satellite imagery | empty | Yes (if using Google) |
-| `VITE_MAPBOX_API_KEY` | Mapbox API key for satellite imagery | empty | Yes (if using Mapbox) |
-| `VITE_AERIAL_PROVIDER` | Preferred imagery provider | `google` | No |
+| `USE_REAL_AERIAL_DATA` | Enable real API calls vs mock data | `false` | No |
+| `GOOGLE_MAPS_API_KEY` | Google Maps API key for satellite imagery | empty | Yes (if using Google) |
+| `MAPBOX_API_KEY` | Mapbox API key for satellite imagery | empty | Yes (if using Mapbox) |
+| `AERIAL_PROVIDER` | Preferred imagery provider | `google` | No |
 
 ## Troubleshooting
 

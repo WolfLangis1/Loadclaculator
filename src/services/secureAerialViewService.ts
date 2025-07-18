@@ -215,7 +215,7 @@ export class SecureAerialViewService {
     }
   }
 
-  // Get multi-angle street view (requires backend implementation)
+  // Get multi-angle street view using secure backend
   static async getMultiAngleStreetView(
     latitude: number,
     longitude: number,
@@ -223,17 +223,6 @@ export class SecureAerialViewService {
   ): Promise<{heading: number; imageUrl: string; label: string}[]> {
     try {
       const { width = 640, height = 640 } = options;
-      
-      // Determine API base using same logic as SecureApiService
-      const API_BASE = (() => {
-        // If API_BASE_URL is empty string, use proxy
-        if (import.meta.env.API_BASE_URL === '') {
-          return '/api';
-        }
-        // If API_BASE_URL is set, use direct API calls
-        return import.meta.env.API_BASE_URL ? 
-          `${import.meta.env.API_BASE_URL}/api` : '/api';
-      })();
       
       // Define multiple headings for comprehensive street view coverage
       const headings = [
@@ -243,21 +232,20 @@ export class SecureAerialViewService {
         { heading: 270, label: 'West View' }
       ];
       
-      // Get street view for each heading
+      // Get street view for each heading using SecureApiService
       const streetViewPromises = headings.map(async ({ heading, label }) => {
         try {
-          const response = await fetch(
-            `${API_BASE}/streetview?lat=${latitude}&lon=${longitude}&heading=${heading}&width=${width}&height=${height}`
+          const result = await SecureApiService.getStreetView(
+            latitude,
+            longitude,
+            heading,
+            width,
+            height
           );
           
-          if (!response.ok) {
-            throw new Error(`Street View API failed for ${label}: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
           return {
             heading,
-            imageUrl: data.url,
+            imageUrl: result.url || `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Unavailable')}`,
             label
           };
         } catch (error) {

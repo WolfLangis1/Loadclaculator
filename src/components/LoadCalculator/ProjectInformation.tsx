@@ -2,6 +2,7 @@ import React from 'react';
 import { Home } from 'lucide-react';
 import { useLoadCalculator } from '../../hooks/useLoadCalculator';
 import { useProjectSettings } from '../../context/ProjectSettingsContext';
+import { useAddressSync } from '../../context/AddressSyncContext';
 import { TooltipWrapper } from '../UI/TooltipWrapper';
 import { AddressAutocomplete } from '../UI/AddressAutocomplete';
 import { InputField } from '../UI/InputField';
@@ -9,6 +10,7 @@ import { InputField } from '../UI/InputField';
 export const ProjectInformation: React.FC = () => {
   const { state, updateProjectInfo, updateSettings } = useLoadCalculator();
   const { updatePanelDetails } = useProjectSettings();
+  const { syncAddressToAerialView } = useAddressSync();
   const { projectInfo } = state;
 
   return (
@@ -37,16 +39,21 @@ export const ProjectInformation: React.FC = () => {
           </label>
           <AddressAutocomplete
             value={projectInfo.propertyAddress || ''}
-            onChange={(address) => updateProjectInfo({ propertyAddress: address })}
+            onChange={(address) => {
+              updateProjectInfo({ propertyAddress: address });
+              syncAddressToAerialView(address);
+            }}
             onPlaceSelect={(place) => {
               console.log('🏠 Project address selected:', place);
-              updateProjectInfo({ 
+              const addressData = {
                 propertyAddress: place.address,
                 // Optionally update city, state if components available
                 ...(place.components?.city && { city: place.components.city }),
                 ...(place.components?.state && { state: place.components.state }),
                 ...(place.components?.zipCode && { zipCode: place.components.zipCode })
-              });
+              };
+              updateProjectInfo(addressData);
+              syncAddressToAerialView(place.address);
             }}
             placeholder="Start typing property address..."
             required

@@ -15,7 +15,9 @@ const supabaseAnonKey = import.meta.env.SUPABASE_ANON_KEY;
 console.log('supabase.ts: Environment variables loaded:', { 
   url: !!supabaseUrl, 
   key: !!supabaseAnonKey,
-  urlValue: supabaseUrl?.substring(0, 20) + '...' 
+  urlValue: supabaseUrl?.substring(0, 20) + '...',
+  env: import.meta.env.NODE_ENV,
+  allEnvKeys: Object.keys(import.meta.env).filter(k => k.includes('SUPABASE'))
 });
 
 // Validate URLs before creating client
@@ -33,12 +35,16 @@ export const supabase = (() => {
   try {
     // Check if environment variables are provided
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn('Supabase environment variables not configured, running in offline mode');
+      console.warn('🔒 Supabase not configured:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseAnonKey,
+        message: 'Set SUPABASE_URL and SUPABASE_ANON_KEY in Vercel environment variables'
+      });
       return null;
     }
     
     if (!isValidUrl(supabaseUrl)) {
-      console.warn('Invalid Supabase URL provided, running in offline mode');
+      console.warn('❌ Invalid Supabase URL provided:', supabaseUrl);
       return null;
     }
     
