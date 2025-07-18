@@ -8,6 +8,7 @@ import type {
   ProjectAttachment
 } from '../types';
 import { AttachmentService } from './attachmentService';
+import { CRMProjectIntegrationService } from './crmProjectIntegrationService';
 
 export const exportToPDF = async (
   calculations: CalculationResults,
@@ -42,82 +43,89 @@ export const exportToPDF = async (
   const contentWidth = pageWidth - (2 * margin);
   let currentY = 18;
 
-  // === PROFESSIONAL HEADER WITH BRANDING ===
-  // Header background
-  pdf.setFillColor(41, 55, 71); // Professional dark blue
-  pdf.rect(margin, currentY - 8, contentWidth, 18, 'F');
-  
-  // Title
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(16);
+  // === PROFESSIONAL MINIMALIST HEADER ===
+  // Clean title without heavy background
+  pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(31, 41, 55); // Dark gray instead of white on dark
   pdf.text('ELECTRICAL LOAD CALCULATION REPORT', pageWidth / 2, currentY, { align: 'center' });
   
-  // Subtitle
-  currentY += 6;
-  pdf.setFontSize(9);
+  // Elegant subtitle with method info
+  currentY += 7;
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(107, 114, 128); // Medium gray
   const methodText = calculationMethod === 'optional' ? 'NEC 220.83 Optional Method' : 
                      calculationMethod === 'standard' ? 'NEC 220.42 Standard Method' : 
                      'NEC 220.87 Existing Dwelling Method';
   pdf.text(`${methodText} • NEC ${codeYear} Compliant`, pageWidth / 2, currentY, { align: 'center' });
   
-  pdf.setTextColor(0, 0, 0); // Reset to black
-  currentY += 12;
-
-  // === PROJECT INFORMATION SECTION ===
-  pdf.setFillColor(248, 250, 252); // Light gray background
-  pdf.rect(margin, currentY, contentWidth, 16, 'F');
-  pdf.setDrawColor(203, 213, 225);
+  // Subtle divider line
+  currentY += 6;
+  pdf.setDrawColor(229, 231, 235);
   pdf.setLineWidth(0.5);
-  pdf.rect(margin, currentY, contentWidth, 16);
+  pdf.line(margin, currentY, pageWidth - margin, currentY);
   
-  currentY += 4;
-  pdf.setFontSize(9);
+  pdf.setTextColor(0, 0, 0); // Reset to black
+  currentY += 8;
+
+  // === PROJECT INFORMATION SECTION - Clean layout ===
+  // Small section header without heavy background
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(51, 65, 85);
-  pdf.text('PROJECT INFORMATION', margin + 2, currentY);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text('PROJECT INFORMATION', margin, currentY);
   
-  currentY += 5;
-  pdf.setFontSize(8);
+  currentY += 6;
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(71, 85, 105);
+  pdf.setTextColor(55, 65, 81);
   
   const projectNameDisplay = (projectInfo.customerName || 'Not Specified').substring(0, 30);
   const address = `${projectInfo.propertyAddress || 'Not Specified'}, ${projectInfo.city || ''}, ${projectInfo.state || ''}`.substring(0, 45);
   const calculatedBy = (projectInfo.calculatedBy || 'Not Specified').substring(0, 25);
   
-  // Two column layout for project info
-  pdf.text(`Project: ${projectNameDisplay}`, margin + 2, currentY);
-  pdf.text(`Square Footage: ${squareFootage.toLocaleString()} sq ft`, margin + contentWidth/2 + 5, currentY);
+  // Elegant two-column layout with better spacing
+  const col1 = margin;
+  const col2 = margin + contentWidth/2;
   
-  currentY += 4;
-  pdf.text(`Address: ${address}`, margin + 2, currentY);
-  pdf.text(`Calculated By: ${calculatedBy}`, margin + contentWidth/2 + 5, currentY);
+  pdf.text(`Project: ${projectNameDisplay}`, col1, currentY);
+  pdf.text(`Square Footage: ${squareFootage.toLocaleString()} sq ft`, col2, currentY);
   
-  currentY += 4;
-  pdf.text(`Report Date: ${new Date().toLocaleDateString()}`, margin + 2, currentY);
-  pdf.text(`Service Size: ${mainBreaker} Amperes`, margin + contentWidth/2 + 5, currentY);
+  currentY += 5;
+  pdf.text(`Address: ${address}`, col1, currentY);
+  pdf.text(`Calculated By: ${calculatedBy}`, col2, currentY);
+  
+  currentY += 5;
+  pdf.text(`Report Date: ${new Date().toLocaleDateString()}`, col1, currentY);
+  pdf.text(`Service Size: ${mainBreaker} Amperes`, col2, currentY);
+  
+  // Subtle divider
+  currentY += 7;
+  pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, currentY, pageWidth - margin, currentY);
   
   pdf.setTextColor(0, 0, 0); // Reset to black
-  currentY += 10;
+  currentY += 8;
 
   // === OPTIMIZED FULL-WIDTH LAYOUT ===
   const sectionWidth = contentWidth;
   
-  // PART A: GENERAL LOADS - Full width section
+  // PART A: GENERAL LOADS - Clean section header
   let sectionY = currentY;
   
-  // Section header with background
-  pdf.setFillColor(75, 85, 99); // Professional gray
-  pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
+  // Minimalist section header with left accent
+  pdf.setFillColor(59, 130, 246); // Blue accent
+  pdf.rect(margin, sectionY - 2, 3, 7, 'F');
+  
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('PART A: GENERAL LOADS', margin + 2, sectionY + 1);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text('PART A: GENERAL LOADS', margin + 6, sectionY + 2);
   
   pdf.setTextColor(0, 0, 0);
-  sectionY += 10;
+  sectionY += 8;
 
   // THREE COLUMN TABLE LAYOUT FOR BETTER SPACE UTILIZATION
   const col1X = margin;
@@ -125,18 +133,23 @@ export const exportToPDF = async (
   const col3X = margin + (sectionWidth * 0.7);
   const col4X = margin + (sectionWidth * 0.85);
   
-  // Table header
-  pdf.setFillColor(243, 244, 246);
-  pdf.rect(margin, sectionY, sectionWidth, 6, 'F');
+  // Simple table header with bottom border only
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Load Description', col1X + 1, sectionY + 3);
-  pdf.text('Calculation', col2X + 1, sectionY + 3);
-  pdf.text('VA', col3X + 1, sectionY + 3);
-  pdf.text('Circuit', col4X + 1, sectionY + 3);
+  pdf.setTextColor(107, 114, 128); // Gray headers
+  pdf.text('Load Description', col1X, sectionY);
+  pdf.text('Calculation', col2X, sectionY);
+  pdf.text('VA', col3X, sectionY);
+  pdf.text('Circuit', col4X, sectionY);
   
-  sectionY += 6;
+  sectionY += 2;
+  pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, sectionY, pageWidth - margin, sectionY);
+  
+  sectionY += 4;
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(55, 65, 81);
   
   // Base loads with professional formatting
   const baseLoads = [
@@ -146,71 +159,60 @@ export const exportToPDF = async (
     ['Bathroom Circuit', '1 × 1,500 VA (NEC 210.11)', '1,500', '20A']
   ];
 
-  baseLoads.forEach(([desc, calc, va, circuit], index) => {
-    if (index % 2 === 0) {
-      pdf.setFillColor(249, 250, 251);
-      pdf.rect(margin, sectionY - 1, sectionWidth, 4, 'F');
-    }
-    pdf.setFontSize(7);
-    pdf.text(desc, col1X + 1, sectionY + 2);
-    pdf.text(calc, col2X + 1, sectionY + 2);
-    pdf.text(va + ' VA', col3X + 1, sectionY + 2);
-    pdf.text(circuit, col4X + 1, sectionY + 2);
+  baseLoads.forEach(([desc, calc, va, circuit]) => {
+    pdf.setFontSize(8);
+    pdf.text(desc, col1X, sectionY);
+    pdf.text(calc, col2X, sectionY);
+    pdf.text(va + ' VA', col3X, sectionY);
+    pdf.text(circuit, col4X, sectionY);
     sectionY += 4;
   });
 
-  // Active appliances section - SHOW ALL, NOT JUST 3
+  // Active appliances section - Clean presentation
   const activeAppliances = loads.generalLoads.filter(load => load.quantity > 0);
   if (activeAppliances.length > 0) {
-    sectionY += 2;
-    pdf.setFillColor(243, 244, 246);
-    pdf.rect(margin, sectionY, sectionWidth, 4, 'F');
+    sectionY += 3;
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
-    pdf.text('Dedicated Appliance Circuits:', col1X + 1, sectionY + 2);
+    pdf.setFontSize(9);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text('Dedicated Appliance Circuits:', col1X, sectionY);
     sectionY += 4;
     
     pdf.setFont('helvetica', 'normal');
-    activeAppliances.forEach((appliance, index) => {
-      if (index % 2 === 0) {
-        pdf.setFillColor(249, 250, 251);
-        pdf.rect(margin, sectionY - 1, sectionWidth, 4, 'F');
-      }
+    pdf.setFontSize(8);
+    pdf.setTextColor(55, 65, 81);
+    activeAppliances.forEach((appliance) => {
       const name = appliance.name.substring(0, 30);
       const circuitInfo = appliance.circuit || `${appliance.amps}A`;
-      pdf.setFontSize(7);
-      pdf.text(name, col1X + 1, sectionY + 2);
-      pdf.text(`${appliance.quantity} × ${appliance.va.toLocaleString()} VA`, col2X + 1, sectionY + 2);
-      pdf.text(appliance.total.toLocaleString() + ' VA', col3X + 1, sectionY + 2);
-      pdf.text(circuitInfo, col4X + 1, sectionY + 2);
+      pdf.text(name, col1X, sectionY);
+      pdf.text(`${appliance.quantity} × ${appliance.va.toLocaleString()} VA`, col2X, sectionY);
+      pdf.text(appliance.total.toLocaleString() + ' VA', col3X, sectionY);
+      pdf.text(circuitInfo, col4X, sectionY);
       sectionY += 4;
     });
   }
 
-  // Demand calculation section
-  sectionY += 3;
-  pdf.setFillColor(75, 85, 99); // Professional gray
-  pdf.rect(margin, sectionY - 2, sectionWidth, 6, 'F');
-  pdf.setTextColor(255, 255, 255);
+  // Demand calculation section - Clean design
+  sectionY += 5;
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
-  pdf.text('DEMAND FACTOR CALCULATION', margin + 2, sectionY + 1);
+  pdf.setTextColor(75, 85, 99);
+  pdf.text('DEMAND FACTOR CALCULATION', margin, sectionY);
   
-  pdf.setTextColor(0, 0, 0);
-  sectionY += 6;
+  sectionY += 4;
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
+  pdf.setTextColor(55, 65, 81);
   const baseGeneralVA = squareFootage * 3 + 6000;
   const applianceVA = calculations.applianceDemand || 0;
   const totalGeneralVA = baseGeneralVA + applianceVA;
   
-  pdf.text(`Total General Load: ${totalGeneralVA.toLocaleString()} VA`, margin + 1, sectionY);
+  pdf.text(`Total General Load: ${totalGeneralVA.toLocaleString()} VA`, margin, sectionY);
   sectionY += 5;
 
-  // Demand factor calculation with professional formatting
-  pdf.setFillColor(252, 252, 253);
-  pdf.rect(margin, sectionY - 1, sectionWidth, 20, 'F');
+  // Demand factor calculation - Clean without heavy backgrounds
   pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.3);
   pdf.rect(margin, sectionY - 1, sectionWidth, 20);
   
   if (calculationMethod === 'optional') {
@@ -242,38 +244,50 @@ export const exportToPDF = async (
   }
   
   sectionY += 3;
-  pdf.setFillColor(75, 85, 99);
-  pdf.rect(margin, sectionY - 1, sectionWidth, 6, 'F');
-  pdf.setTextColor(255, 255, 255);
+  // Part A Total with subtle emphasis
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
-  pdf.text(`Part A Total: ${(calculations.generalDemand || 0).toLocaleString()} VA`, margin + 2, sectionY + 2);
-  pdf.setTextColor(0, 0, 0);
-  sectionY += 10;
-
-  // PART B: 100% LOADS - Full width
-  pdf.setFillColor(239, 68, 68); // Professional red
-  pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('PART B: 100% DEMAND LOADS', margin + 2, sectionY + 1);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text(`Part A Total: ${(calculations.generalDemand || 0).toLocaleString()} VA`, margin + sectionWidth - 60, sectionY);
+  
+  // Divider before Part B
+  sectionY += 5;
+  pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, sectionY, pageWidth - margin, sectionY);
   
   pdf.setTextColor(0, 0, 0);
-  sectionY += 10;
+  sectionY += 8;
 
-  // Enhanced table with more details
-  pdf.setFillColor(243, 244, 246);
-  pdf.rect(margin, sectionY, sectionWidth, 6, 'F');
+  // PART B: 100% LOADS - Clean header with red accent
+  pdf.setFillColor(239, 68, 68); // Red accent
+  pdf.rect(margin, sectionY - 2, 3, 7, 'F');
+  
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(31, 41, 55);
+  pdf.text('PART B: 100% DEMAND LOADS', margin + 6, sectionY + 2);
+  
+  pdf.setTextColor(0, 0, 0);
+  sectionY += 8;
+
+  // Clean table header for Part B
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Load Type', col1X + 1, sectionY + 3);
-  pdf.text('Details', col2X + 1, sectionY + 3);
-  pdf.text('Demand (VA)', col3X + 1, sectionY + 3);
-  pdf.text('Circuit', col4X + 1, sectionY + 3);
+  pdf.setTextColor(107, 114, 128);
+  pdf.text('Load Type', col1X, sectionY);
+  pdf.text('Details', col2X, sectionY);
+  pdf.text('Demand (VA)', col3X, sectionY);
+  pdf.text('Circuit', col4X, sectionY);
   
-  sectionY += 6;
+  sectionY += 2;
+  pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, sectionY, pageWidth - margin, sectionY);
+  
+  sectionY += 4;
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(55, 65, 81);
 
   const partBLoads: string[][] = [];
   
@@ -338,23 +352,30 @@ export const exportToPDF = async (
   }
 
   const partBTotal = (calculations.hvacDemand || 0) + (calculations.evseDemand || 0) + (calculations.batteryChargingDemand || 0);
-  sectionY += 1;
-  pdf.setFillColor(239, 68, 68);
-  pdf.rect(margin, sectionY - 1, sectionWidth, 6, 'F');
-  pdf.setTextColor(255, 255, 255);
+  sectionY += 3;
+  // Part B Total with subtle emphasis
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
-  pdf.text(`Part B Total: ${partBTotal.toLocaleString()} VA`, margin + 2, sectionY + 2);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text(`Part B Total: ${partBTotal.toLocaleString()} VA`, margin + sectionWidth - 60, sectionY);
+  
+  // Divider before summary
+  sectionY += 5;
+  pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, sectionY, pageWidth - margin, sectionY);
+  
   pdf.setTextColor(0, 0, 0);
-  sectionY += 10;
+  sectionY += 8;
 
-  // CALCULATION SUMMARY - Full width below Part B
-  pdf.setFillColor(75, 85, 99); // Professional gray
-  pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
+  // CALCULATION SUMMARY - Clean header with accent
+  pdf.setFillColor(34, 197, 94); // Green accent for summary
+  pdf.rect(margin, sectionY - 2, 3, 7, 'F');
+  
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('LOAD CALCULATION SUMMARY', margin + 2, sectionY + 1);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text('LOAD CALCULATION SUMMARY', margin + 6, sectionY + 2);
   
   pdf.setTextColor(0, 0, 0);
   sectionY += 10;
@@ -364,21 +385,21 @@ export const exportToPDF = async (
   const summaryCol2X = margin + (sectionWidth / 2);
   const summaryColWidth = (sectionWidth / 2) - 5;
 
-  // Left summary column
-  pdf.setFillColor(248, 250, 252);
-  pdf.rect(summaryCol1X, sectionY, summaryColWidth, 25, 'F');
-  pdf.setDrawColor(203, 213, 225);
+  // Left summary column - Clean bordered box
+  pdf.setDrawColor(209, 213, 219);
   pdf.setLineWidth(0.5);
   pdf.rect(summaryCol1X, sectionY, summaryColWidth, 25);
 
   let summaryY = sectionY + 4;
-  pdf.setFontSize(8);
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(31, 41, 55);
   pdf.text('CALCULATED DEMAND:', summaryCol1X + 2, summaryY);
   
   summaryY += 5;
-  pdf.setFontSize(7);
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(55, 65, 81);
   
   pdf.text(`Part A (General w/ Demand Factors):`, summaryCol1X + 3, summaryY);
   pdf.text(`${(calculations.generalDemand || 0).toLocaleString()} VA`, summaryCol1X + summaryColWidth - 25, summaryY);
@@ -389,33 +410,34 @@ export const exportToPDF = async (
   summaryY += 5;
   
   // Total calculation
-  pdf.setDrawColor(156, 163, 175);
+  pdf.setDrawColor(209, 213, 219);
   pdf.setLineWidth(0.3);
   pdf.line(summaryCol1X + 3, summaryY - 1, summaryCol1X + summaryColWidth - 3, summaryY - 1);
   
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.text('TOTAL CALCULATED LOAD:', summaryCol1X + 3, summaryY);
-  pdf.text(`${(calculations.totalVA || 0).toLocaleString()} VA`, summaryCol1X + summaryColWidth - 25, summaryY);
-  summaryY += 4;
+  pdf.setFontSize(9);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text('TOTAL CALCULATED LOAD:', summaryCol1X + 3, summaryY + 2);
+  pdf.text(`${(calculations.totalVA || 0).toLocaleString()} VA`, summaryCol1X + summaryColWidth - 25, summaryY + 2);
+  summaryY += 5;
   pdf.text('TOTAL AMPERAGE @ 240V:', summaryCol1X + 3, summaryY);
   pdf.text(`${(calculations.totalAmps || 0).toFixed(1)} A`, summaryCol1X + summaryColWidth - 25, summaryY);
 
   // Right summary column - Service Analysis
-  pdf.setFillColor(248, 250, 252);
-  pdf.rect(summaryCol2X, sectionY, summaryColWidth, 25, 'F');
-  pdf.setDrawColor(203, 213, 225);
+  pdf.setDrawColor(209, 213, 219);
   pdf.setLineWidth(0.5);
   pdf.rect(summaryCol2X, sectionY, summaryColWidth, 25);
   
   let serviceY = sectionY + 4;
-  pdf.setFontSize(8);
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(31, 41, 55);
   pdf.text('SERVICE ANALYSIS:', summaryCol2X + 2, serviceY);
   
-  serviceY += 4;
-  pdf.setFontSize(7);
+  serviceY += 5;
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(55, 65, 81);
   
   const utilizationPercent = ((calculations.totalAmps || 0) / mainBreaker) * 100;
   const spareCapacityPercent = calculations.spareCapacity || 0;
@@ -460,19 +482,20 @@ export const exportToPDF = async (
 
   // ADD LOAD MANAGEMENT DETAILS SECTION
   if (loadManagementType !== 'none') {
-    pdf.setFillColor(75, 85, 99); // Professional gray
-    pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(10);
+    // Clean header with purple accent
+    pdf.setFillColor(147, 51, 234); // Purple accent
+    pdf.rect(margin, sectionY - 2, 3, 7, 'F');
+    
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('LOAD MANAGEMENT SYSTEM DETAILS', margin + 2, sectionY + 1);
+    pdf.setTextColor(31, 41, 55);
+    pdf.text('LOAD MANAGEMENT SYSTEM DETAILS', margin + 6, sectionY + 2);
     
     pdf.setTextColor(0, 0, 0);
     sectionY += 10;
 
-    pdf.setFillColor(252, 252, 253);
-    pdf.rect(margin, sectionY, sectionWidth, 25, 'F');
     pdf.setDrawColor(229, 231, 235);
+    pdf.setLineWidth(0.3);
     pdf.rect(margin, sectionY, sectionWidth, 25);
     
     sectionY += 4;
@@ -538,12 +561,14 @@ export const exportToPDF = async (
   // Solar/Battery section (if present)
   if (calculations.solarCapacityKW > 0 || calculations.batteryCapacityKW > 0) {
     sectionY += 5;
-    pdf.setFillColor(75, 85, 99); // Professional gray
-    pdf.rect(margin, sectionY - 3, sectionWidth, 8, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(10);
+    // Clean header with yellow accent for solar
+    pdf.setFillColor(251, 191, 36); // Yellow accent
+    pdf.rect(margin, sectionY - 2, 3, 7, 'F');
+    
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('RENEWABLE ENERGY SYSTEMS', margin + 2, sectionY + 1);
+    pdf.setTextColor(31, 41, 55);
+    pdf.text('RENEWABLE ENERGY SYSTEMS', margin + 6, sectionY + 2);
     
     pdf.setTextColor(0, 0, 0);
     sectionY += 10;
@@ -616,21 +641,23 @@ export const exportToPDF = async (
           sectionY = 20;
         }
         
-        // Section header
+        // Section header - Clean design
         sectionY += 10;
-        pdf.setFillColor(75, 85, 99); // Professional gray
-        pdf.rect(margin, sectionY - 6, contentWidth, 12, 'F');
+        pdf.setFillColor(16, 185, 129); // Green accent for site docs
+        pdf.rect(margin, sectionY - 4, 3, 7, 'F');
         
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(12);
+        pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('SITE DOCUMENTATION & AERIAL VIEWS', margin + 2, sectionY);
+        pdf.setTextColor(31, 41, 55);
+        pdf.text('SITE DOCUMENTATION & AERIAL VIEWS', margin + 6, sectionY);
         
+        sectionY += 5;
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`${exportAttachments.length} attachment(s) for permit application`, margin + 2, sectionY + 4);
+        pdf.setTextColor(107, 114, 128);
+        pdf.text(`${exportAttachments.length} attachment(s) for permit application`, margin + 6, sectionY);
         
-        sectionY += 16;
+        sectionY += 10;
         pdf.setTextColor(0, 0, 0);
         
         // Add each attachment
@@ -708,27 +735,30 @@ export const exportToPDF = async (
     }
   }
 
-  // PROFESSIONAL FOOTER SECTION - Dynamic positioning
+  // PROFESSIONAL FOOTER SECTION - Clean minimal design
   sectionY += 5; // Add some space before footer
   const footerY = Math.min(sectionY, 255); // Ensure footer doesn't go off page
   
-  // Professional footer with branding
-  pdf.setFillColor(41, 55, 71);
-  pdf.rect(margin, footerY - 8, contentWidth, 12, 'F');
+  // Subtle divider line
+  pdf.setDrawColor(229, 231, 235);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
   
-  pdf.setTextColor(255, 255, 255);
+  // Footer content - clean text layout
+  pdf.setTextColor(75, 85, 99);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('ELECTRICAL LOAD CALCULATION REPORT', margin + 2, footerY - 2);
+  pdf.text('ELECTRICAL LOAD CALCULATION REPORT', margin, footerY);
   
-  pdf.setFontSize(6);
+  pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(`NEC ${codeYear} Compliant Calculation • Generated: ${new Date().toLocaleDateString()}`, margin + 2, footerY + 1);
+  pdf.setTextColor(107, 114, 128);
+  pdf.text(`NEC ${codeYear} Compliant Calculation • Generated: ${new Date().toLocaleDateString()}`, margin, footerY + 4);
   
-  // Key metrics in footer
+  // Key metrics aligned right
   const footerSpareCapacity = calculations.spareCapacity || 0;
-  pdf.text(`Total Load: ${(calculations.totalAmps || 0).toFixed(1)}A`, margin + contentWidth - 60, footerY - 2);
-  pdf.text(`Service: ${mainBreaker}A • Spare: ${footerSpareCapacity.toFixed(0)}%`, margin + contentWidth - 60, footerY + 1);
+  pdf.setTextColor(75, 85, 99);
+  pdf.text(`Total Load: ${(calculations.totalAmps || 0).toFixed(1)}A • Service: ${mainBreaker}A • Spare: ${footerSpareCapacity.toFixed(0)}%`, pageWidth - margin - 60, footerY);
   
   pdf.setTextColor(0, 0, 0);
 
@@ -743,5 +773,29 @@ export const exportToPDF = async (
   const projectNameFile = projectInfo.customerName?.replace(/[^a-zA-Z0-9]/g, '_') || 'Project';
   const dateStamp = new Date().toISOString().split('T')[0];
   const fileName = `Electrical_Load_Calculation_${projectNameFile}_${dateStamp}.pdf`;
+  
+  // Save locally first
   pdf.save(fileName);
+
+  // Auto-save to CRM if customer exists and CRM is enabled
+  try {
+    const lastCRMCustomerId = localStorage.getItem('lastCRMCustomerId');
+    
+    if (lastCRMCustomerId && window.fetch) {
+      // Create blob for CRM upload
+      const pdfBlob = pdf.output('blob');
+      
+      // Save to CRM in background
+      await CRMProjectIntegrationService.savePDFToCRM(
+        lastCRMCustomerId,
+        pdfBlob,
+        fileName
+      );
+      
+      console.log('✅ PDF automatically saved to CRM customer attachments');
+    }
+  } catch (crmError) {
+    // Don't let CRM errors break the PDF export
+    console.warn('Failed to save PDF to CRM (continuing with local save):', crmError);
+  }
 };
