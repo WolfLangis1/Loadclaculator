@@ -40,8 +40,8 @@ export const ProjectInformation: React.FC = () => {
           <AddressAutocomplete
             value={projectInfo.propertyAddress || ''}
             onChange={(address) => {
+              // Only update project info for manual typing, don't sync to aerial yet
               updateProjectInfo({ propertyAddress: address });
-              syncAddressToAerialView(address);
             }}
             onPlaceSelect={(place) => {
               console.log('🏠 Project address selected:', place);
@@ -53,6 +53,7 @@ export const ProjectInformation: React.FC = () => {
                 ...(place.components?.zipCode && { zipCode: place.components.zipCode })
               };
               updateProjectInfo(addressData);
+              // Only sync to aerial view when a place is actually selected
               syncAddressToAerialView(place.address);
             }}
             placeholder="Start typing property address..."

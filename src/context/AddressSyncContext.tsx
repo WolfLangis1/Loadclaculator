@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useRef, useCallback } from 'react';
 import { useProjectSettings } from './ProjectSettingsContext';
 import { useAerialView } from './AerialViewContext';
 
@@ -18,36 +18,33 @@ export const useAddressSync = () => {
 };
 
 export const AddressSyncProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { settings, updateProjectInfo } = useProjectSettings();
-  const { state: aerialState, setAddress } = useAerialView();
+  const { updateProjectInfo } = useProjectSettings();
+  const { setAddress } = useAerialView();
+  
+  // Track the source of the last address change to prevent circular updates
+  const lastUpdateSource = useRef<'project' | 'aerial' | null>(null);
 
-  const syncAddressToAerialView = (address: string) => {
+  const syncAddressToAerialView = useCallback((address: string) => {
     console.log('🔄 Syncing address to Aerial View:', address);
+    lastUpdateSource.current = 'project';
     setAddress(address);
-  };
+    
+    // Clear the source after a short delay to allow for future updates
+    setTimeout(() => {
+      lastUpdateSource.current = null;
+    }, 100);
+  }, [setAddress]);
 
-  const syncAddressToProject = (address: string) => {
+  const syncAddressToProject = useCallback((address: string) => {
     console.log('🔄 Syncing address to Project Settings:', address);
+    lastUpdateSource.current = 'aerial';
     updateProjectInfo({ propertyAddress: address });
-  };
-
-  // Auto-sync when project address changes
-  useEffect(() => {
-    const projectAddress = settings.projectInfo.propertyAddress;
-    if (projectAddress && projectAddress !== aerialState.address) {
-      console.log('🔄 Auto-syncing project address to aerial view:', projectAddress);
-      setAddress(projectAddress);
-    }
-  }, [settings.projectInfo.propertyAddress, aerialState.address, setAddress]);
-
-  // Auto-sync when aerial address changes (from search)
-  useEffect(() => {
-    const aerialAddress = aerialState.address;
-    if (aerialAddress && aerialAddress !== settings.projectInfo.propertyAddress) {
-      console.log('🔄 Auto-syncing aerial address to project settings:', aerialAddress);
-      updateProjectInfo({ propertyAddress: aerialAddress });
-    }
-  }, [aerialState.address, settings.projectInfo.propertyAddress, updateProjectInfo]);
+    
+    // Clear the source after a short delay to allow for future updates
+    setTimeout(() => {
+      lastUpdateSource.current = null;
+    }, 100);
+  }, [updateProjectInfo]);
 
   const value: AddressSyncContextType = {
     syncAddressToAerialView,
