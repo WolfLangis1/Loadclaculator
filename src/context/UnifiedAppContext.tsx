@@ -5,6 +5,7 @@ import { CalculationProvider, useCalculations } from './CalculationContext';
 import { SLDDataProvider } from './SLDDataContext';
 import { AerialViewProvider } from './AerialViewContext';
 import { ComplianceProvider } from './ComplianceContext';
+import { CRMProvider } from './CRMContext';
 
 /**
  * Unified App Context Provider
@@ -19,6 +20,7 @@ import { ComplianceProvider } from './ComplianceContext';
  * 4. SLDProvider (single line diagram management)
  * 5. AerialViewProvider (aerial view and site analysis)
  * 6. ComplianceProvider (inspection and compliance management)
+ * 7. CRMProvider (customer relationship management)
  */
 export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -28,7 +30,9 @@ export const UnifiedAppProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           <SLDDataProvider>
             <AerialViewProvider>
               <ComplianceProvider>
-                {children}
+                <CRMProvider>
+                  {children}
+                </CRMProvider>
               </ComplianceProvider>
             </AerialViewProvider>
           </SLDDataProvider>

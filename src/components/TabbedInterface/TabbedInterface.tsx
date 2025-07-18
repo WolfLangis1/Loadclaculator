@@ -1,5 +1,5 @@
 import React, { useState, Suspense, lazy, memo, useCallback } from 'react';
-import { Calculator, FolderOpen, Zap, MapPin, Cable, Plus, Shield } from 'lucide-react';
+import { Calculator, FolderOpen, Zap, MapPin, Cable, Plus, Shield, Users } from 'lucide-react';
 import { LoadCalculatorMain } from '../LoadCalculator/LoadCalculatorMain';
 import { WireSizingChart } from '../LoadCalculator/WireSizingChart';
 import { AsyncComponentErrorBoundary } from '../ErrorBoundary/FeatureErrorBoundary';
@@ -14,12 +14,13 @@ const WorkingIntelligentSLDCanvas = lazy(() =>
 );
 const SimpleAerialViewMain = lazy(() => import('../AerialView/SimpleAerialViewMain').then(module => ({ default: module.SimpleAerialViewMain })));
 const ComplianceMain = lazy(() => import('../Compliance/ComplianceMain').then(module => ({ default: module.ComplianceMain })));
+const CRMMain = lazy(() => import('../CRM/CRMMain').then(module => ({ default: module.CRMMain })));
 const EnhancedProjectManager = lazy(() => 
   import('../ProjectManager/EnhancedProjectManager').then(module => ({ default: module.EnhancedProjectManager }))
     .catch(() => import('../ProjectManager/ProjectManager').then(module => ({ default: module.ProjectManager })))
 );
 
-type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing' | 'compliance';
+type TabType = 'calculator' | 'sld-intelligent' | 'aerial' | 'wire-sizing' | 'compliance' | 'crm';
 
 interface Tab {
   id: TabType;
@@ -44,6 +45,7 @@ export const TabbedInterface: React.FC = memo(() => {
     SLD_ENABLED: false, // Set to false to disable SLD feature
     COMPLIANCE_ENABLED: featureFlags.aerialView.compliance,
     INSPECTION_ENABLED: featureFlags.aerialView.inspection,
+    CRM_ENABLED: true, // CRM system is now available
   };
 
   const tabs: Tab[] = [
@@ -80,6 +82,14 @@ export const TabbedInterface: React.FC = memo(() => {
       component: ComplianceMain,
       disabled: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED,
       comingSoon: !FEATURE_FLAGS.COMPLIANCE_ENABLED && !FEATURE_FLAGS.INSPECTION_ENABLED
+    },
+    {
+      id: 'crm',
+      label: 'CRM',
+      icon: Users,
+      component: CRMMain,
+      disabled: !FEATURE_FLAGS.CRM_ENABLED,
+      comingSoon: !FEATURE_FLAGS.CRM_ENABLED
     }
   ];
 
@@ -244,13 +254,13 @@ export const TabbedInterface: React.FC = memo(() => {
         id={`tabpanel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
         className={`${
-          activeTab === 'sld-intelligent' || activeTab === 'aerial' || activeTab === 'compliance'
+          activeTab === 'sld-intelligent' || activeTab === 'aerial' || activeTab === 'compliance' || activeTab === 'crm'
             ? 'h-[calc(100vh-80px)] overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' 
             : activeTab === 'wire-sizing'
             ? 'max-w-7xl mx-auto py-3 sm:py-6 px-2 sm:px-0'
             : 'max-w-7xl mx-auto px-2 sm:px-0'
         }`}
-        style={activeTab === 'sld-intelligent' || activeTab === 'aerial' || activeTab === 'compliance' ? { 
+        style={activeTab === 'sld-intelligent' || activeTab === 'aerial' || activeTab === 'compliance' || activeTab === 'crm' ? { 
           scrollBehavior: 'smooth',
           overflowY: 'auto',
           overflowX: 'auto'
