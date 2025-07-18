@@ -27,8 +27,8 @@ export const LOAD_TEMPLATES = {
   ] as HVACLoad[],
   
   evse: [
-    { id: 1, name: 'Level 2 EV Charger (40A)', quantity: 0, amps: 49, volts: 240, va: 11760, total: 0, continuous: true as const, circuit: '' },
-    { id: 2, name: 'Level 2 EV Charger (32A)', quantity: 0, amps: 40, volts: 240, va: 9600, total: 0, continuous: true as const, circuit: '' }
+    { id: 1, name: 'Level 2 EV Charger', quantity: 0, amps: 48, volts: 240, va: 11520, total: 0, continuous: true as const, circuit: '' },
+    { id: 2, name: 'Level 2 EV Charger #2', quantity: 0, amps: 40, volts: 240, va: 9600, total: 0, continuous: true as const, circuit: '' }
   ] as EVSELoad[],
   
   solar: [
