@@ -131,7 +131,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   </span>
                 </button>
                 
-                {categories.map((category) => {
+                {categories.map((category: { category: string; name: string; count: number }) => {
                   const IconComponent = getCategoryIcon(category.category);
                   return (
                     <button
@@ -187,7 +187,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               <h3 className="font-medium text-gray-900">
                 {selectedCategory === 'all' 
                   ? `All Templates (${filteredTemplates.length})`
-                  : `${categories.find(c => c.category === selectedCategory)?.name} Templates (${filteredTemplates.length})`
+                  : `${categories.find((c: { category: string; name: string; count: number }) => c.category === selectedCategory)?.name} Templates (${filteredTemplates.length})`
                 }
               </h3>
             </div>
@@ -200,7 +200,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredTemplates.map((template) => (
+                {filteredTemplates.map((template: DetailedProjectTemplate) => (
                   <TemplateCard
                     key={template.id}
                     template={template}

@@ -345,6 +345,13 @@ export class ProjectTemplateService {
   }
 
   /**
+   * Get all templates (alias for getTemplates)
+   */
+  static getAllTemplates(): DetailedProjectTemplate[] {
+    return DETAILED_TEMPLATES;
+  }
+
+  /**
    * Get templates by category
    */
   static getTemplatesByCategory(category: 'residential' | 'commercial' | 'industrial' | 'specialty'): DetailedProjectTemplate[] {
@@ -377,6 +384,23 @@ export class ProjectTemplateService {
       template.description.toLowerCase().includes(searchTerm) ||
       template.tags.some(tag => tag.toLowerCase().includes(searchTerm))
     );
+  }
+
+  /**
+   * Get template categories with counts
+   */
+  static getTemplateCategories() {
+    const categoryCounts = DETAILED_TEMPLATES.reduce((acc, template) => {
+      acc[template.category] = (acc[template.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { category: 'residential', name: 'Residential', count: categoryCounts.residential || 0 },
+      { category: 'commercial', name: 'Commercial', count: categoryCounts.commercial || 0 },
+      { category: 'industrial', name: 'Industrial', count: categoryCounts.industrial || 0 },
+      { category: 'specialty', name: 'Specialty', count: categoryCounts.specialty || 0 }
+    ];
   }
 
   /**
