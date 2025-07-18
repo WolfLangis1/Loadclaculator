@@ -20,7 +20,7 @@ export const LOAD_TEMPLATES = {
   
   hvac: [
     { id: 1, name: 'AC#1', quantity: 0, amps: 32, volts: 240, va: 7680, total: 0, type: 'hvac' as const, critical: true, circuit: '' },
-    { id: 2, name: 'AC#2', quantity: 0, amps: 30, volts: 240, va: 7200, total: 0, type: 'hvac' as const, critical: true, circuit: '' },
+    { id: 2, name: 'AC#2', quantity: 0, amps: 32, volts: 240, va: 7680, total: 0, type: 'hvac' as const, critical: true, circuit: '' },
     { id: 3, name: 'Air Handler/Furnace Fan', quantity: 0, amps: 12, volts: 240, va: 2880, total: 0, type: 'motor' as const, hp: 0.5, critical: true, circuit: '' },
     { id: 4, name: 'Heater', quantity: 0, amps: 16, volts: 240, va: 3840, total: 0, type: 'resistance_heat' as const, critical: true, circuit: '' },
     { id: 5, name: 'Attic/Exhaust Fan', quantity: 0, amps: 8, volts: 120, va: 960, total: 0, type: 'motor' as const, hp: 1, critical: false, circuit: '' }
