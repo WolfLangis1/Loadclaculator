@@ -3,33 +3,41 @@
  * Provides comprehensive health status for monitoring and debugging
  */
 
-import { cors, healthCheck, requestLogger } from './utils/middleware.js';
-import ErrorHandler from './utils/errorHandler.js';
-
 export default async function handler(req, res) {
+  // Simple CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    // Enable CORS
-    if (cors(req, res)) return;
-    
-    // Log request
-    requestLogger(req, res, () => {});
-    
-    // Only allow GET requests
-    if (req.method !== 'GET') {
-      const error = ErrorHandler.createApiError(
-        `Method ${req.method} not allowed`,
-        405,
-        'METHOD_NOT_ALLOWED'
-      );
-      return ErrorHandler.sendResponse(res, error);
-    }
-    
-    // Return health status
-    healthCheck(req, res);
-    
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      services: {
+        googleMaps: !!process.env.GOOGLE_MAPS_API_KEY,
+        supabase: !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY
+      },
+      uptime: process.uptime()
+    };
+
+    console.log('Health check successful:', health);
+    res.status(200).json(health);
   } catch (error) {
-    ErrorHandler.logError(error, { endpoint: 'health', method: req.method });
-    const apiError = ErrorHandler.createApiError('Health check failed');
-    ErrorHandler.sendResponse(res, apiError);
+    console.error('Health check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
   }
 }

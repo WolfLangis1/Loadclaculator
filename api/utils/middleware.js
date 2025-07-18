@@ -94,7 +94,7 @@ class SimpleRateLimiter {
 
 const rateLimiter = new SimpleRateLimiter();
 
-export const rateLimit = (limit = 60, windowMs = 60000) => (req, res, next) => {
+export const rateLimit = (req, res, limit = 60, windowMs = 60000) => {
   const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
                    req.headers['x-real-ip'] || 
                    req.connection?.remoteAddress || 
@@ -108,24 +108,32 @@ export const rateLimit = (limit = 60, windowMs = 60000) => (req, res, next) => {
   res.setHeader('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
   
   if (!rateLimitResult.allowed) {
-    const error = ErrorHandler.handleRateLimitError(limit, windowMs, clientIP);
-    return ErrorHandler.sendResponse(res, error);
+    res.status(429).json({
+      error: 'Too Many Requests',
+      message: `Rate limit exceeded. Try again in ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    });
+    return true; // Indicates request was handled
   }
   
-  next();
+  return false; // Indicates to continue processing
 };
 
 import jwt from 'jsonwebtoken';
 import apiKeyManager from './apiKeyManager.js';
 
-export const validate = (schema) => (req, res, next) => {
+export const validate = (schema) => (req, res) => {
   const validation = schema(req.query);
   if (!validation.isValid) {
-    const error = ErrorHandler.handleValidationError(validation.errors);
-    return ErrorHandler.sendResponse(res, error);
+    res.status(400).json({
+      error: 'Validation Error',
+      message: 'Invalid request parameters',
+      details: validation.errors
+    });
+    return true; // Indicates request was handled
   }
   req.validatedData = validation.data;
-  next();
+  return false; // Indicates to continue processing
 };
 
 export const authenticate = async (req, res, next) => {
