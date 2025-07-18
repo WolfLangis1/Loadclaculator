@@ -3,16 +3,22 @@ import { supabase } from '../config/supabase';
 import { ApiError } from './ApiError';
 
 const getApiBaseUrl = (): string => {
+  // Production: Always use relative /api for Vercel serverless functions
   if (import.meta.env.PROD && typeof window !== 'undefined') {
     return '/api';
   }
+  
+  // Development: Check for configured API URLs
   if (import.meta.env.API_URL) {
     return import.meta.env.API_URL;
   }
-  if (import.meta.env.API_BASE_URL) {
+  
+  if (import.meta.env.API_BASE_URL && import.meta.env.API_BASE_URL !== 'undefined') {
     return `${import.meta.env.API_BASE_URL}/api`;
   }
-  return 'http://localhost:3001/api';
+  
+  // Development fallback: Use /api (assumes Vite proxy or local serverless functions)
+  return '/api';
 };
 
 const API_BASE = getApiBaseUrl();

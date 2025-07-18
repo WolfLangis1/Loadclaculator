@@ -69,18 +69,21 @@ class SimpleRateLimiter {
 export class SecureApiService {
   private static rateLimiter = new SimpleRateLimiter();
   private static readonly API_BASE = (() => {
-    // Always use backend proxy in production for security
+    // Production: Always use relative /api for Vercel serverless functions
     if (import.meta.env.PROD) {
       return '/api';
     }
     
-    // Development: use configured backend or proxy
-    if (import.meta.env.API_BASE_URL === '') {
+    // Development: Use configured backend or fall back to /api
+    const apiBaseUrl = import.meta.env.API_BASE_URL;
+    
+    // Handle empty string or undefined
+    if (!apiBaseUrl || apiBaseUrl === '' || apiBaseUrl === 'undefined') {
       return '/api';
     }
     
-    return import.meta.env.API_BASE_URL ? 
-      `${import.meta.env.API_BASE_URL}/api` : '/api';
+    // Use configured backend URL for development (Docker/local server)
+    return `${apiBaseUrl}/api`;
   })();
 
   // Enhanced request method with retry logic and better error handling

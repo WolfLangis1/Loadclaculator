@@ -1,10 +1,7 @@
-import { cors, rateLimit, validateInput, requestLogger } from './utils/middleware.js';
-import ErrorHandler from './utils/errorHandler.js';
-import apiKeyManager from './utils/apiKeyManager.js';
+// Vercel Serverless Function for Google Geocoding API
 
-const validateAddress = (data) => {
+const validateAddress = (address) => {
   const errors = [];
-  const address = data.address;
   
   if (!address || typeof address !== 'string') {
     errors.push('Address parameter is required and must be a string');
@@ -21,73 +18,74 @@ const validateAddress = (data) => {
   };
 };
 
-export default ErrorHandler.asyncHandler(async (req, res) => {
-  // Apply middleware
-  if (cors(req, res)) return;
-  
-  // Apply rate limiting (30 requests per minute for geocoding)
-  rateLimit(30, 60000)(req, res, () => {});
-  
-  // Log request
-  requestLogger(req, res, () => {});
-  
-  // Validate input
-  validateInput(validateAddress)(req, res, () => {});
-  
-  if (req.method !== 'GET') {
-    const error = ErrorHandler.createApiError(
-      `Method ${req.method} not allowed`,
-      405,
-      'METHOD_NOT_ALLOWED'
-    );
-    return ErrorHandler.sendResponse(res, error);
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Content-Type': 'application/json'
+};
+
+export default async function handler(req, res) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).setHeader(corsHeaders).end();
   }
 
-  const address = req.validatedData;
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    return res.status(405).json({
+      error: 'Method not allowed',
+      message: `Method ${req.method} not allowed`
+    });
+  }
+
+  const { address } = req.query;
+  
+  // Validate input
+  const validation = validateAddress(address);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      message: 'Request parameters are invalid',
+      details: validation.errors,
+      timestamp: new Date().toISOString()
+    });
+  }
 
   try {
-    const apiKey = apiKeyManager.getGoogleMapsKey();
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    
+    if (!apiKey || apiKey.startsWith('your_')) {
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'Google Maps API key not configured'
+      });
+    }
 
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(validation.data)}&key=${apiKey}`
     );
 
     if (!response.ok) {
-      throw ErrorHandler.handleExternalApiError(
-        'Google Geocoding API',
-        new Error(`HTTP ${response.status}: ${response.statusText}`),
-        response.status
-      );
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
 
     // Check for API-level errors
     if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      throw ErrorHandler.handleExternalApiError(
-        'Google Geocoding API',
-        new Error(data.error_message || `API returned status: ${data.status}`)
-      );
+      throw new Error(data.error_message || `API returned status: ${data.status}`);
     }
 
     return res.status(200).json(data);
     
   } catch (error) {
-    if (error.message.includes('not configured')) {
-      const apiError = ErrorHandler.handleApiKeyError('Google Maps API', error);
-      return ErrorHandler.sendResponse(res, apiError);
-    }
+    console.error('Geocoding API error:', error);
     
-    ErrorHandler.logError(error, { 
-      endpoint: 'geocode', 
-      address: address?.substring(0, 50) + '...' 
+    return res.status(500).json({
+      error: 'Geocoding service temporarily unavailable',
+      message: error.message || 'Internal server error',
+      timestamp: new Date().toISOString()
     });
-    
-    if (error instanceof ErrorHandler.constructor) {
-      return ErrorHandler.sendResponse(res, error);
-    }
-    
-    const apiError = ErrorHandler.createApiError('Geocoding service temporarily unavailable');
-    return ErrorHandler.sendResponse(res, apiError);
   }
-}); 
+} 
