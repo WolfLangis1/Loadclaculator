@@ -200,10 +200,32 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({ chil
 
     try {
       setIsLoading(true);
+      
+      // Determine the correct redirect URL based on environment
+      const getRedirectUrl = () => {
+        const currentOrigin = window.location.origin;
+        
+        // If we're on localhost, redirect back to localhost
+        if (currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1')) {
+          return `${currentOrigin}/`;
+        }
+        
+        // If we're on Vercel preview, use the current origin
+        if (currentOrigin.includes('vercel.app')) {
+          return `${currentOrigin}/`;
+        }
+        
+        // For production, use the production domain
+        return 'https://proloadcalc.com/';
+      };
+
+      const redirectUrl = getRedirectUrl();
+      console.log('OAuth redirect URL:', redirectUrl);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

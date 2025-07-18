@@ -47,6 +47,11 @@ export class SecureAerialViewService {
   ): Promise<any> {
     try {
       if (this.USE_SECURE_API) {
+        // Validate input coordinates
+        if (!latitude || !longitude || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+          throw new Error('Invalid coordinates provided for satellite imagery');
+        }
+
         // Use secure backend proxy
         const result = await SecureApiService.getSatelliteImage(
           latitude,
@@ -57,9 +62,24 @@ export class SecureAerialViewService {
           options.provider || 'google'
         );
         
+        // Validate API response
+        if (!result) {
+          throw new Error('No response from satellite imagery service');
+        }
+
+        // Check if we have a valid image URL
+        if (!result.url && !result.imageUrl) {
+          throw new Error('No image URL returned from satellite service');
+        }
+
+        const imageUrl = result.url || result.imageUrl;
+        if (typeof imageUrl !== 'string' || imageUrl.length === 0) {
+          throw new Error('Invalid image URL format returned from satellite service');
+        }
+        
         return {
           success: true,
-          data: result,
+          data: { imageUrl },
           source: 'secure-backend'
         };
       } else {
@@ -222,6 +242,11 @@ export class SecureAerialViewService {
     options: { width?: number; height?: number } = {}
   ): Promise<{heading: number; imageUrl: string; label: string}[]> {
     try {
+      // Validate input coordinates
+      if (!latitude || !longitude || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        throw new Error('Invalid coordinates provided for street view');
+      }
+
       const { width = 640, height = 640 } = options;
       
       // Define multiple headings for comprehensive street view coverage
@@ -239,26 +264,65 @@ export class SecureAerialViewService {
             latitude,
             longitude,
             heading,
+            0, // pitch
+            90, // fov
             width,
             height
           );
           
+          // Validate the API response
+          if (!result) {
+            console.warn(`No response from street view service for ${label}`);
+            return {
+              heading,
+              imageUrl: `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Unavailable')}`,
+              label
+            };
+          }
+
+          // Check for valid image URL
+          const imageUrl = result.url || result.imageUrl;
+          if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.length === 0) {
+            console.warn(`No valid image URL returned for ${label}`);
+            return {
+              heading,
+              imageUrl: `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Unavailable')}`,
+              label
+            };
+          }
+
+          // Check if street view is actually available (not an error response)
+          if (result.available === false || (result.status && result.status !== 'OK')) {
+            console.warn(`Street view not available for ${label}:`, result.status || 'Unknown status');
+            return {
+              heading,
+              imageUrl: `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Not Available')}`,
+              label
+            };
+          }
+          
           return {
             heading,
-            imageUrl: result.url || `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Unavailable')}`,
+            imageUrl,
             label
           };
         } catch (error) {
           console.warn(`Failed to get ${label}:`, error);
           return {
             heading,
-            imageUrl: `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Unavailable')}`,
+            imageUrl: `https://via.placeholder.com/${width}x${height}/ffcccc/cc0000?text=${encodeURIComponent(label + ' Error')}`,
             label
           };
         }
       });
       
-      return await Promise.all(streetViewPromises);
+      const results = await Promise.all(streetViewPromises);
+      
+      // Log summary of results
+      const validImages = results.filter(r => r.imageUrl && !r.imageUrl.includes('placeholder'));
+      console.log(`Street view results: ${validImages.length}/${results.length} views available`);
+      
+      return results;
     } catch (error) {
       console.error('Street view error:', error);
       throw error;
