@@ -485,6 +485,190 @@ describe('Security Validation', () => {
 
 ---
 
+## 🔄 GitHub Forking Workflow
+
+This section provides a comprehensive guide for contributing to the Load Calculator project through GitHub forking, ensuring clean collaboration and proper code management.
+
+### Step 1: Fork the Repository
+
+**On GitHub:**
+1. Navigate to the repository you want to fork
+2. Click the **"Fork"** button in the top-right corner
+3. Choose your GitHub account as the destination
+4. Wait for the fork to complete
+
+### Step 2: Clone Your Fork Locally
+
+```bash
+# Clone your forked repository
+git clone https://github.com/YOUR_USERNAME/Loadclaculator.git
+
+# Navigate into the project directory
+cd Loadclaculator
+
+# Verify the remote origin points to your fork
+git remote -v
+# Should show:
+# origin  https://github.com/YOUR_USERNAME/Loadclaculator.git (fetch)
+# origin  https://github.com/YOUR_USERNAME/Loadclaculator.git (push)
+```
+
+### Step 3: Add Original Repository as Upstream
+
+```bash
+# Add the original repository as "upstream" remote
+git remote add upstream https://github.com/WolfLangis1/Loadclaculator.git
+
+# Verify both remotes are configured
+git remote -v
+# Should show:
+# origin    https://github.com/YOUR_USERNAME/Loadclaculator.git (fetch)
+# origin    https://github.com/YOUR_USERNAME/Loadclaculator.git (push)
+# upstream  https://github.com/WolfLangis1/Loadclaculator.git (fetch)
+# upstream  https://github.com/WolfLangis1/Loadclaculator.git (push)
+```
+
+### Step 4: Create a Feature Branch
+
+```bash
+# Ensure you're on the main branch and it's up to date
+git checkout main
+git pull origin main
+
+# Create and switch to a new feature branch
+git checkout -b feature/your-feature-name
+
+# Example:
+git checkout -b feature/add-new-calculator
+```
+
+### Step 5: Make Your Changes
+
+```bash
+# Make your code changes
+# Edit files, add new features, etc.
+
+# Stage your changes
+git add .
+
+# Commit your changes with a descriptive message
+git commit -m "feat: add new calculator feature with improved accuracy"
+
+# Push your feature branch to your fork
+git push origin feature/your-feature-name
+```
+
+### Step 6: Keep Your Fork Updated
+
+#### Sync with Original Repository:
+```bash
+# Fetch latest changes from upstream
+git fetch upstream
+
+# Switch to main branch
+git checkout main
+
+# Merge upstream changes into your main branch
+git merge upstream/main
+
+# Push updated main branch to your fork
+git push origin main
+```
+
+#### Update Your Feature Branch:
+```bash
+# Switch back to your feature branch
+git checkout feature/your-feature-name
+
+# Rebase your feature branch on the updated main
+git rebase main
+
+# Force push if you rebased (only if you haven't shared the branch)
+git push --force-with-lease origin feature/your-feature-name
+```
+
+### Step 7: Create a Pull Request
+
+**On GitHub:**
+1. Go to your forked repository
+2. Click **"Compare & pull request"** for your feature branch
+3. Fill in the PR description explaining your changes
+4. Submit the pull request
+
+## 🏷️ Best Practices
+
+### Branch Naming:
+```bash
+# Use descriptive branch names
+git checkout -b feature/user-authentication
+git checkout -b bugfix/fix-calculation-error
+git checkout -b hotfix/security-patch
+git checkout -b docs/update-api-documentation
+```
+
+### Commit Messages:
+```bash
+# Use conventional commit format
+git commit -m "feat: add new load calculation method"
+git commit -m "fix: resolve validation error for 175A breakers"
+git commit -m "docs: update API documentation"
+git commit -m "test: add comprehensive test coverage"
+git commit -m "refactor: improve calculation performance"
+```
+
+### Regular Syncing:
+```bash
+# Set up a workflow to regularly sync with upstream
+# Add this to your .bashrc or create an alias
+alias sync-fork='git fetch upstream && git checkout main && git merge upstream/main && git push origin main'
+```
+
+## 📋 Workflow Summary
+
+```bash
+# Initial setup (one-time)
+git clone https://github.com/YOUR_USERNAME/Loadclaculator.git
+cd Loadclaculator
+git remote add upstream https://github.com/WolfLangis1/Loadclaculator.git
+
+# Daily workflow
+git checkout main
+git pull upstream main  # Keep main updated
+git checkout -b feature/new-feature
+# Make changes
+git add .
+git commit -m "feat: add new feature"
+git push origin feature/new-feature
+# Create PR on GitHub
+```
+
+## ✅ Benefits of This Approach
+
+1. **Preserves main branch**: Original repository remains untouched
+2. **Easy collaboration**: Multiple people can work on different features
+3. **Clean history**: Feature branches keep changes organized
+4. **Easy updates**: Can sync with original repository anytime
+5. **Safe experimentation**: Can make changes without affecting the original
+
+## 🔧 Fork Validation
+
+The project includes automated fork validation:
+
+```bash
+# Complete fork validation
+npm run fork-validation
+
+# Quick validation (skip performance/E2E)
+npm run fork-validation:quick
+
+# Generate detailed reports
+npm run fork-validation:report
+```
+
+This workflow ensures you can contribute to the Load Calculator project while maintaining a clean separation between your work and the original codebase.
+
+---
+
 ## 🎉 Quick Start for New Contributors
 
 1. **Setup Environment**:
