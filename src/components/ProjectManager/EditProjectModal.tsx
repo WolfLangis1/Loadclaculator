@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Save, User, FileText, Calendar } from 'lucide-react';
+import { Save, User, FileText, Calendar, Tag } from 'lucide-react';
 import { Modal } from '../UI/Modal';
 import { TagInput } from '../UI/TagInput';
-import type { ProjectData } from '../../services/projectService';
+import type { ProjectData } from '../../types/project';
 
 interface EditProjectModalProps {
   isOpen: boolean;
