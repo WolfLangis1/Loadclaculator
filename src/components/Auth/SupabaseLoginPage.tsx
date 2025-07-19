@@ -8,17 +8,22 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Zap, 
-  UserPlus, 
   User, 
   Shield, 
-  Cloud, 
-  Share2, 
   AlertCircle,
   CheckCircle,
   Mail,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Calculator,
+  Cable,
+  MapPin,
+  Users,
+  ArrowRight,
+  Sparkles,
+  Target,
+  BarChart3
 } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext';
 import { supabase } from '../../config/supabase';
@@ -106,68 +111,167 @@ export const SupabaseLoginPage: React.FC = () => {
     }
   };
 
-  const features = [
+  const coreFeatures = [
     {
-      icon: Cloud,
-      title: 'Cloud Storage',
-      description: 'Save and sync your projects across all devices'
+      icon: Calculator,
+      title: 'Load Calculator',
+      description: 'NEC compliant electrical load calculations for residential and commercial projects',
+      highlight: 'Most Popular',
+      color: 'bg-blue-500'
     },
     {
-      icon: Share2,
-      title: 'Share Projects',
-      description: 'Collaborate with team members and clients'
+      icon: Cable,
+      title: 'Wire Sizing',
+      description: 'Comprehensive wire sizing charts and calculations with ampacity tables',
+      highlight: 'Essential Tool',
+      color: 'bg-green-500'
+    },
+    {
+      icon: MapPin,
+      title: 'Site Analysis',
+      description: 'Aerial view with advanced measurement tools and calibration',
+      highlight: 'New Feature',
+      color: 'bg-purple-500'
+    },
+    {
+      icon: Users,
+      title: 'Project Management',
+      description: 'Organize projects, collaborate with teams, and track progress',
+      highlight: 'Pro Feature',
+      color: 'bg-orange-500'
+    }
+  ];
+
+  const benefits = [
+    {
+      icon: Target,
+      title: 'Professional Results',
+      description: 'Generate accurate, NEC-compliant calculations trusted by professionals'
+    },
+    {
+      icon: BarChart3,
+      title: 'Save Time',
+      description: 'Complete load calculations in minutes, not hours'
     },
     {
       icon: Shield,
-      title: 'Secure & Private',
-      description: 'Your data is encrypted and protected'
+      title: 'Always Compliant',
+      description: 'Stay up-to-date with latest NEC codes and standards'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="lg:flex">
-            {/* Left Panel - Features */}
-            <div className="lg:w-1/2 bg-gradient-to-br from-blue-600 to-indigo-700 p-8 lg:p-12 text-white">
-              <div className="flex items-center gap-3 mb-8">
-                <Zap className="h-10 w-10" />
-                <h1 className="text-3xl font-bold">Proloadcalc.com</h1>
-              </div>
-              
-              <p className="text-lg mb-8 text-blue-100">
-                Professional electrical load calculations with NEC compliance, 
-                now with cloud storage and collaboration features.
-              </p>
-              
-              <div className="space-y-6">
-                {features.map((feature, index) => (
-                  <div key={index} className="flex items-start gap-4">
-                    <div className="bg-white/20 rounded-lg p-2">
-                      <feature.icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">{feature.title}</h3>
-                      <p className="text-sm text-blue-100">{feature.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background with App Preview */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+        {/* App Preview Background */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-1/4 w-80 h-60 bg-white/20 rounded-xl transform rotate-12"></div>
+          <div className="absolute bottom-32 right-1/4 w-64 h-48 bg-white/15 rounded-xl transform -rotate-6"></div>
+          <div className="absolute top-1/3 right-1/3 w-96 h-64 bg-white/10 rounded-xl transform rotate-3"></div>
+        </div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-1/4 left-1/4 animate-pulse">
+          <Calculator className="h-12 w-12 text-blue-400/30" />
+        </div>
+        <div className="absolute top-3/4 right-1/4 animate-pulse delay-1000">
+          <Cable className="h-10 w-10 text-green-400/30" />
+        </div>
+        <div className="absolute top-1/2 left-1/6 animate-pulse delay-2000">
+          <MapPin className="h-8 w-8 text-purple-400/30" />
+        </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex">
+        {/* Left Panel - Hero & Features */}
+        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-12 xl:p-16 text-white">
+          {/* Header */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-blue-500 rounded-xl">
+                <Zap className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold">ProLoadCalc</h1>
+                <p className="text-blue-200 text-sm">Professional Edition</p>
+              </div>
             </div>
             
-            {/* Right Panel - Authentication */}
-            <div className="lg:w-1/2 p-8 lg:p-12">
+            <h2 className="text-3xl xl:text-4xl font-bold mb-4 leading-tight">
+              Professional Electrical
+              <span className="text-blue-400"> Load Calculations</span>
+            </h2>
+            
+            <p className="text-xl text-blue-100 mb-8">
+              NEC-compliant calculations trusted by electrical professionals worldwide. 
+              Complete projects faster with our comprehensive suite of tools.
+            </p>
+          </div>
+
+          {/* Core Features Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-12">
+            {coreFeatures.map((feature, index) => (
+              <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 hover:bg-white/15 transition-all group">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`${feature.color} p-2 rounded-lg group-hover:scale-110 transition-transform`}>
+                    <feature.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-sm">{feature.title}</h3>
+                      <span className="text-xs px-2 py-0.5 bg-blue-500/50 rounded-full">{feature.highlight}</span>
+                    </div>
+                    <p className="text-xs text-blue-200 leading-relaxed">{feature.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Benefits */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-yellow-400" />
+              Why Professionals Choose Us
+            </h3>
+            {benefits.map((benefit, index) => (
+              <div key={index} className="flex items-center gap-3 text-blue-100">
+                <benefit.icon className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-white">{benefit.title}</span>
+                  <span className="ml-2 text-sm">{benefit.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Panel - Authentication */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-md">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 lg:p-10">
+              {/* Mobile Header */}
+              <div className="lg:hidden mb-8 text-center">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-500 rounded-xl">
+                    <Zap className="h-6 w-6 text-white" />
+                  </div>
+                  <h1 className="text-2xl font-bold text-gray-900">ProLoadCalc</h1>
+                </div>
+                <p className="text-gray-600">Professional electrical load calculations</p>
+              </div>
+
+              {/* Auth Header */}
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
                 </h2>
                 <p className="text-gray-600">
                   {authMode === 'signup' 
-                    ? 'Sign up to save your projects and access advanced features'
-                    : 'Sign in to access your projects and settings'
+                    ? 'Join thousands of electrical professionals using ProLoadCalc'
+                    : 'Sign in to access your projects and continue your work'
                   }
                 </p>
               </div>
@@ -191,28 +295,22 @@ export const SupabaseLoginPage: React.FC = () => {
               )}
               
               {/* Supabase Status */}
-              <div className={`mb-6 p-4 rounded-lg border ${supabase ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+              <div className={`mb-6 p-3 rounded-lg border ${supabase ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${supabase ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-                  <p className={`text-sm font-medium ${supabase ? 'text-green-800' : 'text-amber-800'}`}>
-                    {supabase ? 'Supabase Connected' : 'Supabase Not Configured'}
+                  <p className={`text-xs font-medium ${supabase ? 'text-green-800' : 'text-amber-800'}`}>
+                    {supabase ? 'Cloud Storage Ready' : 'Offline Mode Active'}
                   </p>
                 </div>
-                <p className={`text-xs mt-1 ${supabase ? 'text-green-600' : 'text-amber-600'}`}>
-                  {supabase 
-                    ? 'Ready for authentication and cloud storage'
-                    : 'Using offline mode - configure Supabase for full features'
-                  }
-                </p>
               </div>
 
               {/* Authentication Form */}
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Google Sign In */}
                 <button
                   onClick={handleGoogleSignIn}
                   disabled={isLoading || !supabase}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -220,14 +318,14 @@ export const SupabaseLoginPage: React.FC = () => {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  <span className="font-medium text-gray-700">
+                  <span className="font-medium text-gray-700 group-hover:text-gray-900">
                     {isLoading ? 'Signing in...' : `Continue with Google`}
                   </span>
                 </button>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
+                    <div className="w-full border-t border-gray-200"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-4 bg-white text-gray-500">or</span>
@@ -239,7 +337,7 @@ export const SupabaseLoginPage: React.FC = () => {
                   <form onSubmit={handleEmailAuth} className="space-y-4">
                     {authMode === 'signup' && (
                       <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                           Full Name
                         </label>
                         <input
@@ -249,14 +347,14 @@ export const SupabaseLoginPage: React.FC = () => {
                           value={formData.name}
                           onChange={handleInputChange}
                           required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                           placeholder="Enter your full name"
                         />
                       </div>
                     )}
 
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                         Email Address
                       </label>
                       <div className="relative">
@@ -268,14 +366,14 @@ export const SupabaseLoginPage: React.FC = () => {
                           value={formData.email}
                           onChange={handleInputChange}
                           required
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                           placeholder="Enter your email"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                         Password
                       </label>
                       <div className="relative">
@@ -287,7 +385,7 @@ export const SupabaseLoginPage: React.FC = () => {
                           value={formData.password}
                           onChange={handleInputChange}
                           required
-                          className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                          className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                           placeholder="Enter your password"
                         />
                         <button
@@ -302,7 +400,7 @@ export const SupabaseLoginPage: React.FC = () => {
 
                     {authMode === 'signup' && (
                       <div>
-                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                           Confirm Password
                         </label>
                         <div className="relative">
@@ -314,7 +412,7 @@ export const SupabaseLoginPage: React.FC = () => {
                             value={formData.confirmPassword}
                             onChange={handleInputChange}
                             required
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                             placeholder="Confirm your password"
                           />
                         </div>
@@ -324,11 +422,12 @@ export const SupabaseLoginPage: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting || isLoading}
-                      className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                     >
                       <span className="font-medium">
                         {isSubmitting ? 'Processing...' : authMode === 'signup' ? 'Create Account' : 'Sign In'}
                       </span>
+                      {!isSubmitting && <ArrowRight className="h-4 w-4" />}
                     </button>
                   </form>
                 )}
@@ -354,7 +453,7 @@ export const SupabaseLoginPage: React.FC = () => {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
+                    <div className="w-full border-t border-gray-200"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-4 bg-white text-gray-500">or</span>
@@ -365,32 +464,32 @@ export const SupabaseLoginPage: React.FC = () => {
                 <button
                   onClick={handleGuestSignIn}
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-100 border-2 border-transparent rounded-lg hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
                   data-cy="guest-login"
                 >
-                  <User className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium text-gray-700">
-                    {isLoading ? 'Loading...' : 'Continue as Guest'}
+                  <User className="h-5 w-5 text-gray-600 group-hover:text-gray-700" />
+                  <span className="font-medium text-gray-700 group-hover:text-gray-900">
+                    {isLoading ? 'Loading...' : 'Try as Guest'}
                   </span>
+                  <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
                 </button>
               </div>
               
               {/* Guest Mode Info */}
-              <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Guest Mode
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Guest Access
                 </h4>
-                <p className="text-sm text-amber-800">
-                  Try all features without signing up. Your work is saved locally 
-                  and can be synced to your account later.
+                <p className="text-sm text-blue-800">
+                  Explore all features instantly. Your work is saved locally and can be synced when you create an account.
                 </p>
               </div>
               
               {/* Privacy Notice */}
               <p className="mt-6 text-xs text-gray-500 text-center">
-                By signing in, you agree to our Terms of Service and Privacy Policy. 
-                We never share your data with third parties.
+                By continuing, you agree to our Terms of Service and Privacy Policy. 
+                Your data is always secure and never shared.
               </p>
             </div>
           </div>

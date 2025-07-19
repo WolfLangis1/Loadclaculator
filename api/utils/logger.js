@@ -1,7 +1,10 @@
 /**
  * Enhanced Logging Service
  * Provides structured logging with different levels, request tracking, and monitoring integration
+ * Includes automatic data anonymization for privacy compliance
  */
+
+import dataAnonymizer from './dataAnonymization.js';
 
 class Logger {
   constructor() {
@@ -9,6 +12,7 @@ class Logger {
     this.requestLogs = [];
     this.errorLogs = [];
     this.maxLogs = 1000; // Keep last 1000 logs in memory
+    this.anonymizeLogsInProduction = process.env.ANONYMIZE_LOGS !== 'false'; // Default to true
     
     // Start log cleanup interval
     setInterval(() => this.cleanup(), 300000); // Every 5 minutes
@@ -236,7 +240,7 @@ class Logger {
 
   // Sanitize sensitive data
   sanitizeData(data) {
-    const sensitiveKeys = ['password', 'token', 'secret', 'key', 'authorization'];
+    const sensitiveKeys = ['password', 'token', 'secret', 'key', 'authorization', 'email', 'phone', 'address', 'name', 'ssn', 'credit_card'];
     const sanitized = { ...data };
 
     const sanitizeValue = (obj, path = '') => {
@@ -329,6 +333,195 @@ class Logger {
       .sort(([,a], [,b]) => b - a)
       .slice(0, 5)
       .map(([message, count]) => ({ message, count }));
+  }
+
+  // Privacy-compliant logging methods
+  
+  /**
+   * Log activity with automatic anonymization in production
+   */
+  logActivity(userId, action, details = {}, metadata = {}) {
+    const logEntry = {
+      timestamp: this.formatTimestamp(),
+      level: 'info',
+      type: 'activity',
+      user_id: userId,
+      action,
+      details,
+      ip_address: metadata.ip_address,
+      user_agent: metadata.user_agent,
+      session_id: metadata.session_id
+    };
+
+    // Apply anonymization in production
+    const finalLogEntry = this.shouldAnonymize() 
+      ? dataAnonymizer.anonymizeActivityLog(logEntry)
+      : this.sanitizeData(logEntry);
+
+    this.info(`User activity: ${action}`, finalLogEntry);
+    return finalLogEntry;
+  }
+
+  /**
+   * Log analytics event with privacy protection
+   */
+  logAnalyticsEvent(event, properties = {}, userContext = {}) {
+    const analyticsEntry = {
+      timestamp: this.formatTimestamp(),
+      event,
+      properties,
+      user_id: userContext.user_id,
+      session_id: userContext.session_id,
+      ip_address: userContext.ip_address,
+      user_agent: userContext.user_agent
+    };
+
+    // Apply anonymization for analytics
+    const anonymizedEntry = this.shouldAnonymize()
+      ? dataAnonymizer.anonymizeAnalyticsEvent(analyticsEntry)
+      : this.sanitizeData(analyticsEntry);
+
+    this.info(`Analytics: ${event}`, anonymizedEntry);
+    return anonymizedEntry;
+  }
+
+  /**
+   * Log error with privacy protection
+   */
+  logErrorWithContext(error, context = {}) {
+    const errorEntry = {
+      timestamp: this.formatTimestamp(),
+      level: 'error',
+      type: 'error_log',
+      message: error.message,
+      stack_trace: error.stack,
+      context,
+      user_id: context.user_id,
+      session_id: context.session_id,
+      ip_address: context.ip_address
+    };
+
+    // Apply anonymization for error logs
+    const anonymizedEntry = this.shouldAnonymize()
+      ? dataAnonymizer.anonymizeErrorLog(errorEntry)
+      : this.sanitizeData(errorEntry);
+
+    this.error(error.message, anonymizedEntry);
+    return anonymizedEntry;
+  }
+
+  /**
+   * Log data access for audit purposes
+   */
+  logDataAccess(userId, action, resourceType, resourceId, metadata = {}) {
+    const auditEntry = {
+      timestamp: this.formatTimestamp(),
+      level: 'info',
+      type: 'data_access',
+      user_id: userId,
+      action, // 'read', 'write', 'delete', etc.
+      resource_type: resourceType, // 'project', 'customer', etc.
+      resource_id: resourceId,
+      ip_address: metadata.ip_address,
+      user_agent: metadata.user_agent,
+      success: metadata.success !== false
+    };
+
+    // Data access logs are sensitive, always apply some level of anonymization
+    const anonymizedEntry = dataAnonymizer.anonymizeActivityLog(auditEntry);
+    
+    this.info(`Data access: ${action} ${resourceType}`, anonymizedEntry);
+    return anonymizedEntry;
+  }
+
+  /**
+   * Log consent changes for compliance
+   */
+  logConsentChange(userId, consentChanges, metadata = {}) {
+    const consentEntry = {
+      timestamp: this.formatTimestamp(),
+      level: 'info',
+      type: 'consent_change',
+      user_id: userId,
+      consent_changes: consentChanges,
+      previous_consents: metadata.previous_consents,
+      ip_address: metadata.ip_address,
+      user_agent: metadata.user_agent,
+      source: metadata.source || 'unknown'
+    };
+
+    // Consent logs are important for compliance, use pseudonymization
+    const pseudonymizedEntry = {
+      ...consentEntry,
+      pseudonymous_user_id: dataAnonymizer.generatePseudonymousId(userId),
+      ip_address: dataAnonymizer.anonymizeIP(consentEntry.ip_address),
+      user_agent: dataAnonymizer.anonymizeUserAgent(consentEntry.user_agent)
+    };
+    delete pseudonymizedEntry.user_id;
+
+    this.info('Consent change', pseudonymizedEntry);
+    return pseudonymizedEntry;
+  }
+
+  /**
+   * Create anonymized log export for compliance
+   */
+  exportAnonymizedLogs(dateRange = null, logTypes = ['all']) {
+    let logs = this.getLogs('all', this.maxLogs);
+    
+    // Filter by date range if provided
+    if (dateRange) {
+      const startDate = new Date(dateRange.start);
+      const endDate = new Date(dateRange.end);
+      logs = logs.filter(log => {
+        const logDate = new Date(log.timestamp);
+        return logDate >= startDate && logDate <= endDate;
+      });
+    }
+
+    // Filter by log types
+    if (!logTypes.includes('all')) {
+      logs = logs.filter(log => logTypes.includes(log.type));
+    }
+
+    // Apply anonymization
+    const anonymizedLogs = dataAnonymizer.batchAnonymize(logs, 'activity_log');
+
+    return {
+      export_info: {
+        anonymized: true,
+        export_date: new Date().toISOString(),
+        date_range: dateRange,
+        log_types: logTypes,
+        total_logs: anonymizedLogs.length
+      },
+      logs: anonymizedLogs
+    };
+  }
+
+  /**
+   * Check if logs should be anonymized
+   */
+  shouldAnonymize() {
+    return !this.isDevelopment && this.anonymizeLogsInProduction;
+  }
+
+  /**
+   * Get anonymized statistics for privacy dashboard
+   */
+  getAnonymizedStats() {
+    const stats = this.getStats();
+    
+    // Remove or anonymize any potentially identifying information
+    return {
+      total_requests: stats.requestCount,
+      total_errors: stats.errorCount,
+      average_response_time: stats.averageResponseTime,
+      time_range: stats.timeRange,
+      // Don't include top errors as they might contain sensitive info
+      anonymized: true,
+      generated_at: new Date().toISOString()
+    };
   }
 }
 

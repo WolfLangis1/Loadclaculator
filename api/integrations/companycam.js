@@ -1,5 +1,6 @@
 // CompanyCam Integration API
 import fetch from 'node-fetch';
+import apiKeyManager from '../utils/apiKeyManager.js';
 
 const COMPANYCAM_API_BASE = 'https://api.companycam.com/v2';
 
@@ -183,22 +184,22 @@ class CompanyCamService {
   }
 }
 
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+import { cors } from '../utils/middleware.js';
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+export default async function handler(req, res) {
+  // Apply secure CORS middleware
+  if (cors(req, res)) return;
 
   try {
     const { action } = req.query;
-    const { apiKey, ...requestData } = req.body;
+    const requestData = req.body;
 
-    if (!apiKey) {
-      return res.status(401).json({ error: 'API key required' });
+    // Use server-side API key for security
+    let apiKey;
+    try {
+      apiKey = apiKeyManager.getCompanyCamKey();
+    } catch (error) {
+      return res.status(500).json({ error: 'CompanyCam API key not configured on server' });
     }
 
     const companyCam = new CompanyCamService(apiKey);

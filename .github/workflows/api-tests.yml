@@ -1,0 +1,209 @@
+name: API Configuration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'api/**'
+      - '.env.example'
+      - 'package.json'
+      - 'vercel.json'
+      - '.github/workflows/api-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+      - '.env.example'
+      - 'package.json'
+      - 'vercel.json'
+  schedule:
+    # Run daily at 6 AM UTC to catch any external API issues
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  api-tests:
+    name: Test API Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify API endpoints exist
+        run: |
+          echo "🔍 Verifying API endpoint files..."
+          test -f api/geocode.js && echo "✅ geocode.js found"
+          test -f api/places.js && echo "✅ places.js found"
+          test -f api/satellite.js && echo "✅ satellite.js found"
+          test -f api/satellite-enhanced.js && echo "✅ satellite-enhanced.js found"
+          test -f api/usgs-imagery.js && echo "✅ usgs-imagery.js found"
+          test -f api/esri-imagery.js && echo "✅ esri-imagery.js found"
+          test -f api/health.js && echo "✅ health.js found"
+
+      - name: Run comprehensive API tests
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          NODE_ENV: test
+          CI: true
+        run: |
+          echo "🧪 Running comprehensive API test suite..."
+          node scripts/ci-api-test.js
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-reports-node${{ matrix.node-version }}
+          path: test-reports/
+          retention-days: 30
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: API Tests (Node ${{ matrix.node-version }})
+          path: test-reports/api-tests.xml
+          reporter: java-junit
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'test-reports/api-test-report.md';
+            
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🧪 API Test Results (Node ${{ matrix.node-version }})\n\n${report}`
+              });
+            }
+
+      - name: Fail if tests failed
+        if: failure()
+        run: |
+          echo "❌ API tests failed! Check the logs above for details."
+          echo "Common issues:"
+          echo "  1. Missing or invalid GOOGLE_MAPS_API_KEY secret"
+          echo "  2. API endpoints returning unexpected responses"
+          echo "  3. Network connectivity issues"
+          echo "  4. API quota limits exceeded"
+          exit 1
+
+  deployment-readiness:
+    name: Deployment Readiness Check
+    runs-on: ubuntu-latest
+    needs: api-tests
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test production build
+        run: npm run build
+
+      - name: Verify Vercel configuration
+        run: |
+          echo "🔍 Verifying Vercel configuration..."
+          test -f vercel.json && echo "✅ vercel.json found"
+          
+          # Check if vercel.json is valid JSON
+          node -e "
+            const config = require('./vercel.json');
+            console.log('✅ vercel.json is valid JSON');
+            
+            if (config.functions) {
+              console.log('✅ Functions configuration found');
+            }
+            
+            if (config.rewrites) {
+              console.log('✅ Rewrites configuration found');
+            }
+          "
+
+      - name: Check environment variable documentation
+        run: |
+          echo "📝 Checking environment variable documentation..."
+          if grep -q "GOOGLE_MAPS_API_KEY" .env.example; then
+            echo "✅ GOOGLE_MAPS_API_KEY documented in .env.example"
+          else
+            echo "⚠️ GOOGLE_MAPS_API_KEY not found in .env.example"
+          fi
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Readiness Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All API tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Production build successful" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Vercel configuration valid" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The application is ready for deployment! 🎉" >> $GITHUB_STEP_SUMMARY
+
+  notify-slack:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [api-tests, deployment-readiness]
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Send Slack notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          STATUS="${{ needs.api-tests.result == 'success' && needs.deployment-readiness.result == 'success' && '✅ Success' || '❌ Failed' }}"
+          COLOR="${{ needs.api-tests.result == 'success' && needs.deployment-readiness.result == 'success' && 'good' || 'danger' }}"
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"Load Calculator API Tests\",
+                \"text\": \"$STATUS - API configuration tests completed\",
+                \"fields\": [
+                  {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
+                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true}
+                ]
+              }]
+            }" \
+            $SLACK_WEBHOOK_URL

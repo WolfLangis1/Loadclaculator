@@ -88,8 +88,8 @@ describe('NEC Load Calculations', () => {
       0
     );
 
-    // EVSE demand should be 100% of nameplate per NEC 625.42(B)
-    expect(result.evseDemand).toBe(11520);
+    // EVSE demand should be 125% of nameplate per NEC 625.17 (continuous load)
+    expect(result.evseDemand).toBe(11520 * 1.25);
   });
 
   describe('Solar 120% Rule Tests', () => {

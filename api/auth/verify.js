@@ -1,6 +1,7 @@
 
 import { cors, rateLimit } from '../utils/middleware.js';
 import { authService } from '../services/authService.js';
+import apiKeyManager from '../utils/apiKeyManager.js';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -32,6 +33,9 @@ export default async function handler(req, res) {
       isGuest
     );
 
+    // Use secure JWT secret from apiKeyManager
+    const jwtSecret = apiKeyManager.getJwtSecret();
+    
     const appToken = jwt.sign(
       {
         userId: userData.id,
@@ -40,7 +44,7 @@ export default async function handler(req, res) {
         isGuest: userData.is_guest,
         subscriptionTier: userData.subscription_tier,
       },
-      process.env.JWT_SECRET || 'your-jwt-secret',
+      jwtSecret,
       { expiresIn: '7d' }
     );
 

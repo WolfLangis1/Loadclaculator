@@ -42,7 +42,9 @@ class ApiKeyManager {
       'jwt_secret',
       'stripe_secret_key',
       'stripe_publishable_key',
-      'stripe_webhook_secret'
+      'stripe_webhook_secret',
+      'gemini_api_key',
+      'companycam_api_key'
     ];
 
     for (const secretKey of secretKeys) {
@@ -72,7 +74,9 @@ class ApiKeyManager {
       'JWT_SECRET': 'JWT_SECRET',
       'STRIPE_SECRET_KEY': 'STRIPE_SECRET_KEY',
       'STRIPE_PUBLISHABLE_KEY': 'STRIPE_PUBLISHABLE_KEY',
-      'STRIPE_WEBHOOK_SECRET': 'STRIPE_WEBHOOK_SECRET'
+      'STRIPE_WEBHOOK_SECRET': 'STRIPE_WEBHOOK_SECRET',
+      'GEMINI_API_KEY': 'GEMINI_API_KEY',
+      'COMPANYCAM_API_KEY': 'COMPANYCAM_API_KEY'
     };
 
     for (const [internalKey, envKey] of Object.entries(envKeys)) {
@@ -198,6 +202,28 @@ class ApiKeyManager {
   }
 
   /**
+   * Get Gemini API key
+   */
+  getGeminiKey() {
+    const key = this.keys.get('GEMINI_API_KEY');
+    if (!key || key.startsWith('your_')) {
+      throw new Error('Gemini API key not configured');
+    }
+    return key;
+  }
+
+  /**
+   * Get CompanyCam API key
+   */
+  getCompanyCamKey() {
+    const key = this.keys.get('COMPANYCAM_API_KEY');
+    if (!key || key.startsWith('your_')) {
+      throw new Error('CompanyCam API key not configured');
+    }
+    return key;
+  }
+
+  /**
    * Get all available service status
    */
   getServiceStatus() {
@@ -206,7 +232,9 @@ class ApiKeyManager {
       supabase: this.hasKey('SUPABASE_URL') && this.hasKey('SUPABASE_ANON_KEY'),
       openWeather: this.hasKey('OPENWEATHER_API_KEY') && !this.keys.get('OPENWEATHER_API_KEY').startsWith('your_'),
       jwt: this.hasKey('JWT_SECRET') && this.keys.get('JWT_SECRET').length >= 32,
-      stripe: this.hasKey('STRIPE_SECRET_KEY') && this.hasKey('STRIPE_PUBLISHABLE_KEY')
+      stripe: this.hasKey('STRIPE_SECRET_KEY') && this.hasKey('STRIPE_PUBLISHABLE_KEY'),
+      gemini: this.hasKey('GEMINI_API_KEY') && !this.keys.get('GEMINI_API_KEY').startsWith('your_'),
+      companyCam: this.hasKey('COMPANYCAM_API_KEY') && !this.keys.get('COMPANYCAM_API_KEY').startsWith('your_')
     };
   }
 

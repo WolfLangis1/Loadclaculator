@@ -48,7 +48,7 @@ export class ValidationService {
       );
     }
 
-    const validBreakerSizes = [60, 100, 125, 150, 200, 225, 300, 320, 350, 400, 600, 800, 1000, 1200, 1600, 2000];
+    const validBreakerSizes = [60, 100, 125, 150, 175, 200, 225, 300, 320, 350, 400, 600, 800, 1000, 1200, 1600, 2000];
     if (!validBreakerSizes.includes(mainBreaker)) {
       throw ErrorHandlingService.createError(
         ErrorType.VALIDATION,

@@ -319,14 +319,28 @@ class GmailService {
   }
 
   async getEmailsByCustomer(customerEmail, dateRange = null) {
-    let query = `from:${customerEmail} OR to:${customerEmail}`;
+    // Sanitize email input to prevent Gmail query injection
+    const sanitizedEmail = this.sanitizeEmailAddress(customerEmail);
+    if (!sanitizedEmail) {
+      throw new Error('Invalid email address provided');
+    }
+    
+    let query = `from:${sanitizedEmail} OR to:${sanitizedEmail}`;
     
     if (dateRange) {
       if (dateRange.after) {
-        query += ` after:${dateRange.after}`;
+        // Validate date format (YYYY/MM/DD)
+        const sanitizedAfter = this.sanitizeDateString(dateRange.after);
+        if (sanitizedAfter) {
+          query += ` after:${sanitizedAfter}`;
+        }
       }
       if (dateRange.before) {
-        query += ` before:${dateRange.before}`;
+        // Validate date format (YYYY/MM/DD)
+        const sanitizedBefore = this.sanitizeDateString(dateRange.before);
+        if (sanitizedBefore) {
+          query += ` before:${sanitizedBefore}`;
+        }
       }
     }
 
@@ -337,15 +351,76 @@ class GmailService {
     let query = '';
     
     if (customerEmail) {
-      query = `(from:${customerEmail} OR to:${customerEmail})`;
+      const sanitizedEmail = this.sanitizeEmailAddress(customerEmail);
+      if (sanitizedEmail) {
+        query = `(from:${sanitizedEmail} OR to:${sanitizedEmail})`;
+      }
     }
     
     if (projectKeywords.length > 0) {
-      const keywordQuery = projectKeywords.map(keyword => `"${keyword}"`).join(' OR ');
-      query = query ? `${query} AND (${keywordQuery})` : `(${keywordQuery})`;
+      // Sanitize keywords to prevent query injection
+      const sanitizedKeywords = projectKeywords
+        .map(keyword => this.sanitizeSearchKeyword(keyword))
+        .filter(keyword => keyword !== null);
+      
+      if (sanitizedKeywords.length > 0) {
+        const keywordQuery = sanitizedKeywords.map(keyword => `"${keyword}"`).join(' OR ');
+        query = query ? `${query} AND (${keywordQuery})` : `(${keywordQuery})`;
+      }
     }
 
     return this.searchEmails(query);
+  }
+
+  // Helper methods for input sanitization
+  sanitizeEmailAddress(email) {
+    if (!email || typeof email !== 'string') {
+      return null;
+    }
+    
+    // Basic email validation regex
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const trimmedEmail = email.trim();
+    
+    if (emailRegex.test(trimmedEmail) && trimmedEmail.length <= 254) {
+      return trimmedEmail;
+    }
+    
+    return null;
+  }
+
+  sanitizeDateString(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') {
+      return null;
+    }
+    
+    // Gmail accepts YYYY/MM/DD format
+    const dateRegex = /^\d{4}\/\d{2}\/\d{2}$/;
+    const trimmedDate = dateStr.trim();
+    
+    if (dateRegex.test(trimmedDate)) {
+      return trimmedDate;
+    }
+    
+    return null;
+  }
+
+  sanitizeSearchKeyword(keyword) {
+    if (!keyword || typeof keyword !== 'string') {
+      return null;
+    }
+    
+    // Remove potentially dangerous characters and limit length
+    const sanitized = keyword
+      .replace(/[<>"`&]/g, '') // Remove dangerous characters
+      .trim()
+      .slice(0, 50); // Limit length
+    
+    if (sanitized.length > 0) {
+      return sanitized;
+    }
+    
+    return null;
   }
 
   // CRM Integration Helpers

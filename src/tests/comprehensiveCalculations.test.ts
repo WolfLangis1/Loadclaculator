@@ -71,8 +71,8 @@ describe('Comprehensive Load Calculations', () => {
       // Total base load: 10500 VA
 
       // With NEC 220.83 optional method:
-      // First 8 kVA at 100% + remainder at 40%
-      const expectedBaseDemand = 8000 + (2500 * 0.4); // 9,000 VA
+      // First 10 kVA at 100% + remainder at 40%
+      const expectedBaseDemand = 10000 + (500 * 0.4); // 10,200 VA
       expect(result.generalDemand).toBe(expectedBaseDemand);
     });
 
@@ -99,10 +99,10 @@ describe('Comprehensive Load Calculations', () => {
         const totalBase = expectedLighting + 3000 + 1500 + 1500; // lighting + small appliance + laundry + bathroom
         let expectedDemand;
         
-        if (totalBase <= 8000) {
+        if (totalBase <= 10000) {
           expectedDemand = totalBase;
         } else {
-          expectedDemand = 8000 + ((totalBase - 8000) * 0.4);
+          expectedDemand = 10000 + ((totalBase - 10000) * 0.4);
         }
 
         expect(result.generalDemand).toBe(expectedDemand);
@@ -132,9 +132,9 @@ describe('Comprehensive Load Calculations', () => {
 
     it('should apply proper demand factors for multiple large appliances', () => {
       const loadState = createTestLoadState();
-      setLoadQuantity(loadState, 'general', 0, 1); // Electric Range: 12000 VA
-      setLoadQuantity(loadState, 'general', 1, 1); // Electric Dryer: 7200 VA  
-      setLoadQuantity(loadState, 'general', 2, 1); // Water Heater: 6000 VA
+      setLoadQuantity(loadState, 'general', 0, 1); // Electric Range/Oven: 9600 VA
+      setLoadQuantity(loadState, 'general', 5, 1); // Electric Clothes Dryer: 5760 VA  
+      setLoadQuantity(loadState, 'general', 6, 1); // Electric Water Heater: 5760 VA
       
       const result = calculateLoadDemand(
         loadState,
@@ -147,9 +147,13 @@ describe('Comprehensive Load Calculations', () => {
         0
       );
 
-      // For optional method: range (40A*240V) + dryer (24A*240V) + water heater (24A*240V)
-      const expectedAppliances = 9600 + 5760 + 5760; // All at 100% for optional method
+      // For optional method, appliances are included in general demand calculation
+      // So applianceDemand shows the raw total, but it's included in generalDemand
+      const expectedAppliances = 9600 + 5760 + 5760; // Raw appliance VA
       expect(result.applianceDemand).toBe(expectedAppliances);
+      
+      // Verify appliances are included in general demand
+      expect(result.appliancesIncludedInGeneral).toBe(true);
     });
   });
 
@@ -169,14 +173,14 @@ describe('Comprehensive Load Calculations', () => {
         0
       );
 
-      // HVAC loads should be at 100% (largest motor) + 25% for others
-      expect(result.hvacDemand).toBe(6000);
+      // HVAC loads should have 125% continuous load factor applied: 7680 * 1.25 = 9600 VA
+      expect(result.hvacDemand).toBe(7680 * 1.25);
     });
 
     it('should handle multiple HVAC loads correctly', () => {
       const loadState = createTestLoadState();
-      setLoadQuantity(loadState, 'hvac', 0, 1); // AC Load #1: 6000 VA
-      setLoadQuantity(loadState, 'hvac', 1, 1); // AC Load #2: 3600 VA
+      setLoadQuantity(loadState, 'hvac', 0, 1); // AC#1: 7680 VA
+      setLoadQuantity(loadState, 'hvac', 1, 1); // AC#2: 7680 VA
       
       const result = calculateLoadDemand(
         loadState,
@@ -189,8 +193,8 @@ describe('Comprehensive Load Calculations', () => {
         0
       );
 
-      // Should include both HVAC loads
-      expect(result.hvacDemand).toBe(6000 + 3600);
+      // Should include both HVAC loads with 125% factor: (7680 + 7680) * 1.25 = 19200 VA
+      expect(result.hvacDemand).toBe((7680 + 7680) * 1.25);
     });
   });
 

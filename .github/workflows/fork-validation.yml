@@ -1,0 +1,443 @@
+name: Fork Validation Workflow
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+
+jobs:
+  # Job 1: Code Quality and Linting
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Run TypeScript type checking
+        run: npm run typecheck
+        
+      - name: Check for security vulnerabilities
+        run: npm audit --audit-level moderate
+        
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: eslint-report.json
+          retention-days: 7
+
+  # Job 2: Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+        
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 30
+          
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const total = coverage.total;
+              
+              const comment = `
+              ## 📊 Test Coverage Report
+              
+              | Metric | Percentage | Covered/Total |
+              |--------|------------|---------------|
+              | Statements | ${total.statements.pct}% | ${total.statements.covered}/${total.statements.total} |
+              | Branches | ${total.branches.pct}% | ${total.branches.covered}/${total.branches.total} |
+              | Functions | ${total.functions.pct}% | ${total.functions.covered}/${total.functions.total} |
+              | Lines | ${total.lines.pct}% | ${total.lines.covered}/${total.lines.total} |
+              
+              ${total.statements.pct < 80 ? '⚠️ Warning: Statement coverage below 80%' : '✅ Good statement coverage'}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not post coverage comment:', error.message);
+            }
+
+  # Job 3: Build Tests
+  build-tests:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build for production
+        run: npm run build
+        
+      - name: Check build size
+        run: |
+          BUILD_SIZE=$(du -sh dist | cut -f1)
+          echo "Build size: $BUILD_SIZE"
+          echo "BUILD_SIZE=$BUILD_SIZE" >> $GITHUB_ENV
+          
+      - name: Verify Vercel compatibility
+        run: npm run vercel:test
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+          retention-days: 7
+
+  # Job 4: API Tests
+  api-tests:
+    name: API Endpoint Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run API tests
+        run: npm run test -- --run src/tests/api/
+        
+      - name: Test API endpoints (if secrets available)
+        if: env.GOOGLE_MAPS_API_KEY != ''
+        run: npm run test:api
+        continue-on-error: true
+        
+      - name: Upload API test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: api-test-results.json
+          retention-days: 7
+
+  # Job 5: E2E Tests
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Cypress dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libnss3-dev libxss1 libasound2-dev libxtst6 xauth xvfb
+          
+      - name: Build application
+        run: npm run build
+        
+      - name: Start application for E2E tests
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+          
+      - name: Run E2E tests
+        run: npm run cypress:run
+        env:
+          CYPRESS_baseUrl: http://localhost:4173
+          
+      - name: Upload E2E test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            cypress/screenshots/
+            cypress/videos/
+          retention-days: 7
+
+  # Job 6: Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run performance tests
+        run: npm run test -- --run src/tests/performance/
+        
+      - name: Upload performance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: performance-results.json
+          retention-days: 30
+
+  # Job 7: Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run integration tests
+        run: npm run test -- --run src/tests/integration/
+        
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: integration-test-results.json
+          retention-days: 7
+
+  # Job 8: Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Job 9: Validation Summary
+  validation-summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, build-tests, api-tests, e2e-tests, performance-tests, integration-tests, security-scan]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          
+      - name: Generate validation report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobs = [
+              { name: 'code-quality', status: '${{ needs.code-quality.result }}' },
+              { name: 'unit-tests', status: '${{ needs.unit-tests.result }}' },
+              { name: 'build-tests', status: '${{ needs.build-tests.result }}' },
+              { name: 'api-tests', status: '${{ needs.api-tests.result }}' },
+              { name: 'e2e-tests', status: '${{ needs.e2e-tests.result }}' },
+              { name: 'performance-tests', status: '${{ needs.performance-tests.result }}' },
+              { name: 'integration-tests', status: '${{ needs.integration-tests.result }}' },
+              { name: 'security-scan', status: '${{ needs.security-scan.result }}' }
+            ];
+            
+            const passed = jobs.filter(job => job.status === 'success');
+            const failed = jobs.filter(job => job.status === 'failure');
+            const skipped = jobs.filter(job => job.status === 'skipped');
+            
+            const report = `
+            # 🔍 Fork Validation Report
+            
+            ## Summary
+            - ✅ **Passed:** ${passed.length}/${jobs.length} jobs
+            - ❌ **Failed:** ${failed.length} jobs
+            - ⏭️ **Skipped:** ${skipped.length} jobs
+            
+            ## Job Results
+            ${jobs.map(job => {
+              const icon = job.status === 'success' ? '✅' : 
+                          job.status === 'failure' ? '❌' : 
+                          job.status === 'skipped' ? '⏭️' : '⚠️';
+              return `${icon} **${job.name}**: ${job.status}`;
+            }).join('\n')}
+            
+            ${failed.length > 0 ? `
+            ## ❌ Failed Jobs
+            ${failed.map(job => `- **${job.name}**: Check job logs for details`).join('\n')}
+            ` : ''}
+            
+            ## 📊 Artifacts Generated
+            - Code coverage reports
+            - Build artifacts
+            - Test results
+            - Performance benchmarks
+            - Security scan results
+            
+            ${failed.length === 0 ? 
+              '🎉 **All validations passed!** This fork is ready for integration.' :
+              '⚠️ **Some validations failed.** Please review the failed jobs before merging.'
+            }
+            `;
+            
+            if (context.eventName === 'pull_request') {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+            }
+            
+            console.log(report);
+            
+            // Set step outputs
+            core.setOutput('validation_status', failed.length === 0 ? 'success' : 'failure');
+            core.setOutput('passed_jobs', passed.length);
+            core.setOutput('total_jobs', jobs.length);
+            
+      - name: Fail workflow if validations failed
+        if: needs.code-quality.result == 'failure' || needs.unit-tests.result == 'failure' || needs.build-tests.result == 'failure'
+        run: |
+          echo "Critical validation jobs failed"
+          exit 1
+
+  # Job 10: Deployment Test (Optional)
+  deployment-test:
+    name: Test Deployment
+    runs-on: ubuntu-latest
+    needs: [validation-summary]
+    if: github.event_name == 'pull_request' && needs.validation-summary.outputs.validation_status == 'success'
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+        
+      - name: Build for Vercel
+        run: npm run build
+        
+      - name: Test Vercel deployment (dry run)
+        run: |
+          echo "Testing Vercel deployment configuration..."
+          vercel --version
+          # Add any specific Vercel deployment tests here
+          echo "Deployment test completed"

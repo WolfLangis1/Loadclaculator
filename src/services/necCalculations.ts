@@ -171,7 +171,8 @@ export const calculateLoadDemand = (
     if (effectiveLoadMgmt === 'simpleswitch' && simpleSwitchMode === 'branch_sharing') {
       calc.evseDemand = (totalEvseVA - simpleSwitchManagedEvseVA) + (effectiveLoad * 240);
     } else {
-      calc.evseDemand = effectiveLoad * 240; 
+      // Apply 125% continuous load factor to managed EVSE loads
+      calc.evseDemand = (effectiveLoad * 240) * NEC_CONSTANTS.CONTINUOUS_LOAD_FACTOR; 
     }
     
     if (effectiveLoadMgmt === 'simpleswitch') {
@@ -214,10 +215,13 @@ export const calculateLoadDemand = (
       }
     }
   } else {
-    calc.evseDemand = totalEvseVA; 
+    // Apply 125% continuous load factor to EVSE loads per NEC 625.17
+    calc.evseDemand = totalEvseVA * NEC_CONSTANTS.CONTINUOUS_LOAD_FACTOR; 
   }
   
-  calc.hvacDemand = hvacLoads.reduce((sum, load) => sum + load.total, 0) - simpleSwitchManagedHvacVA;
+  // Apply 125% continuous load factor to HVAC loads per NEC 210.19(A)(1)
+  const rawHvacDemand = hvacLoads.reduce((sum, load) => sum + load.total, 0);
+  calc.hvacDemand = (rawHvacDemand * NEC_CONSTANTS.CONTINUOUS_LOAD_FACTOR) - simpleSwitchManagedHvacVA;
   
   if (simpleSwitchManagedGeneralVA > 0) {
     const adjustedApplianceDemand = rawApplianceDemand - simpleSwitchManagedGeneralVA;

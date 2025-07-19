@@ -93,6 +93,12 @@ export const CalculationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return result;
     } catch (error) {
       console.error('Calculation failed:', error);
+      console.error('Error details:', { 
+        loads, 
+        settings,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
       setIsCalculating(false);
       
       // Return default calculation result to prevent UI crashes

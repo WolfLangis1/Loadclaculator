@@ -357,15 +357,11 @@ class HubSpotService {
   }
 }
 
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+import { cors } from '../utils/middleware.js';
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+export default async function handler(req, res) {
+  // Apply secure CORS middleware
+  if (cors(req, res)) return;
 
   try {
     const { action } = req.query;

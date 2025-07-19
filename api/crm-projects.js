@@ -1,24 +1,34 @@
 // CRM Projects API endpoint
 import { crmService } from './services/crmService.js';
+import { cors, authenticate } from './utils/middleware.js';
+import jwt from 'jsonwebtoken';
+import apiKeyManager from './utils/apiKeyManager.js';
 
 export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // Apply CORS middleware
+  if (cors(req, res)) return;
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
-    // Extract Firebase UID from authorization header
+    // Verify JWT token and extract user data
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Missing or invalid authorization header' });
     }
 
-    const firebaseUid = authHeader.replace('Bearer ', '');
+    const token = authHeader.substring(7);
+    let decoded;
+    try {
+      const jwtSecret = apiKeyManager.getJwtSecret();
+      decoded = jwt.verify(token, jwtSecret);
+    } catch (error) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const firebaseUid = decoded.firebaseUid;
 
     switch (req.method) {
       case 'GET':

@@ -32,9 +32,13 @@ class CRMService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    // Apply filters
+    // Apply filters with proper parameterization to prevent SQL injection
     if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,company.ilike.%${filters.search}%`);
+      // Sanitize search input
+      const sanitizedSearch = filters.search.replace(/[%_]/g, '\\$&').trim();
+      if (sanitizedSearch.length > 0 && sanitizedSearch.length <= 100) {
+        query = query.or(`name.ilike.*${sanitizedSearch}*,email.ilike.*${sanitizedSearch}*,company.ilike.*${sanitizedSearch}*`);
+      }
     }
     
     if (filters.source && filters.source.length > 0) {
